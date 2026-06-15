@@ -26,23 +26,24 @@ type ValidationIssue = { field: string; message: string; severity: string };
 const API_BASE = process.env.NEXT_PUBLIC_AIM_API_BASE_URL ?? 'http://localhost:4000';
 const DEMO_HEADERS = {
   'Content-Type': 'application/json',
-  'x-aim-demo-roles': 'engineer,senior_engineer'
+  'x-aim-demo-roles': 'admin',
+  'x-aim-demo-email': 'admin@aim.local'
 };
 
-const defaultForm = {
-  tank_tag: 'TK-NEW',
-  asset_name: 'New Tank',
-  facility: 'Tank Farm',
-  location: 'Area A',
-  service_fluid: 'Water',
+const formPlaceholders = {
+  tank_tag: 'ex. TK-101',
+  asset_name: 'ex. Crude Oil Storage Tank 101',
+  facility: 'ex. Tank Farm A',
+  location: 'ex. Area A',
+  service_fluid: 'ex. Water / Diesel / Crude Oil',
   tank_type: 'aboveground_storage_tank',
-  construction_year: '2015',
-  original_design_code: 'API 650',
-  current_assessment_code: 'API 653',
-  code_edition: 'User supplied edition required',
-  owner: 'Operations',
+  construction_year: 'ex. 2015',
+  original_design_code: 'ex. API 650',
+  current_assessment_code: 'ex. API 653',
+  code_edition: 'ex. API 650 12th Ed. / API 653 5th Ed.',
+  owner: 'ex. Operations',
   operating_status: 'in_service',
-  inspection_due_date: '2027-01-01'
+  inspection_due_date: ''
 };
 
 function fieldValue(form: HTMLFormElement, name: string): string {
@@ -140,18 +141,30 @@ export default function AssetRegisterClient() {
             <p>Required engineering fields are explicit. Code edition is mandatory.</p>
           </div>
 
-          {Object.entries(defaultForm).map(([key, value]) => (
+          {Object.entries(formPlaceholders).map(([key, placeholder]) => (
             <label key={key}>
               <span>{key.replaceAll('_', ' ')}</span>
+
               {key === 'operating_status' ? (
-                <select name={key} defaultValue={value} required>
+                <select name={key} defaultValue="in_service" required>
                   <option value="in_service">in_service</option>
                   <option value="out_of_service">out_of_service</option>
                   <option value="mothballed">mothballed</option>
                   <option value="retired">retired</option>
                 </select>
               ) : (
-                <input name={key} defaultValue={value} type={key === 'inspection_due_date' ? 'date' : key === 'construction_year' ? 'number' : 'text'} required />
+                <input
+                  name={key}
+                  placeholder={placeholder}
+                  type={
+                    key === 'inspection_due_date'
+                     ? 'date'
+                     : key === 'construction_year'
+                       ? 'number'
+                       : 'text'
+                }
+                required
+                />
               )}
             </label>
           ))}
