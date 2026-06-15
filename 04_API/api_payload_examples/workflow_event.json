@@ -1,0 +1,13 @@
+{
+  "workflow_event_code": "WF-EVT-2026-000001",
+  "workflow_id": "WF-001",
+  "workflow_name": "File Intake",
+  "event_type": "workflow.started",
+  "event_status": "received",
+  "source_system": "n8n",
+  "related_entity_type": "asset",
+  "related_entity_id": "replace-with-asset-uuid",
+  "payload": {
+    "note": "n8n orchestration event recorded through AIM API only"
+  }
+}

@@ -158,3 +158,16 @@ pnpm db:seed
 pnpm dev:api
 pnpm dev:web
 ```
+
+
+## Governance Hardening Patch Status
+
+This repo includes an AIM+n8n alignment hardening patch before continuing to Sprint 3. The patch adds:
+
+- OpenAPI contract for currently implemented `/api/v1` endpoints only.
+- Workflow event and error log baseline APIs/tables.
+- Current data dictionary and ERD documentation.
+- Centralized local dev RBAC API client helper.
+- Governance tests for NDT approval separation, evidence gate policy, OpenAPI alignment, AI-agent approval denial, and audit coverage.
+
+No engineering calculation, API/ASME formula, AI extraction, report generation, or functional NDT module is implemented in this hardening patch.

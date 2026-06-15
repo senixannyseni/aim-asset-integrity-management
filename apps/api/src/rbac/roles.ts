@@ -65,6 +65,8 @@ export const PERMISSIONS = [
   'work_order.update',
   'work_order.close',
   'workflow_event.create',
+  'error_log.create',
+  'error_log.read',
   'audit.read',
   'admin.manage'
 ] as const;
@@ -183,6 +185,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'work_order.create',
     'work_order.update',
     'work_order.close',
+    'workflow_event.create',
+    'error_log.create',
+    'error_log.read',
     'audit.read'
   ],
   qa_qc: [
@@ -201,6 +206,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'integrity_decision.review',
     'report.review',
     'report.approve',
+    'error_log.read',
     'audit.read'
   ],
   client_viewer: readOnlyPermissions,
@@ -210,7 +216,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'evidence.read',
     'ai_extraction.create',
     'ai_extraction.read',
-    'workflow_event.create'
+    'workflow_event.create',
+    'error_log.create'
   ]
 };
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
+import { apiFetch } from '../../../lib/api-client';
 
 type Material = {
   material_id: string;
@@ -42,12 +43,6 @@ type TankAssetBundle = {
 
 type ValidationIssue = { field: string; message: string; severity: string };
 
-const API_BASE = process.env.NEXT_PUBLIC_AIM_API_BASE_URL ?? 'http://localhost:4000';
-const DEMO_HEADERS = {
-  'Content-Type': 'application/json',
-  'x-aim-demo-roles': 'engineer,senior_engineer'
-};
-
 function value(form: HTMLFormElement, name: string): string {
   const data = new FormData(form).get(name);
   return typeof data === 'string' ? data : '';
@@ -67,8 +62,8 @@ export default function AssetDetailClient({ assetId }: { assetId: string }) {
   async function load() {
     setLoading(true);
     const [assetResponse, materialResponse] = await Promise.all([
-      fetch(`${API_BASE}/api/v1/assets/${assetId}`, { headers: DEMO_HEADERS, cache: 'no-store' }),
-      fetch(`${API_BASE}/api/v1/materials`, { headers: DEMO_HEADERS, cache: 'no-store' })
+      apiFetch(`/api/v1/assets/${assetId}`, { cache: 'no-store' }),
+      apiFetch('/api/v1/materials', { cache: 'no-store' })
     ]);
     const assetPayload = await assetResponse.json();
     const materialPayload = await materialResponse.json();
@@ -105,9 +100,8 @@ export default function AssetDetailClient({ assetId }: { assetId: string }) {
       construction_year: Number(asset?.geometry?.construction_year ?? asset?.geometry?.construction_year ?? 2015)
     };
 
-    const response = await fetch(`${API_BASE}/api/v1/assets/${assetId}/geometry`, {
+    const response = await apiFetch(`/api/v1/assets/${assetId}/geometry`, {
       method: 'PUT',
-      headers: DEMO_HEADERS,
       body: JSON.stringify(payload)
     });
     const result = await response.json();
@@ -143,9 +137,8 @@ export default function AssetDetailClient({ assetId }: { assetId: string }) {
       coating_lining_status: value(form, 'coating_lining_status')
     };
 
-    const response = await fetch(`${API_BASE}/api/v1/assets/${assetId}/shell-courses`, {
+    const response = await apiFetch(`/api/v1/assets/${assetId}/shell-courses`, {
       method: 'POST',
-      headers: DEMO_HEADERS,
       body: JSON.stringify(payload)
     });
     const result = await response.json();

@@ -41,3 +41,8 @@ Sprint 2 — Tank Asset Register and Engineering Master Data.
 ## Boundary Confirmation
 
 AIM remains the system of record. n8n must call AIM APIs only. No direct n8n-to-PostgreSQL writes are allowed. No engineering calculation is implemented in Sprint 2.
+
+
+## Governance Hardening Before Sprint 3
+
+Status: implemented. OpenAPI, current data dictionary, ERD, workflow event/error log baseline, and governance tests were added. Sprint 3 Evidence/NDT functional implementation has not been applied in this state.

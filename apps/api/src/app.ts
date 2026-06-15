@@ -5,6 +5,7 @@ import { config } from './config/env.js';
 import { demoRequestContext } from './middleware/request-context.js';
 import { assetsRouter } from './routes/assets.js';
 import { healthRouter } from './routes/health.js';
+import { operationsRouter } from './routes/operations.js';
 import { rbacDemoRouter } from './routes/rbac-demo.js';
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
@@ -30,6 +31,7 @@ export function createApp() {
 
   app.use(healthRouter);
   app.use('/api/v1', assetsRouter);
+  app.use('/api/v1', operationsRouter);
   app.use('/api/v1', rbacDemoRouter);
 
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

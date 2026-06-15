@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../../lib/api-client';
 
 type AssetRecord = {
   asset_id: string;
@@ -22,13 +23,6 @@ type AssetRecord = {
 };
 
 type ValidationIssue = { field: string; message: string; severity: string };
-
-const API_BASE = process.env.NEXT_PUBLIC_AIM_API_BASE_URL ?? 'http://localhost:4000';
-const DEMO_HEADERS = {
-  'Content-Type': 'application/json',
-  'x-aim-demo-roles': 'admin',
-  'x-aim-demo-email': 'admin@aim.local'
-};
 
 const formPlaceholders = {
   tank_tag: 'ex. TK-101',
@@ -64,9 +58,8 @@ export default function AssetRegisterClient() {
   async function loadAssets(query = '') {
     setLoading(true);
     setMessage(null);
-    const url = new URL('/api/v1/assets', API_BASE);
-    if (query) url.searchParams.set('search', query);
-    const response = await fetch(url, { headers: DEMO_HEADERS, cache: 'no-store' });
+    const path = query ? `/api/v1/assets?search=${encodeURIComponent(query)}` : '/api/v1/assets';
+    const response = await apiFetch(path, { cache: 'no-store' });
     const payload = await response.json();
     if (!response.ok) {
       setMessage(payload?.error?.message ?? 'Failed to load assets.');
@@ -104,9 +97,8 @@ export default function AssetRegisterClient() {
       inspection_due_date: fieldValue(form, 'inspection_due_date')
     };
 
-    const response = await fetch(`${API_BASE}/api/v1/assets`, {
+    const response = await apiFetch('/api/v1/assets', {
       method: 'POST',
-      headers: DEMO_HEADERS,
       body: JSON.stringify(payload)
     });
     const result = await response.json();
