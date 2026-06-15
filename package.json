@@ -1,0 +1,23 @@
+{
+  "name": "aim-tank-integrity",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AIM+n8n Tank Integrity Module monorepo foundation",
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @aim/api --filter @aim/web dev",
+    "dev:api": "pnpm --filter @aim/api dev",
+    "dev:web": "pnpm --filter @aim/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:ci": "pnpm -r test:ci",
+    "db:migrate": "pnpm --filter @aim/api db:migrate",
+    "db:seed": "pnpm --filter @aim/api db:seed",
+    "db:reset": "pnpm --filter @aim/api db:reset"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

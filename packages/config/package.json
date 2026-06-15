@@ -1,0 +1,13 @@
+{
+  "name": "@aim/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node -e \"console.log('config package has no build step')\"",
+    "lint": "node -e \"console.log('config package lint ok')\"",
+    "typecheck": "node -e \"console.log('config package typecheck ok')\"",
+    "test": "node -e \"console.log('config package no tests')\"",
+    "test:ci": "node -e \"console.log('config package no tests')\""
+  }
+}
