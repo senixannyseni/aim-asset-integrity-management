@@ -15,6 +15,7 @@ insert into permissions(permission_code, description) values
   ('asset.read', 'Read assets'),
   ('asset.create', 'Create assets'),
   ('asset.update', 'Update assets'),
+  ('asset.delete', 'Soft delete tank assets'),
   ('asset.approve', 'Approve assets'),
   ('inspection.read', 'Read inspections'),
   ('inspection.create', 'Create inspections'),
@@ -155,7 +156,7 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in (
-  'asset.read','asset.update','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request',
+  'asset.read','asset.update','asset.delete','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request',
   'ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','formula.read','formula.create','formula.update',
   'calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.trigger','ffs.review','ffs.request_assessment',
   'rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve',
@@ -181,40 +182,134 @@ on conflict (material_code) do update set
   material_specification = excluded.material_specification,
   notes = excluded.notes;
 
-insert into assets(asset_tag, asset_name, asset_type, facility, area, service_fluid, status, design_code, design_code_edition)
-values ('TK-001', 'Demo Aboveground Storage Tank', 'aboveground_storage_tank', 'Demo Facility', 'Tank Farm A', 'Water - demo only', 'draft', 'API 650', 'User-supplied basis required')
+insert into assets(
+  asset_tag,
+  asset_name,
+  asset_type,
+  facility,
+  area,
+  location,
+  service_fluid,
+  status,
+  tank_type,
+  construction_year,
+  design_code,
+  design_code_edition,
+  original_design_code,
+  current_assessment_code,
+  code_edition,
+  owner,
+  operating_status,
+  inspection_due_date
+)
+values (
+  'TK-001',
+  'Demo Aboveground Storage Tank',
+  'aboveground_storage_tank',
+  'Demo Facility',
+  'Tank Farm A',
+  'Tank Farm A - East Bund',
+  'Water - demo only',
+  'draft',
+  'aboveground_storage_tank',
+  2010,
+  'API 650',
+  'User-supplied basis required',
+  'API 650',
+  'API 653',
+  'User-supplied edition required',
+  'Demo Owner',
+  'in_service',
+  current_date + interval '180 days'
+)
 on conflict (asset_tag) do update set
   asset_name = excluded.asset_name,
   facility = excluded.facility,
   area = excluded.area,
+  location = excluded.location,
   service_fluid = excluded.service_fluid,
+  tank_type = excluded.tank_type,
+  construction_year = excluded.construction_year,
   design_code = excluded.design_code,
-  design_code_edition = excluded.design_code_edition;
+  design_code_edition = excluded.design_code_edition,
+  original_design_code = excluded.original_design_code,
+  current_assessment_code = excluded.current_assessment_code,
+  code_edition = excluded.code_edition,
+  owner = excluded.owner,
+  operating_status = excluded.operating_status,
+  inspection_due_date = excluded.inspection_due_date;
 
-insert into tank_geometry(asset_id, diameter_m, height_m, nominal_capacity_m3, design_liquid_level_m, bottom_type, roof_type, foundation_type, construction_year, status)
-select id, 20.0000, 12.0000, 3500.0000, 11.5000, 'flat_bottom', 'fixed_roof', 'ringwall', 2010, 'draft'
+insert into tank_geometry(
+  asset_id,
+  diameter_m,
+  height_m,
+  shell_height_m,
+  number_of_courses,
+  nominal_capacity_m3,
+  design_liquid_level_m,
+  bottom_type,
+  roof_type,
+  foundation_type,
+  construction_year,
+  design_pressure_kpa,
+  design_temperature_c,
+  specific_gravity,
+  vacuum_design_basis,
+  status
+)
+select id, 20.0000, 12.0000, 12.0000, 3, 3500.0000, 11.5000, 'flat_bottom', 'fixed_roof', 'ringwall', 2010, 0.0000, 60.0000, 1.0000, 'Not specified - engineering review required', 'draft'
 from assets where asset_tag = 'TK-001'
 on conflict (asset_id) do update set
   diameter_m = excluded.diameter_m,
   height_m = excluded.height_m,
+  shell_height_m = excluded.shell_height_m,
+  number_of_courses = excluded.number_of_courses,
   nominal_capacity_m3 = excluded.nominal_capacity_m3,
   design_liquid_level_m = excluded.design_liquid_level_m,
+  bottom_type = excluded.bottom_type,
+  roof_type = excluded.roof_type,
+  foundation_type = excluded.foundation_type,
+  design_pressure_kpa = excluded.design_pressure_kpa,
+  design_temperature_c = excluded.design_temperature_c,
+  specific_gravity = excluded.specific_gravity,
+  vacuum_design_basis = excluded.vacuum_design_basis,
   updated_at = now();
 
-insert into shell_courses(asset_id, course_no, material_id, nominal_thickness_mm, minimum_required_thickness_mm, height_mm, status)
-select a.id, course_no, m.id, nominal_thickness_mm, minimum_required_thickness_mm, 2000.000, 'draft'
+insert into shell_courses(
+  asset_id,
+  course_no,
+  material_id,
+  nominal_thickness_mm,
+  measured_min_thickness_mm,
+  minimum_required_thickness_mm,
+  height_mm,
+  course_height_mm,
+  material_specification,
+  joint_efficiency,
+  corrosion_allowance_mm,
+  coating_lining_status,
+  status
+)
+select a.id, course_no, m.id, nominal_thickness_mm, measured_min_thickness_mm, minimum_required_thickness_mm, 4000.000, 4000.000, m.material_specification, 1.0000, 1.000, 'unknown', 'draft'
 from assets a
 cross join materials m
 join (values
-  (1, 12.000, 8.000),
-  (2, 10.000, 7.000),
-  (3, 8.000, 6.000)
-) as sc(course_no, nominal_thickness_mm, minimum_required_thickness_mm) on true
+  (1, 12.000, 11.500, 8.000),
+  (2, 10.000, 9.600, 7.000),
+  (3, 8.000, 7.700, 6.000)
+) as sc(course_no, nominal_thickness_mm, measured_min_thickness_mm, minimum_required_thickness_mm) on true
 where a.asset_tag = 'TK-001' and m.material_code = 'AIM-DEMO-CS-001'
 on conflict (asset_id, course_no) do update set
   material_id = excluded.material_id,
   nominal_thickness_mm = excluded.nominal_thickness_mm,
+  measured_min_thickness_mm = excluded.measured_min_thickness_mm,
   minimum_required_thickness_mm = excluded.minimum_required_thickness_mm,
+  height_mm = excluded.height_mm,
+  course_height_mm = excluded.course_height_mm,
+  material_specification = excluded.material_specification,
+  joint_efficiency = excluded.joint_efficiency,
+  corrosion_allowance_mm = excluded.corrosion_allowance_mm,
+  coating_lining_status = excluded.coating_lining_status,
   updated_at = now();
 
 insert into formula_registry(

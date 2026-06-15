@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 0/1 Foundation Implemented**
+Sprint status: **Sprint 2 Tank Asset Register Implemented**
 
-This repository provides the clean monorepo foundation for the AIM+n8n Tank Integrity Module. It includes backend API scaffolding, frontend shell, shared types, PostgreSQL migration baseline, idempotent seed data, RBAC middleware, health checks, unit test setup, and developer documentation.
+This repository provides the AIM+n8n Tank Integrity Module foundation and Sprint 2 Tank Asset Register implementation. It includes backend API scaffolding, frontend shell, shared types, PostgreSQL migrations, idempotent seed data, RBAC middleware, health checks, tank asset CRUD, tank geometry input, shell course master data, material selector, unit-normalized validation, audit logging, unit test setup, and developer documentation.
 
 ## Non-negotiable Architecture Boundary
 
@@ -35,6 +35,30 @@ This repository provides the clean monorepo foundation for the AIM+n8n Tank Inte
   - `GET /health/db`
 - Unit test setup and CI-ready test command.
 - CI workflow scaffold.
+- Sprint 2 Tank Asset Register and Engineering Master Data module.
+- CRUD APIs for tank assets.
+- Geometry and shell course APIs with validation and audit logging.
+- Material master selector endpoint and UI integration.
+- Frontend pages: `/assets` and `/assets/[assetId]`.
+
+
+## Sprint 2 Smoke Test
+
+After running migrations, seed, and dev server:
+
+```bash
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
+```
+
+Open:
+
+- `http://localhost:3000/assets` for the Tank Asset Register.
+- `http://localhost:4000/api/v1/assets` for the asset API.
+- `http://localhost:4000/api/v1/materials` for the material selector API.
+
+The frontend sends local demo RBAC headers for `engineer,senior_engineer` in development. Backend RBAC remains enforced.
 
 ## Local Setup
 

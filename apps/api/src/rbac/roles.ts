@@ -15,6 +15,7 @@ export const PERMISSIONS = [
   'asset.read',
   'asset.create',
   'asset.update',
+  'asset.delete',
   'asset.approve',
   'inspection.read',
   'inspection.create',
@@ -143,6 +144,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   senior_engineer: [
     'asset.read',
     'asset.update',
+    'asset.delete',
     'asset.approve',
     'inspection.read',
     'inspection.review',

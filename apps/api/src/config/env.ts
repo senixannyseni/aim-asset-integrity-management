@@ -64,7 +64,7 @@ export const config: AppConfig = {
   appEnv: required('APP_ENV', 'local'),
   port: numberEnv('PORT', 4000),
   corsOrigin: required('CORS_ORIGIN', 'http://localhost:3000'),
-  databaseUrl: required('DATABASE_URL', 'postgresql://aim_user:aim_password@localhost:5432/aim_tank_integrity'),
+  databaseUrl: required('DATABASE_URL', 'postgresql://aim_user:aim_password@127.0.0.1:5433/aim_tank_integrity'),
   dbSsl: boolEnv('DB_SSL', false),
   dbPoolMax: numberEnv('DB_POOL_MAX', 10),
   authJwtSecret: required('AUTH_JWT_SECRET', 'local-dev-secret-change-me-32-chars-minimum'),
