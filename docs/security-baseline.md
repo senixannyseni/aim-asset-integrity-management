@@ -1,0 +1,59 @@
+# AIM Tank Integrity Security Baseline
+
+Status: Sprint 7 governance and security hardening baseline.
+
+## Current local-development authentication
+
+Demo header authentication is local-development only.
+
+The current sprint implementation accepts temporary headers such as:
+
+- `x-aim-demo-roles`
+- `x-aim-demo-user-id`
+- `x-aim-demo-email`
+
+These headers are a local development shim for rapid sprint validation. They must not be used for UAT, production-like testing, or production deployments.
+
+## Required future authentication model
+
+Before UAT/release candidate, AIM must replace demo headers with verified authentication and authorization:
+
+- JWT/session-based authentication issued by a trusted identity provider or AIM auth service.
+- Server-side user identity validation.
+- DB-backed role and permission resolution using `users`, `roles`, `permissions`, `user_roles`, and `role_permissions`.
+- Tenant/org scoping if multi-tenant deployment is enabled.
+- Explicit audit logging for authentication-sensitive approval actions.
+
+## AI governance
+
+AI agents must never approve or finalize engineering decisions. The `ai_agent` role must not receive approval/finalization permissions for:
+
+- NDT approval
+- Formula approval
+- Calculation approval
+- FFS close/final disposition
+- Report approval/issue
+- Integrity decision approval
+- Work-order closure
+
+AI output, when implemented, must remain staging-only until human review and controlled promotion.
+
+## Object storage security
+
+Evidence files must remain traceable through `evidence_files` and `evidence_links`. Before production use, object storage access must include:
+
+- signed URL generation for read/open actions;
+- signed URL TTL configuration;
+- upload size limits;
+- malware scanning or quarantine workflow;
+- checksum verification;
+- storage path isolation by asset/inspection/evidence code;
+- audit logs for upload, link, open, metadata update, and deletion approval.
+
+## Error handling baseline
+
+API error responses must avoid exposing raw internal error messages in production mode. Detailed stack traces and raw error messages are allowed only in local development/test environments.
+
+## n8n boundary
+
+n8n must call AIM APIs only. n8n must not write directly to PostgreSQL or mutate final AIM system-of-record tables outside approved APIs.

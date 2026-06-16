@@ -245,8 +245,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.read',
     'validation.run',
     'error_log.read',
-    'validation.read',
-    'validation.run',
     'audit.read'
   ],
   client_viewer: readOnlyPermissions,

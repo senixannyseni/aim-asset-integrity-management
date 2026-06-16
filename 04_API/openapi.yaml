@@ -770,3 +770,8 @@ components:
             details:
               type: array
               items: { type: object }
+
+
+# Sprint 7 governance hardening notes
+# FFS case creation rejects cross-asset evidence links with error code CROSS_ASSET_EVIDENCE_LINK_BLOCKED.
+# Demo header authentication is local-development only; production deployments require verified JWT/session identity and DB-backed RBAC.

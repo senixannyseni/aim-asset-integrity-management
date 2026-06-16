@@ -199,3 +199,19 @@ Implemented route/UI scope:
 - `POST /api/v1/ffs/cases/{caseId}/close`.
 
 Workflow statuses: `open`, `under_review`, `data_required`, `assessment_in_progress`, `accepted`, `repair_required`, `monitor`, `closed`.
+
+
+## Sprint 7 Governance and Security Hardening
+
+This baseline hardens Sprint 7 without implementing API/API-ASME formulas, AI extraction runtime, report generation, RBI calculation, CMMS integration, or work-order integration.
+
+Key hardening items:
+
+- FFS evidence links are validated against the same `asset_id` as the FFS case.
+- FFS cases created from calculation warnings preserve `source_calculation_run_id`, `source_entity_id`, and `evidence_file_id` in supporting evidence snapshots.
+- DB seed permissions are aligned to the in-code RBAC map through Sprint 7.
+- `ai_agent` remains prohibited from engineering approval/finalization actions.
+- Demo header authentication is explicitly local-development only. See `docs/security-baseline.md`.
+- Production error responses avoid raw internal error messages.
+
+AIM remains the system of record and n8n remains API-only orchestration.

@@ -175,6 +175,131 @@ join permissions p on p.permission_code in (
 where r.role_code = 'qa_qc'
 on conflict do nothing;
 
+
+-- Sprint 7 governance hardening permission synchronization.
+-- This block mirrors apps/api/src/rbac/roles.ts for DB-backed RBAC readiness.
+insert into permissions(permission_code, description) values
+  ('asset.read', 'Asset Read'),
+  ('asset.create', 'Asset Create'),
+  ('asset.update', 'Asset Update'),
+  ('asset.delete', 'Asset Delete'),
+  ('asset.approve', 'Asset Approve'),
+  ('inspection.read', 'Inspection Read'),
+  ('inspection.create', 'Inspection Create'),
+  ('inspection.update', 'Inspection Update'),
+  ('inspection.review', 'Inspection Review'),
+  ('inspection.approve', 'Inspection Approve'),
+  ('evidence.open', 'Evidence Open'),
+  ('evidence.read', 'Evidence Read'),
+  ('evidence.upload', 'Evidence Upload'),
+  ('evidence.link', 'Evidence Link'),
+  ('evidence.update_metadata', 'Evidence Update Metadata'),
+  ('evidence.delete_request', 'Evidence Delete Request'),
+  ('evidence.delete_approve', 'Evidence Delete Approve'),
+  ('ai_extraction.create', 'Ai Extraction Create'),
+  ('ai_extraction.read', 'Ai Extraction Read'),
+  ('ai_extraction.review', 'Ai Extraction Review'),
+  ('ai_extraction.correct', 'Ai Extraction Correct'),
+  ('ai_extraction.promote', 'Ai Extraction Promote'),
+  ('ndt.read', 'Ndt Read'),
+  ('ndt.create', 'Ndt Create'),
+  ('ndt.import', 'Ndt Import'),
+  ('ndt.update', 'Ndt Update'),
+  ('ndt.review', 'Ndt Review'),
+  ('ndt.approve', 'Ndt Approve'),
+  ('formula.read', 'Formula Read'),
+  ('formula.create', 'Formula Create'),
+  ('formula.update', 'Formula Update'),
+  ('formula.approve', 'Formula Approve'),
+  ('formula.retire', 'Formula Retire'),
+  ('formula.test', 'Formula Test'),
+  ('calculation.run', 'Calculation Run'),
+  ('calculation.read', 'Calculation Read'),
+  ('calculation.review', 'Calculation Review'),
+  ('calculation.approve', 'Calculation Approve'),
+  ('calculation.revise', 'Calculation Revise'),
+  ('ffs.read', 'Ffs Read'),
+  ('ffs.create', 'Ffs Create'),
+  ('ffs.trigger', 'Ffs Trigger'),
+  ('ffs.update', 'Ffs Update'),
+  ('ffs.review', 'Ffs Review'),
+  ('ffs.request_assessment', 'Ffs Request Assessment'),
+  ('ffs.approve', 'Ffs Approve'),
+  ('ffs.close', 'Ffs Close'),
+  ('rbi.interface.read', 'Rbi Interface Read'),
+  ('rbi.interface.create', 'Rbi Interface Create'),
+  ('rbi.interface.export', 'Rbi Interface Export'),
+  ('integrity_decision.create', 'Integrity Decision Create'),
+  ('integrity_decision.review', 'Integrity Decision Review'),
+  ('integrity_decision.approve', 'Integrity Decision Approve'),
+  ('report.generate', 'Report Generate'),
+  ('report.review', 'Report Review'),
+  ('report.approve', 'Report Approve'),
+  ('report.issue', 'Report Issue'),
+  ('work_order.create', 'Work Order Create'),
+  ('work_order.update', 'Work Order Update'),
+  ('work_order.close', 'Work Order Close'),
+  ('workflow_event.create', 'Workflow Event Create'),
+  ('error_log.create', 'Error Log Create'),
+  ('error_log.read', 'Error Log Read'),
+  ('validation.read', 'Validation Read'),
+  ('validation.run', 'Validation Run'),
+  ('audit.read', 'Audit Read'),
+  ('admin.manage', 'Admin Manage')
+on conflict (permission_code) do update set description = excluded.description;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('asset.read','asset.create','asset.update','inspection.read','inspection.create','evidence.read','evidence.upload','evidence.link','ai_extraction.read','ndt.read','ndt.import','ndt.create','validation.read')
+where r.role_code = 'data_entry'
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('asset.read','inspection.read','inspection.create','inspection.update','evidence.read','evidence.upload','evidence.link','ndt.read','ndt.create','ndt.update','ndt.import','validation.read','validation.run','work_order.create','work_order.update')
+where r.role_code = 'inspector'
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('asset.read','asset.update','inspection.read','inspection.update','inspection.review','evidence.read','evidence.link','evidence.update_metadata','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.import','formula.read','calculation.run','calculation.read','calculation.review','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','rbi.interface.read','rbi.interface.create','integrity_decision.create','integrity_decision.review','report.generate','report.review','work_order.create','work_order.update')
+where r.role_code = 'engineer'
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('asset.read','asset.update','asset.delete','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','ndt.import','formula.read','formula.create','formula.update','formula.approve','formula.retire','formula.test','calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','ffs.request_assessment','ffs.approve','ffs.close','rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve','report.generate','report.review','report.approve','work_order.create','work_order.update','work_order.close','validation.read','validation.run','workflow_event.create','error_log.create','error_log.read','audit.read')
+where r.role_code = 'senior_engineer'
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('asset.read','inspection.read','evidence.read','ai_extraction.read','ndt.read','ndt.import','formula.read','calculation.read','calculation.review','ffs.read','ffs.review','rbi.interface.read','integrity_decision.review','report.review','report.approve','validation.read','validation.run','error_log.read','audit.read')
+where r.role_code = 'qa_qc'
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('asset.read','inspection.read','evidence.read','ndt.read','formula.read','calculation.read','ffs.read','rbi.interface.read','validation.read')
+where r.role_code = 'client_viewer'
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('asset.read','inspection.read','evidence.read','ai_extraction.create','ai_extraction.read','workflow_event.create','error_log.create')
+where r.role_code = 'ai_agent'
+on conflict do nothing;
+
+-- Governance guardrail: AI agent is intentionally not granted approval/finalization permissions.
+-- No ffs.approve, ffs.close, ndt.approve, formula.approve, calculation.approve, report.approve, report.issue, or integrity_decision.approve is assigned to ai_agent.
+
 insert into materials(material_code, material_name, material_specification, notes) values
   ('AIM-DEMO-CS-001', 'Demo Carbon Steel', 'Demo material specification - not for engineering use', 'Seed material for local development only.')
 on conflict (material_code) do update set

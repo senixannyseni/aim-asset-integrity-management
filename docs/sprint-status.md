@@ -39,3 +39,16 @@ pnpm lint
 pnpm typecheck
 pnpm test
 ```
+
+
+## Sprint 7 Governance and Security Hardening
+
+Status: Complete.
+
+- Hardened FFS evidence linkage against cross-asset evidence references.
+- Preserved calculation warning source traceability into FFS case evidence snapshots.
+- Aligned seed permissions with TypeScript RBAC roles through Sprint 7.
+- Added local-dev authentication and production security baseline documentation.
+- Improved API error handling to avoid raw internal error disclosure outside local/test environments.
+
+No API/API-ASME formula execution, AI runtime, report generation, RBI calculation, CMMS integration, or work-order integration was implemented.

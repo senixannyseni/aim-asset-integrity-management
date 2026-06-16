@@ -13,6 +13,9 @@ declare global {
   }
 }
 
+/** LOCAL-DEV ONLY: demo header identity is a temporary sprint development shim.
+ * Production authentication must replace this with verified JWT/session identity and DB-backed RBAC.
+ */
 export function demoRequestContext(req: Request, _res: Response, next: NextFunction): void {
   const rawRoles = req.header('x-aim-demo-roles');
   if (!rawRoles) {

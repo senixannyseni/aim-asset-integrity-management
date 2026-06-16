@@ -46,4 +46,20 @@ describe('FFS trigger workflow governance', () => {
     expect(openapi).toContain('/ffs/cases/{caseId}/close:');
     expect(openapi).toContain('x-permission-required: ffs.approve');
   });
+
+  it('blocks cross-asset FFS evidence links with clear validation errors', () => {
+    const route = readRepoFile('apps/api/src/routes/ffs.ts');
+    expect(route).toContain('validateEvidenceFilesForAsset');
+    expect(route).toContain('CROSS_ASSET_EVIDENCE_LINK_BLOCKED');
+    expect(route).toContain('FFS case evidence must belong to the same asset as the FFS case.');
+  });
+
+  it('preserves calculation source traceability when creating FFS cases', () => {
+    const route = readRepoFile('apps/api/src/routes/ffs.ts');
+    expect(route).toContain('source_calculation_run_id');
+    expect(route).toContain('source_entity_id');
+    expect(route).toContain('evidence_file_id');
+    expect(route).toContain("source_entity_type: 'ndt_measurement'");
+  });
+
 });

@@ -46,12 +46,19 @@ export function createApp() {
   app.use('/api/v1', calculationsRouter);
   app.use('/api/v1', ffsRouter);
 
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    const message = error instanceof Error ? error.message : 'Unknown server error.';
-    res.status(500).json({
+  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === 'number'
+      ? Number((error as { statusCode: number }).statusCode)
+      : 500;
+    const safeStatus = statusCode >= 400 && statusCode < 600 ? statusCode : 500;
+    const isLocal = config.appEnv === 'local' || config.appEnv === 'development' || config.appEnv === 'test';
+    const rawMessage = error instanceof Error ? error.message : 'Unknown server error.';
+    res.status(safeStatus).json({
       error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message
+        code: safeStatus === 500 ? 'INTERNAL_SERVER_ERROR' : 'REQUEST_FAILED',
+        message: safeStatus === 500 && !isLocal ? 'Internal server error.' : rawMessage,
+        requestId: req.header('x-request-id') ?? undefined,
+        ...(isLocal && error instanceof Error ? { details: { name: error.name, stack: error.stack } } : {})
       }
     });
   });

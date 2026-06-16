@@ -607,3 +607,15 @@ These remain planned and are not implemented in the Sprint 7 baseline:
 8. Missing critical engineering data produces deterministic validation warnings or blocking results according to validation scope.
 9. Every important create/update/delete/review/approval/governance action must write audit logs.
 10. Clean-clone migrations 0001 through 0008 are part of the implemented Sprint 7 baseline.
+
+
+## Sprint 7 Governance and Security Hardening Notes
+
+The implemented schema through Sprint 7 remains unchanged except for governance hardening behavior. FFS evidence linkage must preserve asset consistency:
+
+- `ffs_cases.asset_id` is the controlling asset for the FFS workflow.
+- `ffs_cases.evidence_links` may store supporting evidence snapshots, but evidence files must belong to the same asset.
+- `evidence_links` may link `evidence_files` to `ffs_case` records after same-asset validation.
+- FFS cases created from calculation warnings preserve source calculation run and source NDT measurement/evidence traceability in `trigger_measurements_json` and `evidence_links`.
+
+RBAC seed data is aligned with `apps/api/src/rbac/roles.ts` through Sprint 7. Demo header authentication remains local-development only and must be replaced by verified JWT/session identity before production-like use.

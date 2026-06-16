@@ -187,6 +187,41 @@ async function assetExists(client: Queryable, assetId: string): Promise<boolean>
   return (result.rowCount ?? 0) > 0;
 }
 
+
+async function validateEvidenceFilesForAsset(
+  client: Queryable,
+  assetId: string,
+  evidenceFileIds: string[]
+): Promise<{ ok: true } | { ok: false; invalidIds: string[] }> {
+  if (evidenceFileIds.length === 0) return { ok: true };
+  const uniqueIds = [...new Set(evidenceFileIds)];
+  const result = await client.query<{ id: string }>(
+    `select id::text as id
+     from evidence_files
+     where id = any($1::uuid[])
+       and asset_id = $2
+       and status not in ('deleted','rejected')`,
+    [uniqueIds, assetId]
+  );
+  const valid = new Set(result.rows.map((row) => row.id));
+  const invalidIds = uniqueIds.filter((id) => !valid.has(id));
+  return invalidIds.length === 0 ? { ok: true } : { ok: false, invalidIds };
+}
+
+function crossAssetEvidenceError(res: ApiResponse, invalidIds: string[]): void {
+  res.status(400).json({
+    error: {
+      code: 'CROSS_ASSET_EVIDENCE_LINK_BLOCKED',
+      message: 'FFS case evidence must belong to the same asset as the FFS case.',
+      details: invalidIds.map((id) => ({
+        field: 'evidence_links.evidence_file_id',
+        message: `Evidence file ${id} does not belong to the FFS case asset or is not active.`,
+        severity: 'blocking'
+      }))
+    }
+  });
+}
+
 async function createEvidenceLinks(
   client: PoolClient,
   req: Request,
@@ -424,6 +459,13 @@ ffsRouter.post('/ffs/cases', requirePermission('ffs.create'), async (req, res, n
       res.status(404).json({ error: { code: 'ASSET_NOT_FOUND', message: 'Asset not found.' } });
       return;
     }
+    const manualEvidenceIds = evidenceIdsFromLinks(normalized.evidenceLinks);
+    const evidenceValidation = await validateEvidenceFilesForAsset(client, normalized.assetId, manualEvidenceIds);
+    if (!evidenceValidation.ok) {
+      await client.query('rollback');
+      crossAssetEvidenceError(res, evidenceValidation.invalidIds);
+      return;
+    }
     const rule = await loadTriggerRule(client, normalized.triggerRuleId);
     const requiredNextAction = asString(rule?.required_next_action) ?? normalized.requiredNextAction;
     const severity = asString(rule?.default_severity) ?? normalized.severity;
@@ -506,8 +548,21 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
       [run.id]
     );
     const evidenceLinks = inputResult.rows
-      .map((input) => ({ evidence_file_id: input.evidence_file_id, source_entity_id: input.source_entity_id, input_name: input.input_name }))
+      .map((input) => ({
+        evidence_file_id: input.evidence_file_id,
+        source_entity_id: input.source_entity_id,
+        source_entity_type: 'ndt_measurement',
+        source_calculation_run_id: run.id,
+        input_name: input.input_name
+      }))
       .filter((item) => item.evidence_file_id);
+    const calculationEvidenceIds = evidenceIdsFromLinks(evidenceLinks);
+    const calculationEvidenceValidation = await validateEvidenceFilesForAsset(client, String(run.asset_id), calculationEvidenceIds);
+    if (!calculationEvidenceValidation.ok) {
+      await client.query('rollback');
+      crossAssetEvidenceError(res, calculationEvidenceValidation.invalidIds);
+      return;
+    }
 
     const createdCases: Array<Record<string, unknown> | null> = [];
     for (const warning of warningResult.rows) {
@@ -537,7 +592,11 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
         triggerRuleId: String(rule.rule_id),
         severity: asString(rule.default_severity) ?? 'warning',
         evidenceLinks,
-        triggerMeasurements: inputResult.rows,
+        triggerMeasurements: inputResult.rows.map((input) => ({
+          ...input,
+          source_calculation_run_id: run.id,
+          source_entity_type: 'ndt_measurement'
+        })),
         assignedEngineer: uuidOrNull(req.body.assigned_engineer),
         dueDate: asString(req.body.due_date) ?? defaultDueDate(),
         requiredNextAction: asString(rule.required_next_action) ?? 'Engineer review required. FFS trigger does not declare fitness for service.'
