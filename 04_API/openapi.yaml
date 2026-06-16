@@ -262,8 +262,15 @@ paths:
       x-permission-required: formula.create
       x-role-restriction: admin or senior_engineer
       x-audit-event-generated: FORMULA_CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormulaRegistryPayload'
       responses:
         '201': { description: Formula created }
+        '400': { $ref: '#/components/responses/ValidationError' }
   /formulas/approved/{formulaId}:
     get:
       summary: Query production-usable approved/locked formula by formula_id and optional version
@@ -321,8 +328,15 @@ paths:
       x-permission-required: formula.update
       x-role-restriction: admin or senior_engineer
       x-audit-event-generated: FORMULA_UPDATED or FORMULA_VERSION_CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormulaRegistryPayload'
       responses:
         '200': { description: Formula updated or new version created }
+        '400': { $ref: '#/components/responses/ValidationError' }
   /formulas/records/{recordId}/approve:
     post:
       summary: Approve and lock a Formula Registry version
@@ -353,7 +367,81 @@ components:
       type: apiKey
       in: header
       name: x-aim-demo-roles
+  responses:
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
   schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items: { type: object }
+    FormulaRegistryPayload:
+      type: object
+      required:
+        - formula_id
+        - formula_name
+        - code_basis
+        - code_edition
+        - clause_reference
+        - formula_type
+        - expression_type
+        - formula_expression_source
+        - input_schema
+        - output_schema
+        - unit_rules
+        - validation_rules
+      properties:
+        formula_id: { type: string }
+        formula_name: { type: string }
+        code_basis: { type: string }
+        code_edition: { type: string }
+        clause_reference:
+          type: string
+          description: Manual licensed reference only. Do not reproduce copyrighted clause text.
+        component: { type: string }
+        damage_mechanism: { type: string }
+        formula_type:
+          type: string
+          enum: [universal_deterministic, api_controlled, rbi_rule, ffs_trigger, report_phrase_rule]
+        expression_type:
+          type: string
+          enum: [none, controlled_placeholder, engineer_entered, json_logic, text_rule]
+        expression_body:
+          type: string
+          description: Controlled placeholder unless entered by an authorized engineer from licensed sources or approved fixtures.
+        formula_expression_source:
+          type: string
+          description: Required source traceability label, e.g. controlled_placeholder_manual_entry or licensed_engineer_entry reference.
+        input_schema: { type: object }
+        output_schema: { type: object }
+        unit_rules: { type: object }
+        validation_rules:
+          oneOf:
+            - type: object
+            - type: array
+        blocking_rules:
+          type: array
+          items: { type: string }
+        test_case_reference: { type: string }
+        status:
+          type: string
+          enum: [draft, under_review, approved, deprecated, locked]
+        version: { type: string }
+        effective_date: { type: string, format: date }
+        locked_flag: { type: boolean }
     EngineeringValidationRequest:
       type: object
       additionalProperties: true

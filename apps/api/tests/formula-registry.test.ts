@@ -16,6 +16,7 @@ describe('Formula Registry governance', () => {
     clause_reference: 'Manual reference only',
     formula_type: 'api_controlled',
     expression_type: 'controlled_placeholder',
+    formula_expression_source: 'controlled_placeholder_manual_entry',
     expression_body: buildControlledPlaceholder(),
     input_schema: { thickness_mm: 'number' },
     output_schema: { status: 'string' },
@@ -29,6 +30,22 @@ describe('Formula Registry governance', () => {
     expect(issues.map((issue) => issue.field)).toContain('formula_name');
     expect(issues.map((issue) => issue.field)).toContain('code_edition');
     expect(issues.map((issue) => issue.field)).toContain('input_schema');
+  });
+
+  it('requires formula_expression_source for create payloads', () => {
+    const issues = validateFormulaPayload({ ...basePayload, formula_expression_source: undefined }, 'create');
+    expect(issues.map((issue) => issue.field)).toContain('formula_expression_source');
+  });
+
+  it('blocks unauthorized API-controlled formula source labels', () => {
+    const issues = validateFormulaPayload({ ...basePayload, formula_expression_source: 'copied_standard_clause' }, 'create');
+    expect(issues.map((issue) => issue.field)).toContain('formula_expression_source');
+  });
+
+  it('does not grant Formula Registry approval permissions to qa_qc after policy alignment', () => {
+    expect(hasPermission(['qa_qc'], 'formula.approve')).toBe(false);
+    expect(hasPermission(['qa_qc'], 'formula.retire')).toBe(false);
+    expect(hasPermission(['qa_qc'], 'formula.read')).toBe(true);
   });
 
   it('blocks API controlled formulas that include non-placeholder expression bodies', () => {

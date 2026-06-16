@@ -169,7 +169,7 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in (
-  'asset.read','inspection.read','evidence.read','ai_extraction.read','ndt.read','formula.read','formula.approve','formula.retire',
+  'asset.read','inspection.read','evidence.read','ai_extraction.read','ndt.read','formula.read',
   'calculation.read','calculation.review','ffs.review','rbi.interface.read','integrity_decision.review','report.review','report.approve','audit.read'
 )
 where r.role_code = 'qa_qc'

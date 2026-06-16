@@ -118,6 +118,7 @@ function mapFormula(row: DbRow): Record<string, unknown> {
     formula_type: row.formula_type,
     expression_type: row.expression_type,
     expression_body: row.expression_body ?? row.formula_expression,
+    formula_expression_source: row.formula_expression_source,
     input_schema: row.input_schema ?? row.inputs_schema,
     output_schema: row.output_schema ?? row.outputs_schema,
     unit_rules: row.unit_rules ?? row.units_schema,
@@ -142,6 +143,10 @@ function payloadToFormulaValues(body: Record<string, unknown>, fallback: Partial
   const expressionBody = isApiControlledFormula(formulaType)
     ? asString(body.expression_body) ?? asString(fallback.expression_body) ?? buildControlledPlaceholder()
     : asString(body.expression_body) ?? asString(fallback.expression_body) ?? null;
+  const expressionSource =
+    asString(body.formula_expression_source) ??
+    asString(fallback.formula_expression_source) ??
+    (isApiControlledFormula(formulaType) ? 'controlled_placeholder_manual_entry' : 'engineer_entered_or_fixture');
 
   return {
     formula_id: asString(body.formula_id) ?? asString(fallback.formula_id) ?? asString(fallback.formula_code),
@@ -156,6 +161,7 @@ function payloadToFormulaValues(body: Record<string, unknown>, fallback: Partial
     formula_type: formulaType,
     expression_type: asString(body.expression_type) ?? asString(fallback.expression_type) ?? 'controlled_placeholder',
     expression_body: expressionBody,
+    formula_expression_source: expressionSource,
     input_schema: isPlainObject(body.input_schema) ? body.input_schema : fallback.input_schema ?? fallback.inputs_schema ?? {},
     output_schema: isPlainObject(body.output_schema) ? body.output_schema : fallback.output_schema ?? fallback.outputs_schema ?? {},
     unit_rules: isPlainObject(body.unit_rules) ? body.unit_rules : fallback.unit_rules ?? fallback.units_schema ?? {},
@@ -253,14 +259,14 @@ formulasRouter.post('/formulas', requirePermission('formula.create'), async (req
     const result = await client.query<DbRow>(
       `insert into formula_registry(
         formula_id, formula_code, formula_name, code_basis, code_edition, edition, clause_reference,
-        component, damage_mechanism, formula_type, expression_type, expression_body,
+        component, damage_mechanism, formula_type, expression_type, expression_body, formula_expression_source,
         input_schema, output_schema, unit_rules, validation_rules, blocking_rules,
         test_case_reference, status, version, effective_date, locked_flag, created_by, updated_by
       ) values (
         $1, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10, $11, $12,
-        $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb,
-        $18, $19, $20, $21, $22, $23, $23
+        $8, $9, $10, $11, $12, $13,
+        $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb,
+        $19, $20, $21, $22, $23, $24, $24
       ) returning *`,
       [
         values.formula_id,
@@ -275,6 +281,7 @@ formulasRouter.post('/formulas', requirePermission('formula.create'), async (req
         values.formula_type,
         values.expression_type,
         values.expression_body,
+        values.formula_expression_source,
         JSON.stringify(asJsonObject(values.input_schema)),
         JSON.stringify(asJsonObject(values.output_schema)),
         JSON.stringify(asJsonObject(values.unit_rules)),
@@ -400,16 +407,16 @@ formulasRouter.patch('/formulas/records/:recordId', requirePermission('formula.u
       result = await client.query<DbRow>(
         `insert into formula_registry(
           formula_id, formula_code, formula_name, code_basis, code_edition, edition, clause_reference,
-          component, damage_mechanism, formula_type, expression_type, expression_body,
+          component, damage_mechanism, formula_type, expression_type, expression_body, formula_expression_source,
           input_schema, output_schema, unit_rules, validation_rules, blocking_rules,
           test_case_reference, status, version, effective_date, locked_flag,
           previous_formula_record_id, created_by, updated_by
         ) values (
           $1, $2, $3, $4, $5, $6, $7,
-          $8, $9, $10, $11, $12,
-          $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb,
-          $18, 'draft', $19, $20, false,
-          $21, $22, $22
+          $8, $9, $10, $11, $12, $13,
+          $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb,
+          $19, 'draft', $20, $21, false,
+          $22, $23, $23
         ) returning *`,
         [
           values.formula_id,
@@ -424,6 +431,7 @@ formulasRouter.patch('/formulas/records/:recordId', requirePermission('formula.u
           values.formula_type,
           values.expression_type,
           values.expression_body,
+          values.formula_expression_source,
           JSON.stringify(asJsonObject(values.input_schema)),
           JSON.stringify(asJsonObject(values.output_schema)),
           JSON.stringify(asJsonObject(values.unit_rules)),
@@ -450,15 +458,16 @@ formulasRouter.patch('/formulas/records/:recordId', requirePermission('formula.u
           formula_type = $8,
           expression_type = $9,
           expression_body = $10,
-          input_schema = $11::jsonb,
-          output_schema = $12::jsonb,
-          unit_rules = $13::jsonb,
-          validation_rules = $14::jsonb,
-          blocking_rules = $15::jsonb,
-          test_case_reference = $16,
-          effective_date = $17,
-          locked_flag = $18,
-          updated_by = $19,
+          formula_expression_source = $11,
+          input_schema = $12::jsonb,
+          output_schema = $13::jsonb,
+          unit_rules = $14::jsonb,
+          validation_rules = $15::jsonb,
+          blocking_rules = $16::jsonb,
+          test_case_reference = $17,
+          effective_date = $18,
+          locked_flag = $19,
+          updated_by = $20,
           updated_at = now()
         where id = $1
         returning *`,
@@ -473,6 +482,7 @@ formulasRouter.patch('/formulas/records/:recordId', requirePermission('formula.u
           values.formula_type,
           values.expression_type,
           values.expression_body,
+          values.formula_expression_source,
           JSON.stringify(asJsonObject(values.input_schema)),
           JSON.stringify(asJsonObject(values.output_schema)),
           JSON.stringify(asJsonObject(values.unit_rules)),

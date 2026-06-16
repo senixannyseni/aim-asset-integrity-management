@@ -220,8 +220,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'ndt.read',
     'ndt.import',
     'formula.read',
-    'formula.approve',
-    'formula.retire',
     'calculation.read',
     'calculation.review',
     'ffs.review',

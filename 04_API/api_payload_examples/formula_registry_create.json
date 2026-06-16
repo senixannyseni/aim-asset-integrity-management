@@ -31,5 +31,6 @@
   ],
   "test_case_reference": "07_Calculation/validation_workbook.xlsx",
   "status": "draft",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "formula_expression_source": "controlled_placeholder_manual_entry"
 }

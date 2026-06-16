@@ -1,155 +1,146 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 2 Tank Asset Register Implemented**
+Sprint status: **Sprint 5.5 Baseline Reproducibility and Documentation Alignment Complete**
 
-This repository provides the AIM+n8n Tank Integrity Module foundation and Sprint 2 Tank Asset Register implementation. It includes backend API scaffolding, frontend shell, shared types, PostgreSQL migrations, idempotent seed data, RBAC middleware, health checks, tank asset CRUD, tank geometry input, shell course master data, material selector, unit-normalized validation, audit logging, unit test setup, and developer documentation.
+This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 5: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, and controlled Formula Registry metadata/versioning. It does **not** implement engineering calculation execution, API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
 - AIM is the system of record.
-- PostgreSQL stores final structured engineering data.
-- Object storage stores original evidence files.
+- PostgreSQL stores final structured engineering data, metadata, validation snapshots, audit logs, workflow events, and error logs.
+- Object storage stores original evidence files; this MVP stores object-storage-compatible evidence metadata/path.
 - n8n is orchestration only and must call AIM backend APIs.
 - n8n must not write directly to PostgreSQL.
-- AI extraction output must go to staging/extraction tables only.
-- AI must not approve engineering data, calculations, integrity decisions, or issued reports.
-- No engineering calculation is implemented in this sprint.
-- Any future API-dependent formula must be represented as an approved Formula Registry object before execution.
+- AI extraction output must go to extraction/staging tables only when implemented.
+- AI must not approve engineering data, calculations, integrity decisions, formulas, or issued reports.
+- No engineering calculation is implemented in the current repo.
+- API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas remain controlled placeholders unless entered by authorized engineers from licensed standards or approved fixtures.
 
-## Implemented in This Sprint
+## Implemented Modules
 
-- Monorepo structure for:
-  - `apps/api` backend service
-  - `apps/web` frontend shell
-  - `packages/shared-types`
-  - `packages/config`
-  - `db/migrations`
-  - `db/seeds`
-  - `docs`
-- Environment configuration template.
-- PostgreSQL baseline migration.
-- Idempotent seed data for roles, permissions, demo users, sample tank asset, sample shell courses, materials, and a placeholder formula registry record.
-- RBAC middleware and permission mapping.
-- Health endpoints:
-  - `GET /health`
-  - `GET /health/db`
-- Unit test setup and CI-ready test command.
-- CI workflow scaffold.
-- Sprint 2 Tank Asset Register and Engineering Master Data module.
-- CRUD APIs for tank assets.
-- Geometry and shell course APIs with validation and audit logging.
-- Material master selector endpoint and UI integration.
-- Frontend pages: `/assets` and `/assets/[assetId]`.
+### Foundation / Sprint 0-1
 
+- Monorepo structure: `apps/api`, `apps/web`, `packages/shared-types`, `packages/config`, `db/migrations`, `db/seeds`, `docs`.
+- PostgreSQL baseline schema.
+- RBAC roles: `admin`, `data_entry`, `inspector`, `engineer`, `senior_engineer`, `qa_qc`, `client_viewer`, `ai_agent`.
+- Health endpoints: `GET /health`, `GET /health/db`.
+- Idempotent seed data and CI-ready test commands.
 
-## Sprint 2 Smoke Test
+### Sprint 2 — Tank Asset Register and Engineering Master Data
 
-After running migrations, seed, and dev server:
+- Asset CRUD APIs and UI.
+- Tank geometry and shell course master data.
+- Material selector.
+- Unit-normalized validation for geometry and thickness inputs.
+- Audit logging for create/update/delete master-data actions.
 
-```bash
-pnpm db:migrate
-pnpm db:seed
-pnpm dev
-```
+### Sprint 2.5 — AIM/n8n Governance Hardening
 
-Open:
+- `workflow_events` and `error_logs` baseline tables/APIs.
+- OpenAPI alignment for implemented `/api/v1` routes.
+- Centralized local demo RBAC API client helper.
+- Governance tests for RBAC/audit/OpenAPI alignment.
 
-- `http://localhost:3000/assets` for the Tank Asset Register.
-- `http://localhost:4000/api/v1/assets` for the asset API.
-- `http://localhost:4000/api/v1/materials` for the material selector API.
+### Sprint 3 — Evidence Repository and NDT Data Room
 
-The frontend sends local demo RBAC headers for `engineer,senior_engineer` in development. Backend RBAC remains enforced.
+- Evidence metadata registration and object-storage path convention.
+- Evidence links to asset, inspection, NDT measurement, calculation run, finding, FFS case, or RBI case.
+- NDT measurement API/UI with manual entry and bulk import.
+- NDT review vs approval separation.
+- Critical NDT approval blocks when direct or linked evidence is missing.
+
+### Sprint 4 — Engineering Data Dictionary and Validation Engine
+
+- `engineering_data_dictionary` and `validation_runs`.
+- Deterministic validation service with severity: `info`, `warning`, `blocking`.
+- Validation UI at `/validation` grouped by asset, geometry, shell course, material, NDT, evidence, formula, and approval.
+- Validation snapshots persisted without running calculations.
+
+### Sprint 5 — Formula Registry Module
+
+- Controlled Formula Registry CRUD/versioning/approval/deprecation/test-run placeholder.
+- Formula metadata fields include `formula_expression_source`, `formula_id`, `formula_name`, code basis/edition/clause reference, formula type, expression type/body, schemas, unit rules, validation rules, blocking rules, version/status/approval/lock fields.
+- Editing an approved/locked formula creates a new draft version.
+- Only `admin` and `senior_engineer` may create/update/approve/deprecate/test formula records.
+- Formula test-run endpoint is a placeholder and does not execute formula expressions.
 
 ## Local Setup
 
-### 1. Install dependencies
-
-```bash
+```powershell
 pnpm install
-```
-
-### 2. Configure environment
-
-```bash
 cp .env.example .env
-```
-
-Update secrets before using beyond local development.
-
-### 3. Start local infrastructure
-
-```bash
 docker compose up -d
-```
-
-### 4. Run database migrations
-
-```bash
 pnpm db:migrate
-```
-
-### 5. Seed baseline data
-
-```bash
 pnpm db:seed
-```
-
-Seed scripts are idempotent and can be re-run safely.
-
-### 6. Start applications
-
-```bash
 pnpm dev
 ```
 
 Backend default: `http://localhost:4000`
 Frontend default: `http://localhost:3000`
 
-### 7. Health checks
+## Reproducible Database Setup
 
-```bash
-curl http://localhost:4000/health
-curl http://localhost:4000/health/db
+A clean checkout must include migrations:
+
+```txt
+db/migrations/0001_baseline.sql
+db/migrations/0002_tank_asset_master_data.sql
+db/migrations/0003_governance_hardening.sql
+db/migrations/0004_evidence_ndt_data_room.sql
+db/migrations/0005_engineering_validation_engine.sql
+db/migrations/0006_formula_registry_module.sql
 ```
 
-### 8. Tests
+Run from an empty PostgreSQL database:
 
-```bash
-pnpm test
-pnpm test:ci
+```powershell
+pnpm db:migrate
+pnpm db:seed
 ```
+
+Seed scripts are idempotent and can be re-run safely.
+
+## Frontend Routes
+
+- `/assets`
+- `/assets/[assetId]`
+- `/evidence`
+- `/ndt`
+- `/validation`
+- `/formulas`
+- `/formulas/[formulaId]`
+
+## Key API Routes
+
+- `GET /health`
+- `GET /health/db`
+- `GET/POST /api/v1/assets`
+- `GET /api/v1/materials`
+- `GET/POST /api/v1/evidence`
+- `POST /api/v1/evidence/{evidenceId}/links`
+- `GET /api/v1/evidence/{evidenceId}/open`
+- `GET/POST /api/v1/ndt/measurements`
+- `POST /api/v1/ndt/measurements/bulk-import`
+- `POST /api/v1/engineering/validate-input`
+- `GET /api/v1/engineering/data-dictionary`
+- Formula Registry endpoints under `/api/v1/formulas`
+- `POST /api/v1/workflow-events`
+- `GET/POST /api/v1/error-logs`
 
 ## Demo RBAC Headers for Local Development
 
-During this foundation sprint, protected route tests use request context roles. In development, the API can parse a demo role header:
+Protected local development routes use demo headers:
 
 ```txt
-x-aim-demo-roles: engineer,inspector
+x-aim-demo-roles: admin
+x-aim-demo-email: admin@aim.local
 ```
 
-Production authentication/JWT hardening should replace this with a verified token middleware in the security sprint.
-
-## Demo Users Seeded
-
-| Email | Role |
-|---|---|
-| admin@aim.local | admin |
-| inspector@aim.local | inspector |
-| engineer@aim.local | engineer |
-| senior.engineer@aim.local | senior_engineer |
-| qa@aim.local | qa_qc |
-| client@aim.local | client_viewer |
-| ai.agent@aim.local | ai_agent |
-
-Passwords are stored as placeholder bcrypt-style hashes for seed demonstration only. Replace with secure password provisioning in production.
-
-## Important Sprint Limitation
-
-No engineering calculation has been implemented. The placeholder formula registry record exists only to validate governance and schema structure.
+Production authentication/JWT/session hardening must replace demo headers before UAT or release.
 
 ## Useful Commands
 
-```bash
+```powershell
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -159,55 +150,11 @@ pnpm dev:api
 pnpm dev:web
 ```
 
+## Current Limitations
 
-## Governance Hardening Patch Status
-
-This repo includes an AIM+n8n alignment hardening patch before continuing to Sprint 3. The patch adds:
-
-- OpenAPI contract for currently implemented `/api/v1` endpoints only.
-- Workflow event and error log baseline APIs/tables.
-- Current data dictionary and ERD documentation.
-- Centralized local dev RBAC API client helper.
-- Governance tests for NDT approval separation, evidence gate policy, OpenAPI alignment, AI-agent approval denial, and audit coverage.
-
-No engineering calculation, API/ASME formula, AI extraction, report generation, or functional NDT module is implemented in this hardening patch.
-
-
-## Sprint 3 Routes
-
-- Frontend Evidence Repository: http://localhost:3000/evidence
-- Frontend NDT Data Room: http://localhost:3000/ndt
-- Evidence API: http://localhost:4000/api/v1/evidence
-- NDT API: http://localhost:4000/api/v1/ndt/measurements
-
-Sprint 3 does not implement engineering calculations, API/ASME formulas, AI extraction runtime, or report generation.
-
-## Sprint 4 — Engineering Data Dictionary and Validation Engine
-
-Sprint 4 adds deterministic validation governance for engineering readiness. Use:
-
-- `GET /api/v1/engineering/data-dictionary`
-- `POST /api/v1/engineering/validate-input`
-- Frontend: `http://localhost:3000/validation`
-
-No engineering calculation, API/API-ASME formula execution, AI extraction runtime, or report generation is implemented in Sprint 4.
-
-## Sprint 5 — Formula Registry Module
-
-Sprint 5 adds a controlled Formula Registry for formula metadata, versioning, approval, deprecation, and placeholder test governance. It does not execute engineering calculations and does not include any API/API-ASME formula expressions. API-controlled formulas must remain controlled placeholders unless manually entered by an authorized engineer from licensed standards or approved fixtures.
-
-Routes:
-
-- `GET /api/v1/formulas`
-- `POST /api/v1/formulas`
-- `GET /api/v1/formulas/approved/{formulaId}`
-- `GET /api/v1/formulas/{formulaId}/versions`
-- `GET /api/v1/formulas/{formulaId}/compare`
-- `PATCH /api/v1/formulas/records/{recordId}`
-- `POST /api/v1/formulas/records/{recordId}/approve`
-- `POST /api/v1/formulas/records/{recordId}/deprecate`
-- `POST /api/v1/formulas/records/{recordId}/test-run`
-
-Frontend:
-
-- `http://localhost:3000/formulas`
+- No engineering calculation engine is implemented.
+- No API/API-ASME formula expression is embedded or executed.
+- Evidence binary upload/signed object-storage URL flow is not production-ready.
+- AI extraction/staging runtime is not implemented.
+- Report Builder and internal work-order fallback are not implemented yet.
+- Authentication is development-grade demo-header RBAC, not production auth.

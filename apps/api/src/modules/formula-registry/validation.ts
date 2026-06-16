@@ -87,6 +87,7 @@ export function validateFormulaPayload(payload: Record<string, unknown>, mode: '
     'clause_reference',
     'formula_type',
     'expression_type',
+    'formula_expression_source',
     'input_schema',
     'output_schema',
     'unit_rules',
@@ -119,6 +120,16 @@ export function validateFormulaPayload(payload: Record<string, unknown>, mode: '
   const status = asString(payload.status);
   if (status && !isFormulaStatus(status)) {
     issues.push({ field: 'status', message: `Status must be one of: ${FORMULA_STATUSES.join(', ')}.`, severity: 'error' });
+  }
+
+
+  const formulaExpressionSource = asString(payload.formula_expression_source);
+  if (isApiControlledFormula(formulaType) && formulaExpressionSource && formulaExpressionSource !== 'controlled_placeholder_manual_entry' && !formulaExpressionSource.startsWith('licensed_engineer_entry')) {
+    issues.push({
+      field: 'formula_expression_source',
+      message: 'API-controlled formula source must be a controlled placeholder or licensed engineer entry reference; no copied standard text is allowed.',
+      severity: 'error'
+    });
   }
 
   if (isApiControlledFormula(formulaType)) {

@@ -91,6 +91,7 @@ set
   output_schema = coalesce(nullif(output_schema, '{}'::jsonb), outputs_schema, '{}'::jsonb),
   unit_rules = coalesce(nullif(unit_rules, '{}'::jsonb), units_schema, '{}'::jsonb),
   expression_body = coalesce(expression_body, formula_expression),
+  formula_expression_source = coalesce(formula_expression_source, 'controlled_placeholder_manual_entry'),
   expression_type = coalesce(expression_type, 'controlled_placeholder'),
   formula_type = coalesce(formula_type, 'universal_deterministic'),
   blocking_rules = coalesce(blocking_rules, '[]'::jsonb),
@@ -103,9 +104,13 @@ where formula_id is null
    or input_schema = '{}'::jsonb
    or output_schema = '{}'::jsonb
    or unit_rules = '{}'::jsonb
+   or formula_expression_source is null
    or expression_type is null
    or formula_type is null
    or blocking_rules is null;
+
+alter table formula_registry alter column formula_expression_source set default 'controlled_placeholder_manual_entry';
+alter table formula_registry alter column formula_expression_source set not null;
 
 create unique index if not exists ux_formula_registry_formula_id_version on formula_registry(formula_id, version);
 create index if not exists idx_formula_registry_status on formula_registry(status);
