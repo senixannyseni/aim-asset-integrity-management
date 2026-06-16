@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 5.5 Baseline Reproducibility and Documentation Alignment Complete**
+Sprint status: **Sprint 6 Deterministic Calculation Engine Complete**
 
-This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 5: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, and controlled Formula Registry metadata/versioning. It does **not** implement engineering calculation execution, API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 6: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, and universal deterministic calculation execution. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -158,3 +158,8 @@ pnpm dev:web
 - AI extraction/staging runtime is not implemented.
 - Report Builder and internal work-order fallback are not implemented yet.
 - Authentication is development-grade demo-header RBAC, not production auth.
+
+
+### Sprint 6 — Deterministic Calculation Engine
+
+Implemented `/api/v1/engineering/calculate` and `/api/v1/engineering/calculations` for universal deterministic calculations only. The calculation engine starts with input snapshot and validation result, blocks on blocking validation severity, stores calculation run/input/output records, and generates warning candidates for thickness, corrosion rate, remaining life, missing evidence, FFS trigger, and RBI trigger review. API/API-ASME formula expressions remain controlled by Formula Registry metadata and are not hard-coded.

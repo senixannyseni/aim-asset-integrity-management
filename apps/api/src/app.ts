@@ -11,6 +11,7 @@ import { evidenceRouter } from './routes/evidence.js';
 import { ndtRouter } from './routes/ndt.js';
 import { engineeringValidationRouter } from './routes/engineering-validation.js';
 import { formulasRouter } from './routes/formulas.js';
+import { calculationsRouter } from './routes/calculations.js';
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/v1', ndtRouter);
   app.use('/api/v1', engineeringValidationRouter);
   app.use('/api/v1', formulasRouter);
+  app.use('/api/v1', calculationsRouter);
 
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const message = error instanceof Error ? error.message : 'Unknown server error.';

@@ -33,11 +33,11 @@ erDiagram
   formula_registry ||--o{ formula_registry : previous_version
   formula_registry ||--o{ formula_test_runs : placeholder_test_runs
 
-  assets ||--o{ calculation_runs : future_calculation
-  formula_registry ||--o{ calculation_runs : future_formula_version
-  calculation_runs ||--o{ calculation_inputs : future_inputs
-  calculation_runs ||--o{ calculation_outputs : future_outputs
-  evidence_files ||--o{ calculation_inputs : future_evidence
+  assets ||--o{ calculation_runs : calculation_runs
+  formula_registry ||--o{ calculation_runs : formula_version
+  calculation_runs ||--o{ calculation_inputs : inputs
+  calculation_runs ||--o{ calculation_outputs : outputs
+  evidence_files ||--o{ calculation_inputs : input_evidence
 
   assets ||--o{ ffs_cases : future_ffs_trigger
   assets ||--o{ rbi_cases : future_rbi_interface
@@ -46,7 +46,7 @@ erDiagram
 
 ## Boundary
 
-AIM/PostgreSQL stores final structured engineering data, metadata, validation snapshots, Formula Registry metadata, workflow events, error logs, and audit logs. n8n may create workflow events and error logs through AIM APIs only. No engineering formula execution, AI extraction runtime, report generation, or CMMS work-order integration is included through Sprint 5.5.
+AIM/PostgreSQL stores final structured engineering data, metadata, validation snapshots, Formula Registry metadata, workflow events, error logs, and audit logs. n8n may create workflow events and error logs through AIM APIs only. Universal deterministic calculation execution is included through Sprint 6. No API/API-ASME formula expression execution, AI extraction runtime, report generation, or CMMS work-order integration is included.
 
 ## Formula Registry Note
 

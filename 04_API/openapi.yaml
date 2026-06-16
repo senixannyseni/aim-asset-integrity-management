@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.5.0
-  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 5. No engineering calculation, AI extraction runtime, or report generation is implemented.
+  version: 0.6.0
+  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 6. Deterministic universal calculation engine is implemented; no API/API-ASME formula expressions are hard-coded.
 servers:
   - url: http://localhost:4000/api/v1
 security:
@@ -361,6 +361,48 @@ paths:
       x-audit-event-generated: FORMULA_TEST_PLACEHOLDER_RUN
       responses:
         '201': { description: Placeholder test run recorded }
+  /engineering/calculate:
+    post:
+      summary: Run deterministic engineering calculation
+      description: Runs universal deterministic calculations only. API/API-ASME-dependent calculations must use approved Formula Registry metadata and are not hard-coded. Calculation blocks when validation severity is blocking.
+      x-permission-required: calculation.run
+      x-audit-event-generated: CALCULATION_RUN_CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EngineeringCalculationRequest'
+      responses:
+        '201':
+          description: Calculation completed and stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EngineeringCalculationResponse'
+        '422':
+          description: Calculation blocked by validation and run snapshot stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EngineeringCalculationResponse'
+        '400':
+          description: Invalid request or approved Formula Registry record missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /engineering/calculations:
+    get:
+      summary: List calculation runs
+      x-permission-required: calculation.read
+      parameters:
+        - in: query
+          name: asset_id
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Calculation run list }
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -472,3 +514,75 @@ components:
           type: object
         approval_request:
           type: object
+
+    EngineeringCalculationRequest:
+      type: object
+      required: [asset_id]
+      additionalProperties: true
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+        formula_id:
+          type: string
+          default: AIM-UNIVERSAL-THICKNESS-CORROSION-ENGINE
+        formula_version:
+          type: string
+        calculation_scope:
+          type: string
+          enum: [thickness_screening, corrosion_rate, remaining_life, inspection_interval_placeholder]
+        calculation_request:
+          type: object
+          properties:
+            thickness_check_requested: { type: boolean }
+            retirement_thickness_mm: { type: number }
+            controlled_formula_output: { type: object }
+        thresholds:
+          type: object
+          properties:
+            high_corrosion_rate_mm_per_year: { type: number }
+            low_remaining_life_years: { type: number }
+        context:
+          type: object
+          description: Optional validation/calculation context override. Stored data is loaded by asset_id when omitted.
+    EngineeringCalculationResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            run_id: { type: string }
+            run_status: { type: string }
+            validation_status: { type: string, enum: [passed, blocked] }
+            formula_set_version: { type: string }
+            input_snapshot_hash: { type: string }
+            output_summary: { type: object }
+            calculation:
+              type: object
+              properties:
+                deterministic_engine_version: { type: string }
+                corrosion_rates:
+                  type: array
+                  items: { type: object }
+                remaining_life:
+                  type: array
+                  items: { type: object }
+                warnings:
+                  type: array
+                  items: { type: object }
+        auditLogId: { type: string }
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items: { type: object }
