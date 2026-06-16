@@ -181,3 +181,13 @@ No engineering calculation, API/ASME formula, AI extraction, report generation, 
 - NDT API: http://localhost:4000/api/v1/ndt/measurements
 
 Sprint 3 does not implement engineering calculations, API/ASME formulas, AI extraction runtime, or report generation.
+
+## Sprint 4 — Engineering Data Dictionary and Validation Engine
+
+Sprint 4 adds deterministic validation governance for engineering readiness. Use:
+
+- `GET /api/v1/engineering/data-dictionary`
+- `POST /api/v1/engineering/validate-input`
+- Frontend: `http://localhost:3000/validation`
+
+No engineering calculation, API/API-ASME formula execution, AI extraction runtime, or report generation is implemented in Sprint 4.

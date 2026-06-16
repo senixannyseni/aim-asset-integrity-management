@@ -69,6 +69,8 @@ export const PERMISSIONS = [
   'workflow_event.create',
   'error_log.create',
   'error_log.read',
+  'validation.read',
+  'validation.run',
   'audit.read',
   'admin.manage'
 ] as const;
@@ -82,7 +84,8 @@ const readOnlyPermissions: Permission[] = [
   'ndt.read',
   'formula.read',
   'calculation.read',
-  'rbi.interface.read'
+  'rbi.interface.read',
+  'validation.read'
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -99,7 +102,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'ai_extraction.read',
     'ndt.read',
     'ndt.import',
-    'ndt.create'
+    'ndt.create',
+    'validation.read'
   ],
   inspector: [
     'asset.read',
@@ -113,6 +117,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'ndt.create',
     'ndt.update',
     'ndt.import',
+    'validation.read',
+    'validation.run',
     'work_order.create',
     'work_order.update'
   ],
@@ -191,9 +197,15 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'work_order.create',
     'work_order.update',
     'work_order.close',
+    'validation.read',
+    'validation.run',
     'workflow_event.create',
     'error_log.create',
     'error_log.read',
+    'validation.read',
+    'validation.run',
+    'validation.read',
+    'validation.run',
     'audit.read'
   ],
   qa_qc: [
@@ -213,7 +225,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'integrity_decision.review',
     'report.review',
     'report.approve',
+    'validation.read',
+    'validation.run',
     'error_log.read',
+    'validation.read',
+    'validation.run',
     'audit.read'
   ],
   client_viewer: readOnlyPermissions,

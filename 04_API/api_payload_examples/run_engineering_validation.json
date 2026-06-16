@@ -1,0 +1,37 @@
+{
+  "validation_scope": "final_approval",
+  "asset": {
+    "tank_tag": "TK-001",
+    "asset_name": "Demo Tank",
+    "original_design_code": "API 650",
+    "current_assessment_code": "API 653"
+  },
+  "geometry": {
+    "diameter": null,
+    "shell_height": null
+  },
+  "shell_courses": [
+    {
+      "course_no": 1,
+      "nominal_thickness": 12,
+      "material_specification": "A36"
+    }
+  ],
+  "ndt_measurements": [
+    {
+      "measurement_id": "demo-ndt-001",
+      "component": "shell",
+      "measured_thickness": 10.5,
+      "measured_thickness_unit": "mm",
+      "is_critical": true
+    }
+  ],
+  "evidence_links": [],
+  "calculation_request": {
+    "thickness_check_requested": true
+  },
+  "formula_registry": [],
+  "approval_request": {
+    "final_approval_requested": true
+  }
+}

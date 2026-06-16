@@ -1,0 +1,290 @@
+openapi: 3.0.3
+info:
+  title: AIM Tank Integrity API
+  version: 0.4.0
+  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 4. No engineering calculation, AI extraction runtime, or report generation is implemented.
+servers:
+  - url: http://localhost:4000/api/v1
+security:
+  - DemoRoleHeaders: []
+paths:
+  /assets:
+    get:
+      summary: List tank assets
+      x-permission-required: asset.read
+      responses:
+        '200': { description: Asset list }
+    post:
+      summary: Create tank asset
+      x-permission-required: asset.create
+      x-audit-event-generated: ASSET_CREATED
+      responses:
+        '201': { description: Asset created }
+  /assets/{assetId}:
+    get:
+      summary: Get tank asset detail with geometry and shell courses
+      x-permission-required: asset.read
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Asset detail }
+    patch:
+      summary: Update tank asset
+      x-permission-required: asset.update
+      x-audit-event-generated: ASSET_UPDATED
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Asset updated }
+    delete:
+      summary: Soft delete tank asset
+      x-permission-required: asset.delete
+      x-audit-event-generated: ASSET_DELETED
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Asset retired/deleted }
+  /assets/{assetId}/geometry:
+    put:
+      summary: Upsert tank geometry
+      x-permission-required: asset.update
+      x-audit-event-generated: TANK_GEOMETRY_CREATED or TANK_GEOMETRY_UPDATED
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Geometry upserted }
+  /assets/{assetId}/shell-courses:
+    post:
+      summary: Create shell course
+      x-permission-required: asset.update
+      x-audit-event-generated: SHELL_COURSE_CREATED
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201': { description: Shell course created }
+  /assets/{assetId}/shell-courses/{courseId}:
+    patch:
+      summary: Update shell course
+      x-permission-required: asset.update
+      x-audit-event-generated: SHELL_COURSE_UPDATED
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: courseId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Shell course updated }
+    delete:
+      summary: Delete shell course
+      x-permission-required: asset.update
+      x-audit-event-generated: SHELL_COURSE_DELETED
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: courseId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Shell course deleted }
+  /materials:
+    get:
+      summary: List material master options
+      x-permission-required: asset.read
+      responses:
+        '200': { description: Material list }
+  /evidence:
+    get:
+      summary: List evidence files
+      x-permission-required: evidence.read
+      responses:
+        '200': { description: Evidence list }
+  /evidence/upload:
+    post:
+      summary: Register evidence metadata and object storage path
+      x-permission-required: evidence.upload
+      x-audit-event-generated: EVIDENCE_UPLOADED
+      responses:
+        '201': { description: Evidence registered }
+  /evidence/{evidenceId}:
+    get:
+      summary: Get evidence metadata
+      x-permission-required: evidence.read
+      parameters:
+        - in: path
+          name: evidenceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Evidence detail }
+  /evidence/{evidenceId}/open:
+    get:
+      summary: Open object storage evidence link
+      x-permission-required: evidence.open
+      parameters:
+        - in: path
+          name: evidenceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Evidence open metadata }
+  /evidence/{evidenceId}/links:
+    post:
+      summary: Link evidence to asset, inspection, NDT, calculation, finding, FFS, or RBI entity
+      x-permission-required: evidence.link
+      x-audit-event-generated: EVIDENCE_LINKED
+      parameters:
+        - in: path
+          name: evidenceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201': { description: Evidence link created }
+  /ndt/measurements:
+    get:
+      summary: List NDT measurements
+      x-permission-required: ndt.read
+      responses:
+        '200': { description: NDT measurement list }
+    post:
+      summary: Create NDT measurement
+      x-permission-required: ndt.create
+      x-audit-event-generated: NDT_MEASUREMENT_CREATED
+      responses:
+        '201': { description: NDT measurement created }
+  /ndt/measurements/bulk-import:
+    post:
+      summary: Bulk import NDT measurements
+      x-permission-required: ndt.import
+      x-audit-event-generated: NDT_MEASUREMENT_BULK_IMPORTED
+      responses:
+        '201': { description: NDT measurements imported }
+  /ndt/measurements/{measurementId}:
+    get:
+      summary: Get NDT measurement detail
+      x-permission-required: ndt.read
+      parameters:
+        - in: path
+          name: measurementId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: NDT measurement detail }
+  /ndt/measurements/{measurementId}/review:
+    post:
+      summary: Review NDT measurement without approval
+      x-permission-required: ndt.review
+      x-audit-event-generated: NDT_MEASUREMENT_REVIEWED
+      parameters:
+        - in: path
+          name: measurementId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: NDT measurement reviewed }
+  /ndt/measurements/{measurementId}/approve:
+    post:
+      summary: Approve NDT measurement after evidence gate
+      x-permission-required: ndt.approve
+      x-audit-event-generated: NDT_MEASUREMENT_APPROVED
+      parameters:
+        - in: path
+          name: measurementId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: NDT measurement approved }
+  /engineering/data-dictionary:
+    get:
+      summary: List active engineering data dictionary fields
+      x-permission-required: validation.read
+      responses:
+        '200': { description: Engineering data dictionary }
+  /engineering/validate-input:
+    post:
+      summary: Run deterministic engineering validation and persist validation run snapshot
+      x-permission-required: validation.run
+      x-audit-event-generated: ENGINEERING_VALIDATION_RUN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EngineeringValidationRequest'
+      responses:
+        '201': { description: Validation result snapshot }
+  /workflow-events:
+    post:
+      summary: Receive n8n workflow event through AIM API
+      x-permission-required: workflow_event.create
+      responses:
+        '201': { description: Workflow event recorded }
+  /error-logs:
+    get:
+      summary: List error logs
+      x-permission-required: error_log.read
+      responses:
+        '200': { description: Error log list }
+    post:
+      summary: Create error log through AIM API
+      x-permission-required: error_log.create
+      responses:
+        '201': { description: Error log recorded }
+components:
+  securitySchemes:
+    DemoRoleHeaders:
+      type: apiKey
+      in: header
+      name: x-aim-demo-roles
+  schemas:
+    EngineeringValidationRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        validation_scope:
+          type: string
+          enum: [general, calculation_readiness, thickness_check, final_approval]
+        asset:
+          type: object
+        geometry:
+          type: object
+        shell_courses:
+          type: array
+          items: { type: object }
+        ndt_measurements:
+          type: array
+          items: { type: object }
+        evidence_links:
+          type: array
+          items: { type: object }
+        formula_registry:
+          type: array
+          items: { type: object }
+        calculation_request:
+          type: object
+        approval_request:
+          type: object
