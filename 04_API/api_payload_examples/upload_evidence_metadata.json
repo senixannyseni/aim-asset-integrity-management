@@ -1,0 +1,12 @@
+{
+  "asset_id": "00000000-0000-0000-0000-000000000001",
+  "file_name": "TK-001_UT_Report.pdf",
+  "file_type": "PDF",
+  "inspection_date": "2026-06-16",
+  "method": "UT thickness",
+  "component": "shell course 1",
+  "location": "90 degree orientation, 2.5 m elevation",
+  "page_or_sheet_ref": "p. 12 / table UT-01",
+  "checksum": "demo-sha256-checksum",
+  "file_size_bytes": 0
+}

@@ -89,3 +89,83 @@ Every n8n workflow must post to `/api/v1/workflow-events`. This is an AIM API wr
 ### error_logs
 
 Every workflow/system failure must be recorded through `/api/v1/error-logs` or equivalent AIM backend API.
+
+## Sprint 3 Implemented Tables — Evidence Repository and NDT Data Room
+
+### evidence_files
+
+Status: implemented / extended.
+
+Key fields now used by Sprint 3:
+
+| Field | Purpose | Notes |
+|---|---|---|
+| id | Evidence UUID | Primary key |
+| evidence_code | Evidence convention ID | `EVD-{YYYY}-{running_number}` |
+| asset_id | Linked asset | AIM system-of-record asset reference |
+| inspection_event_id | Optional inspection reference | Nullable during early metadata registration |
+| object_storage_uri | Original object-storage-compatible path | Required legacy field |
+| object_storage_path | Current object storage path alias | Used by Sprint 3 UI/API |
+| original_filename / file_name | Source filename | Original evidence file name |
+| file_extension / file_type | File type | PDF, XLSX, CSV, JPG, PNG, DWG, DXF, STL, ZIP |
+| mime_type | MIME type | Derived when not supplied |
+| file_size_bytes | File size | 0 allowed for metadata-only MVP registration |
+| checksum_sha256 / checksum | Checksum | Required for traceability |
+| method | Inspection/NDT method | Example: UT thickness |
+| component | Tank component | Example: shell course 1 |
+| location | Evidence location reference | Example: orientation/elevation |
+| inspection_date | Evidence inspection date | YYYY-MM-DD |
+| page_figure_table_reference / page_or_sheet_ref | Source reference | Page/table/sheet reference |
+| uploaded_by | User uploading metadata | Nullable in demo header mode |
+| status / evidence_status | Evidence lifecycle state | active/superseded/delete_requested/deleted |
+
+### evidence_links
+
+Status: implemented.
+
+Purpose: links evidence to AIM entities. Implemented validation checks target existence where the target table exists.
+
+Supported `linked_entity_type` values:
+
+- `asset`
+- `inspection_event`
+- `ndt_measurement`
+- `calculation_run`
+- `finding` *(planned target table; accepted as future placeholder)*
+- `ffs_case`
+- `rbi_case`
+
+### ndt_measurements
+
+Status: implemented.
+
+| Field | Purpose | Notes |
+|---|---|---|
+| id | Measurement UUID | Primary key |
+| measurement_code | NDT measurement code | `NDT-000001` style local sequence |
+| asset_id | Tank asset | Required |
+| inspection_event_id | Inspection event | Optional |
+| component | Tank component | Required |
+| shell_course_no | Shell course number | Optional positive integer |
+| cml_tml_id | CML/TML identifier | Optional |
+| grid_ref | Grid reference | Optional |
+| elevation_m | Elevation | Stored internally in meters |
+| orientation | Orientation | Free text, e.g. `90 deg` |
+| measured_thickness_mm | Thickness | Stored internally in millimeters |
+| reading_date | NDT reading date | Required |
+| method | NDT method | Required |
+| confidence | Source confidence | 0–1 |
+| evidence_file_id | Direct evidence | Optional, but critical approval requires direct evidence or evidence_links |
+| extraction_source | Source of data | manual, bulk_import, ai_staging, vendor_import |
+| reviewer_status | Review/approval state | needs_review, reviewed, rejected, approved |
+| validation_status | Evidence validation result | not_validated, valid, warning, blocked |
+| validation_message | Human-readable validation result | Used by UI and API |
+| is_critical | Criticality flag | Critical records require evidence before approval |
+| created_by/reviewed_by/approved_by | Human/user traceability | AI agent cannot approve |
+
+## Sprint 3 Boundary Notes
+
+- No engineering calculation is implemented.
+- No API/ASME formula is implemented.
+- Evidence file binary upload is not implemented in this local MVP patch; AIM stores object-storage-compatible metadata/path.
+- Critical NDT records cannot be approved without direct evidence or linked evidence.

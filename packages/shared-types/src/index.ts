@@ -114,3 +114,56 @@ export type ApiError = {
     requestId?: string;
   };
 };
+
+export type EvidenceFile = {
+  evidence_id: string;
+  evidence_code: string;
+  asset_id: string;
+  inspection_event_id?: string | null;
+  object_storage_path: string;
+  file_name: string;
+  file_type: string;
+  inspection_date: string;
+  method: string;
+  component: string;
+  location?: string | null;
+  page_or_sheet_ref?: string | null;
+  uploaded_by?: string | null;
+  checksum: string;
+  status: string;
+};
+
+export type EvidenceLink = {
+  evidence_link_id: string;
+  evidence_file_id: string;
+  linked_entity_type: 'asset' | 'inspection_event' | 'ndt_measurement' | 'calculation_run' | 'finding' | 'ffs_case' | 'rbi_case';
+  linked_entity_id: string;
+  link_reason: string;
+  linked_by?: string | null;
+  created_at: string;
+};
+
+export type NdtMeasurement = {
+  measurement_id: string;
+  measurement_code: string;
+  asset_id: string;
+  inspection_event_id?: string | null;
+  component: string;
+  shell_course_no?: number | null;
+  cml_tml_id?: string | null;
+  grid_ref?: string | null;
+  elevation?: number | null;
+  elevation_unit: 'm';
+  orientation?: string | null;
+  measured_thickness: number;
+  measured_thickness_unit: 'mm';
+  reading_date: string;
+  method: string;
+  confidence: number;
+  evidence_file_id?: string | null;
+  extraction_source: 'manual' | 'bulk_import' | 'ai_staging' | 'vendor_import';
+  reviewer_status: 'needs_review' | 'reviewed' | 'rejected' | 'approved';
+  validation_status: 'not_validated' | 'valid' | 'warning' | 'blocked';
+  validation_message?: string | null;
+  is_critical: boolean;
+};

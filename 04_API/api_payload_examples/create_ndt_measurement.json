@@ -1,0 +1,17 @@
+{
+  "asset_id": "00000000-0000-0000-0000-000000000001",
+  "component": "shell",
+  "shell_course_no": 1,
+  "cml_tml_id": "CML-001",
+  "grid_ref": "A-01",
+  "elevation": 2.5,
+  "elevation_unit": "m",
+  "orientation": "90 deg",
+  "measured_thickness": 11.5,
+  "measured_thickness_unit": "mm",
+  "reading_date": "2026-06-16",
+  "method": "UT thickness",
+  "confidence": 1,
+  "extraction_source": "manual",
+  "is_critical": true
+}

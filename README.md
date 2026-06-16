@@ -102,7 +102,7 @@ Seed scripts are idempotent and can be re-run safely.
 pnpm dev
 ```
 
-Backend default: `http://localhost:4000`  
+Backend default: `http://localhost:4000`
 Frontend default: `http://localhost:3000`
 
 ### 7. Health checks
@@ -171,3 +171,13 @@ This repo includes an AIM+n8n alignment hardening patch before continuing to Spr
 - Governance tests for NDT approval separation, evidence gate policy, OpenAPI alignment, AI-agent approval denial, and audit coverage.
 
 No engineering calculation, API/ASME formula, AI extraction, report generation, or functional NDT module is implemented in this hardening patch.
+
+
+## Sprint 3 Routes
+
+- Frontend Evidence Repository: http://localhost:3000/evidence
+- Frontend NDT Data Room: http://localhost:3000/ndt
+- Evidence API: http://localhost:4000/api/v1/evidence
+- NDT API: http://localhost:4000/api/v1/ndt/measurements
+
+Sprint 3 does not implement engineering calculations, API/ASME formulas, AI extraction runtime, or report generation.
