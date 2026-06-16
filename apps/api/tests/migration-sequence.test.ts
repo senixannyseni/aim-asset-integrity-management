@@ -9,7 +9,7 @@ const repoRoot = path.resolve(__dirname, '../../..');
 const migrationsDir = path.join(repoRoot, 'db/migrations');
 
 describe('Migration reproducibility baseline', () => {
-  it('tracks all migrations required for a clean Sprint 6 database setup', () => {
+  it('tracks all migrations required for a clean Sprint 8 database setup', () => {
     const files = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql')).sort();
     expect(files).toEqual([
       '0001_baseline.sql',
@@ -19,7 +19,8 @@ describe('Migration reproducibility baseline', () => {
       '0005_engineering_validation_engine.sql',
       '0006_formula_registry_module.sql',
       '0007_deterministic_calculation_engine.sql',
-      '0008_ffs_trigger_workflow.sql'
+      '0008_ffs_trigger_workflow.sql',
+      '0009_rbi_interface_trigger_workflow.sql'
     ]);
   });
 
@@ -33,5 +34,11 @@ describe('Migration reproducibility baseline', () => {
     const migration = fs.readFileSync(path.join(migrationsDir, '0007_deterministic_calculation_engine.sql'), 'utf8');
     expect(migration).toContain('AIM-UNIVERSAL-THICKNESS-CORROSION-ENGINE');
     expect(migration).toContain('NO_API_FORMULA');
+  });
+
+  it('keeps RBI interface trigger workflow free of quantitative API 581 rules', () => {
+    const migration = fs.readFileSync(path.join(migrationsDir, '0009_rbi_interface_trigger_workflow.sql'), 'utf8');
+    expect(migration).toContain('qualitative_placeholder_only_no_api_581_quantitative_rules');
+    expect(migration).toContain('This migration does not implement proprietary quantitative API 581 rules.');
   });
 });

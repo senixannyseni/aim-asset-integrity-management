@@ -1,6 +1,6 @@
-# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 7
+# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 8
 
-Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 7.
+Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 8.
 
 Completed implementation state covered by this dictionary:
 
@@ -13,6 +13,7 @@ Completed implementation state covered by this dictionary:
 - Sprint 5.5 — baseline reproducibility and documentation alignment.
 - Sprint 6 — deterministic universal calculation engine and calculation traceability records.
 - Sprint 7 — API 579-1/ASME FFS-1 trigger workflow governance cases.
+- Sprint 8 — API RP 580/581 RBI interface and trigger workflow governance cases.
 
 ## Governance Boundary
 
@@ -21,7 +22,7 @@ Completed implementation state covered by this dictionary:
 - AI extraction runtime is not implemented in this baseline. Future AI output must go to extraction/staging tables only and must not write final engineering tables directly.
 - AI must not approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
 - No API/API-ASME formula expression is hard-coded or invented in this schema. Formula Registry stores controlled metadata and placeholders only unless an authorized engineer enters licensed/approved source content.
-- Universal deterministic engineering calculations are implemented for AIM-owned screening logic only. Report issue, work-order integration, AI extraction runtime, API/API-ASME formula execution, and full FFS/RBI calculations remain outside the implemented baseline.
+- Universal deterministic engineering calculations are implemented for AIM-owned screening logic only. Report issue, work-order integration, AI extraction runtime, API/API-ASME formula execution, and full FFS calculations and quantitative API RP 581 calculations remain outside the implemented baseline.
 
 ## Implemented Table Inventory
 
@@ -50,9 +51,11 @@ Completed implementation state covered by this dictionary:
 | calculation_outputs | Sprint 6 implemented | engineer / senior_engineer | Field-level deterministic outputs and engineering warnings. |
 | ffs_trigger_rules | Sprint 7 implemented | senior_engineer | Configured trigger rules for FFS case creation. Trigger only; no fitness declaration. |
 | ffs_cases | Sprint 7 implemented | engineer / senior_engineer | FFS trigger workflow cases requiring engineer review and senior engineer/admin final disposition approval. |
+| rbi_trigger_rules | Sprint 8 implemented | senior_engineer | Configured RBI interface trigger rules mapped to deterministic calculation warnings and engineering review. No quantitative API RP 581 rules. |
+| rbi_cases | Sprint 8 implemented | engineer / senior_engineer | RBI interface workflow cases with qualitative/semi-quantitative placeholder inputs, risk category, recommended interval, inspection plan reference, reviewer, approver, and calculation/evidence links. |
 | audit_logs | Implemented | admin / qa_qc | Audit trail for critical create/update/delete/review/approval/governance actions. |
 
-Supporting baseline tables also exist in the clean-clone schema and are used as references or future integration points: `inspection_events`, `engineering_reviews`, `approval_records`, and `rbi_cases`. Sprint 6 promotes `calculation_runs`, `calculation_inputs`, and `calculation_outputs` from supporting schema to implemented deterministic calculation traceability tables. Sprint 7 promotes `ffs_cases` to an implemented FFS trigger workflow governance table and adds `ffs_trigger_rules`.
+Supporting baseline tables also exist in the clean-clone schema and are used as references or future integration points: `inspection_events`, `engineering_reviews`, and `approval_records`. Sprint 6 promotes `calculation_runs`, `calculation_inputs`, and `calculation_outputs` from supporting schema to implemented deterministic calculation traceability tables. Sprint 7 promotes `ffs_cases` to an implemented FFS trigger workflow governance table and adds `ffs_trigger_rules`. Sprint 8 promotes `rbi_cases` to an implemented RBI interface workflow table and adds `rbi_trigger_rules`.
 
 ## Role and Access Tables
 
@@ -569,7 +572,7 @@ Audit coverage currently includes important asset, evidence, NDT, workflow/error
 
 ## Supporting Baseline Tables
 
-These tables exist in the clean-clone schema and are either supporting references or implemented Sprint 6 traceability records:
+These tables exist in the clean-clone schema and are either supporting references or implemented workflow/traceability records:
 
 | Table | Status | Notes |
 |---|---|---|
@@ -581,11 +584,12 @@ These tables exist in the clean-clone schema and are either supporting reference
 | approval_records | Baseline implemented | Future approval records for issued engineering actions. |
 | ffs_cases | Sprint 7 implemented | API 579-1/ASME FFS-1 trigger workflow governance. Trigger only; no FFS calculation or fitness declaration. |
 | ffs_trigger_rules | Sprint 7 implemented | Configured trigger rules for calculation warnings and manual findings. |
-| rbi_cases | Baseline implemented | RBI interface shell only. No API RP 581 quantitative RBI implemented. |
+| rbi_cases | Sprint 8 implemented | API RP 580/581 RBI interface workflow. Qualitative/semi-quantitative placeholder only; no proprietary quantitative API RP 581 rules are implemented. |
+| rbi_trigger_rules | Sprint 8 implemented | Configured trigger rules for high corrosion rate, short remaining life, repeated anomalies, and engineering review. |
 
 ## Future / Not Implemented Tables
 
-These remain planned and are not implemented in the Sprint 7 baseline:
+These remain planned and are not implemented in the Sprint 8 baseline:
 
 | Table / Area | Status | Rule |
 |---|---|---|
@@ -601,12 +605,12 @@ These remain planned and are not implemented in the Sprint 7 baseline:
 2. n8n must call AIM APIs and must not write directly to PostgreSQL.
 3. AI extraction is not implemented; future AI output must remain staging-only.
 4. AI cannot approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
-5. Evidence linkage is mandatory for NDT approval gates; Sprint 6 calculation inputs preserve available NDT/evidence traceability; Sprint 7 FFS cases preserve supporting measurement/evidence snapshots and future calculation approval gates must enforce this linkage before final approval.
+5. Evidence linkage is mandatory for NDT approval gates; Sprint 6 calculation inputs preserve available NDT/evidence traceability; Sprint 7 FFS cases and Sprint 8 RBI cases preserve supporting measurement/evidence snapshots and future calculation approval gates must enforce this linkage before final approval.
 6. Formula Registry governs metadata/versioning and the Sprint 6 universal deterministic engine registration; no API/API-ASME formula expression is invented or embedded.
-7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. Sprint 7 FFS trigger workflow does not execute FFS formulas.
+7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. Sprint 7 FFS and Sprint 8 RBI trigger workflows do not execute API/API-ASME formulas.
 8. Missing critical engineering data produces deterministic validation warnings or blocking results according to validation scope.
 9. Every important create/update/delete/review/approval/governance action must write audit logs.
-10. Clean-clone migrations 0001 through 0008 are part of the implemented Sprint 7 baseline.
+10. Clean-clone migrations 0001 through 0009 are part of the implemented Sprint 8 baseline.
 
 
 ## Sprint 7 Governance and Security Hardening Notes
@@ -618,4 +622,70 @@ The implemented schema through Sprint 7 remains unchanged except for governance 
 - `evidence_links` may link `evidence_files` to `ffs_case` records after same-asset validation.
 - FFS cases created from calculation warnings preserve source calculation run and source NDT measurement/evidence traceability in `trigger_measurements_json` and `evidence_links`.
 
-RBAC seed data is aligned with `apps/api/src/rbac/roles.ts` through Sprint 7. Demo header authentication remains local-development only and must be replaced by verified JWT/session identity before production-like use.
+RBAC seed data is aligned with `apps/api/src/rbac/roles.ts` through Sprint 8. Demo header authentication remains local-development only and must be replaced by verified JWT/session identity before production-like use.
+
+
+## Sprint 8 RBI Interface Tables
+
+### rbi_trigger_rules
+
+| Field | Type | Required | Key / Reference | Notes |
+|---|---|---:|---|---|
+| id | uuid | yes | PK | Internal rule identifier. |
+| rule_id | text | yes | unique | Configured trigger rule code. |
+| rule_name | text | yes |  | Human-readable rule name. |
+| trigger_source_type | text | yes |  | `calculation_warning` or `engineering_review`. |
+| warning_codes | text[] | yes |  | Deterministic calculation warning codes that may create RBI case. |
+| probability_driver | text | yes |  | Qualitative/semi-quantitative placeholder driver. |
+| consequence_driver | text | yes |  | Consequence placeholder driver. |
+| default_risk_category | text | yes |  | Placeholder risk category. |
+| recommended_interval | text | yes |  | Placeholder inspection interval recommendation. |
+| inspection_plan_reference | text | yes |  | Placeholder inspection planning reference. |
+| governance_note | text | yes |  | Confirms no quantitative API RP 581 calculation. |
+| active_flag | boolean | yes |  | Rule activation flag. |
+
+### rbi_cases
+
+| Field | Type | Required | Key / Reference | Notes |
+|---|---|---:|---|---|
+| id | uuid | yes | PK | Internal RBI case identifier. |
+| case_id | text | yes | unique | User-facing RBI case code. |
+| asset_id | uuid | yes | FK assets(id) | Asset under RBI interface review. |
+| inspection_event_id | uuid | no | FK inspection_events(id) | Optional linked inspection event. |
+| calculation_run_id | uuid | no | FK calculation_runs(id) | Source deterministic calculation run when triggered from warnings. |
+| system | text | yes |  | System or unit grouping. |
+| component | text | yes |  | Component under review. |
+| damage_mechanism | text | yes |  | Damage mechanism placeholder/classification. |
+| probability_driver | text | yes |  | Probability driver placeholder. |
+| consequence_driver | text | yes |  | Consequence driver placeholder. |
+| risk_category | text | yes |  | Qualitative/semi-quantitative risk category placeholder. |
+| recommended_interval | text | yes |  | Inspection interval recommendation placeholder. |
+| inspection_plan_reference | text | yes |  | Inspection plan reference placeholder. |
+| evidence_links | jsonb | yes |  | Supporting evidence snapshot. Evidence is also linked through evidence_links table. |
+| input_placeholders | jsonb | yes |  | Consequence of failure, probability of failure, damage mechanism, inspection effectiveness, fluid service, inventory, operating severity, and mitigation controls placeholders. |
+| trigger_source | text | yes |  | `calculation_warning` or `engineering_review`. |
+| trigger_reason | text | yes |  | Trigger explanation. |
+| trigger_rule_id | text | yes |  | RBI trigger rule used. |
+| calculation_basis | text | yes |  | Clearly states placeholder basis. |
+| calculation_basis_note | text | yes |  | States quantitative API RP 581 rules are not implemented unless Formula Registry provides approved rules. |
+| status | text | yes | allowed statuses | Workflow status: open, under_review, data_required, assessment_in_progress, ready_for_review, approved, exported, closed. |
+| reviewer | uuid | no | FK users(id) | Reviewer. |
+| approver | uuid | no | FK users(id) | Senior engineer/admin approver. |
+| reviewed_at | timestamptz | no |  | Review timestamp. |
+| approved_at | timestamptz | no |  | Approval/export timestamp. |
+| created_by | uuid | no | FK users(id) | Creator. |
+| updated_by | uuid | no | FK users(id) | Last updater. |
+| created_at | timestamptz | yes | default now() | Creation timestamp. |
+| updated_at | timestamptz | yes | default now() | Update timestamp. |
+
+
+## Sprint 8 RBI Interface Governance Notes
+
+RBI interface cases are governance records aligned to API RP 580/581 workflow needs. They preserve trigger reason, calculation warning sources, placeholder input fields, evidence snapshots, workflow status, review, and approval/export metadata.
+
+- `rbi_cases.asset_id` is the controlling asset for RBI interface workflow.
+- `rbi_cases.calculation_run_id` links a case to deterministic calculation warning sources when applicable.
+- `rbi_cases.evidence_links` may store supporting evidence snapshots, but evidence files must belong to the same asset.
+- `evidence_links` may link `evidence_files` to `rbi_case` records after same-asset validation.
+- Quantitative API RP 581 probability/consequence/risk rules are not implemented or embedded.
+- Future quantitative RBI must use approved Formula Registry metadata and a controlled executor.

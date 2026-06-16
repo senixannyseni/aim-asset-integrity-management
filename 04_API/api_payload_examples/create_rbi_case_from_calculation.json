@@ -1,0 +1,7 @@
+{
+  "calculation_run_id": "replace-with-calculation-run-id-or-run-code",
+  "system": "tank_integrity",
+  "component": "shell",
+  "damage_mechanism": "corrosion_screening",
+  "notes": "Creates an RBI interface case from deterministic calculation warnings such as HIGH_CORROSION_RATE, LOW_REMAINING_LIFE, REPEATED_ANOMALY, or RBI_TRIGGER_CANDIDATE. Does not implement quantitative API RP 581 calculations."
+}

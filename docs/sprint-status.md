@@ -12,10 +12,12 @@
 | 6 | Deterministic Calculation Engine | Complete |
 | 6.5 | Sprint 6 Calculation Governance Hardening | Complete |
 | 7 | FFS Trigger Workflow | Complete |
+| 7.5 | Sprint 7 Governance and Security Hardening | Complete |
+| 8 | RBI Interface and Trigger Workflow | Complete |
 
 ## Boundary
 
-AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups. Sprint 7 creates FFS trigger workflow cases only; it does not execute FFS calculations or declare fitness for service.
+AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups. Sprint 7 creates FFS trigger workflow cases only; it does not execute FFS calculations or declare fitness for service. Sprint 8 creates RBI interface workflow cases only; it does not implement proprietary quantitative API RP 581 rules.
 
 ## Current Implemented Routes
 
@@ -26,11 +28,12 @@ AIM remains the system of record. n8n may call AIM APIs only and must not write 
 - Formula Registry: `/api/v1/formulas`, `/api/v1/formulas/approved/{formulaId}`, version/compare/approve/deprecate/test-run endpoints
 - Deterministic Calculations: `/api/v1/engineering/calculate`, `/api/v1/engineering/calculations`
 - FFS Trigger Workflow: `/api/v1/ffs/cases`, `/api/v1/ffs/cases/from-calculation`, `/api/v1/ffs/cases/{caseId}/status`, `/api/v1/ffs/cases/{caseId}/close`
+- RBI Interface Workflow: `/api/v1/rbi/cases`, `/api/v1/rbi/cases/from-calculation`, `/api/v1/rbi/cases/{caseId}/status`, `/api/v1/rbi/cases/{caseId}/approve`
 - Operations: `/api/v1/workflow-events`, `/api/v1/error-logs`
 
 ## Reproducibility Requirement
 
-A clean checkout must contain and apply migrations `0001` through `0008` in order. Use:
+A clean checkout must contain and apply migrations `0001` through `0009` in order. Use:
 
 ```powershell
 pnpm db:migrate
@@ -52,3 +55,13 @@ Status: Complete.
 - Improved API error handling to avoid raw internal error disclosure outside local/test environments.
 
 No API/API-ASME formula execution, AI runtime, report generation, RBI calculation, CMMS integration, or work-order integration was implemented.
+
+
+## Sprint 8 RBI Interface and Trigger Workflow
+
+Status: Complete.
+
+- Adds RBI interface cases and trigger rules aligned with API RP 580/581 governance.
+- Supports manual engineering-review creation and calculation-warning creation.
+- Preserves calculation_run, inspection_event, evidence, and placeholder input references.
+- Quantitative API RP 581 calculations are not implemented or embedded.

@@ -474,3 +474,33 @@ on conflict (formula_code, version) do update set
 
 insert into audit_logs(event_type, entity_type, metadata_json)
 values ('FOUNDATION_SEED_EXECUTED', 'database_seed', '{"seed":"0001_foundation_seed","idempotent":true}'::jsonb);
+
+-- Sprint 8 RBI interface permissions synchronization.
+insert into permissions(permission_code, description) values
+  ('rbi.interface.update', 'Update RBI interface workflow status and review data'),
+  ('rbi.interface.review', 'Review RBI interface records'),
+  ('rbi.interface.approve', 'Approve RBI interface summary for export or inspection planning')
+on conflict (permission_code) do update set description = excluded.description;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('rbi.interface.read','rbi.interface.create','rbi.interface.update','rbi.interface.review','rbi.interface.approve','rbi.interface.export')
+where r.role_code in ('admin','senior_engineer')
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('rbi.interface.read','rbi.interface.create','rbi.interface.update','rbi.interface.review')
+where r.role_code = 'engineer'
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('rbi.interface.read','rbi.interface.review')
+where r.role_code = 'qa_qc'
+on conflict do nothing;
+
+-- ai_agent intentionally receives no rbi.interface.* approval/finalization permissions.

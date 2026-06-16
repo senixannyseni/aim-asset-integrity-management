@@ -1,0 +1,24 @@
+{
+  "asset_id": "replace-with-asset-uuid",
+  "system": "tank_integrity",
+  "component": "shell",
+  "damage_mechanism": "corrosion_screening",
+  "probability_driver": "engineering_review_placeholder",
+  "consequence_driver": "consequence_placeholder_required",
+  "risk_category": "screening_required",
+  "recommended_interval": "engineer_review_required",
+  "inspection_plan_reference": "not_assigned",
+  "trigger_source": "engineering_review",
+  "trigger_reason": "Manual RBI interface case created from engineering review. Quantitative API RP 581 rules are not implemented.",
+  "input_placeholders": {
+    "consequence_of_failure": "placeholder_required",
+    "probability_of_failure": "placeholder_required",
+    "damage_mechanism": "corrosion_screening",
+    "inspection_effectiveness": "placeholder_required",
+    "fluid_service": "placeholder_required",
+    "inventory": "placeholder_required",
+    "operating_severity": "placeholder_required",
+    "mitigation_controls": "placeholder_required"
+  },
+  "evidence_links": []
+}

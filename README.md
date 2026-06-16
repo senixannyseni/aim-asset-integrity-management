@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 7 FFS Trigger Workflow Complete**
+Sprint status: **Sprint 8 RBI Interface and Trigger Workflow Complete**
 
-This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 7: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, and FFS trigger workflow governance. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 8: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, and RBI interface trigger workflow governance. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -14,7 +14,7 @@ This repository implements the AIM+n8n Tank Integrity Module foundation through 
 - AI extraction output must go to extraction/staging tables only when implemented.
 - AI must not approve engineering data, calculations, integrity decisions, formulas, or issued reports.
 - A universal deterministic calculation engine is implemented for AIM-owned calculations only.
-- API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas remain controlled placeholders unless entered by authorized engineers from licensed standards or approved fixtures.
+- API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas and quantitative API RP 581 rules remain controlled placeholders unless entered by authorized engineers from licensed standards or approved fixtures.
 
 ## Implemented Modules
 
@@ -63,6 +63,26 @@ This repository implements the AIM+n8n Tank Integrity Module foundation through 
 - Editing an approved/locked formula creates a new draft version.
 - Only `admin` and `senior_engineer` may create/update/approve/deprecate/test formula records.
 - Formula test-run endpoint is a placeholder and does not execute formula expressions.
+
+
+### Sprint 6 — Deterministic Calculation Engine
+
+- Universal deterministic calculation engine for unit conversion, corrosion rate screening, remaining life screening, warning thresholds, and inspection interval placeholder logic.
+- Calculation runs store input snapshot hash, formula version trace, validation status, normalized inputs, outputs, warnings, and audit log.
+- API/API-ASME formula execution remains blocked unless future approved Formula Registry execution rules are provided.
+
+### Sprint 7 — FFS Trigger Workflow
+
+- API 579-1/ASME FFS-1 trigger workflow governance cases.
+- Trigger only; no fitness-for-service declaration or API 579 calculation is implemented.
+- AI agents cannot close FFS cases, and final disposition requires senior engineer/admin approval.
+
+### Sprint 8 — RBI Interface and Trigger Workflow
+
+- API RP 580/581 governance-aligned RBI interface cases.
+- Qualitative/semi-quantitative placeholder only unless quantitative rules are formally provided in Formula Registry.
+- RBI cases can be created manually or from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated anomalies, or engineering review.
+- Risk summary and inspection plan recommendation are auditable and clearly labeled by calculation basis.
 
 ## Local Setup
 
@@ -215,3 +235,13 @@ Key hardening items:
 - Production error responses avoid raw internal error messages.
 
 AIM remains the system of record and n8n remains API-only orchestration.
+
+
+## Sprint 8 RBI Interface Governance
+
+Status: Complete.
+
+- Adds API RP 580/581-aligned RBI interface cases and trigger rules.
+- Supports manual engineering-review creation and calculation-warning creation.
+- Preserves source calculation run, source measurement, evidence, and placeholder inputs.
+- Uses qualitative/semi-quantitative placeholder basis only. No proprietary quantitative API RP 581 logic is implemented.

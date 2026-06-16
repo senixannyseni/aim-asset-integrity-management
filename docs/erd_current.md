@@ -1,4 +1,4 @@
-# AIM Tank Integrity ERD — Implemented Schema Through Sprint 7
+# AIM Tank Integrity ERD — Implemented Schema Through Sprint 8
 
 ```mermaid
 erDiagram
@@ -40,14 +40,16 @@ erDiagram
   evidence_files ||--o{ calculation_inputs : input_evidence
 
   assets ||--o{ ffs_cases : ffs_trigger_cases
-  assets ||--o{ rbi_cases : future_rbi_interface
+  assets ||--o{ rbi_cases : rbi_interface_cases
   calculation_runs ||--o{ ffs_cases : calculation_warning_source
+  calculation_runs ||--o{ rbi_cases : rbi_warning_source
+  rbi_trigger_rules ||--o{ rbi_cases : configured_trigger
   ffs_trigger_rules ||--o{ ffs_cases : configured_trigger
 ```
 
 ## Boundary
 
-AIM/PostgreSQL stores final structured engineering data, metadata, validation snapshots, Formula Registry metadata, workflow events, error logs, and audit logs. n8n may create workflow events and error logs through AIM APIs only. Universal deterministic calculation execution is included through Sprint 6. FFS trigger workflow governance is included through Sprint 7. No API/API-ASME formula expression execution, FFS assessment calculation, AI extraction runtime, report generation, or CMMS work-order integration is included.
+AIM/PostgreSQL stores final structured engineering data, metadata, validation snapshots, Formula Registry metadata, workflow events, error logs, and audit logs. n8n may create workflow events and error logs through AIM APIs only. Universal deterministic calculation execution is included through Sprint 6. FFS trigger workflow governance is included through Sprint 7. RBI interface workflow governance is included through Sprint 8. No API/API-ASME formula expression execution, FFS assessment calculation, quantitative API RP 581 calculation, AI extraction runtime, report generation, or CMMS work-order integration is included.
 
 ## Formula Registry Note
 
@@ -57,3 +59,12 @@ Formula Registry rows represent controlled metadata versions. Formula expression
 ## FFS Trigger Workflow Note
 
 FFS cases are governance trigger records aligned to API 579-1/ASME FFS-1 workflow needs. They preserve trigger reason, supporting measurements, evidence snapshots, workflow status, and approval record linkage. They do not declare fitness for service or execute FFS calculations. Final disposition requires senior engineer/admin approval; AI agents cannot close cases.
+
+
+## Sprint 8 RBI Interface
+
+`rbi_cases` is implemented as an API RP 580/581 governance interface table. It links to `assets`, optionally to `inspection_events`, optionally to `calculation_runs`, and evidence through both JSON snapshot metadata and `evidence_links` rows with `linked_entity_type = 'rbi_case'`.
+
+`rbi_trigger_rules` stores configurable trigger mappings from deterministic calculation warning codes or engineering review triggers to qualitative placeholder probability/consequence drivers and recommended inspection-plan actions.
+
+No quantitative API RP 581 logic is represented in the ERD. Quantitative rules require future approved Formula Registry entries and a controlled executor.

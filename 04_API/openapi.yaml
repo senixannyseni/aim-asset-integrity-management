@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.7.0
-  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 7. Deterministic universal calculation engine and FFS trigger workflow governance are implemented; no API/API-ASME formula expressions are hard-coded.
+  version: 0.8.0
+  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 8. Deterministic universal calculation engine, FFS trigger workflow, and RBI interface workflow governance are implemented; no API/API-ASME formula expressions are hard-coded or proprietary quantitative API RP 581 rules embedded.
 servers:
   - url: http://localhost:4000/api/v1
 security:
@@ -550,6 +550,131 @@ paths:
         '200': { description: Final FFS disposition approved and case closed }
         '400': { $ref: '#/components/responses/ValidationError' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /rbi/cases:
+    get:
+      summary: List RBI interface cases
+      description: Lists API RP 580/581 governance interface cases. Quantitative API RP 581 rules are not implemented unless supplied through Formula Registry.
+      x-permission-required: rbi.interface.read
+      parameters:
+        - in: query
+          name: asset_id
+          required: false
+          schema: { type: string, format: uuid }
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [open, under_review, data_required, assessment_in_progress, ready_for_review, approved, exported, closed]
+      responses:
+        '200': { description: RBI case list }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      summary: Manually create an RBI interface case
+      description: Creates a qualitative/semi-quantitative placeholder RBI interface case from engineering review. Does not implement proprietary API RP 581 quantitative rules.
+      x-permission-required: rbi.interface.create
+      x-audit-event-generated: RBI_CASE_CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RbiCaseCreateRequest'
+      responses:
+        '201': { description: RBI case created }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /rbi/cases/from-calculation:
+    post:
+      summary: Create RBI case from calculation warnings
+      description: Creates an RBI interface case from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated anomaly, or engineering review. Trigger only; no quantitative API RP 581 calculation.
+      x-permission-required: rbi.interface.create
+      x-audit-event-generated: RBI_CASE_CREATED_FROM_CALCULATION
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [calculation_run_id]
+              properties:
+                calculation_run_id: { type: string }
+                system: { type: string }
+                component: { type: string }
+                damage_mechanism: { type: string }
+      responses:
+        '201': { description: RBI case created from calculation warning outputs }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /rbi/cases/{caseId}:
+    get:
+      summary: Get RBI case detail
+      x-permission-required: rbi.interface.read
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: RBI case detail }
+        '404': { description: RBI case not found }
+  /rbi/cases/{caseId}/status:
+    patch:
+      summary: Update RBI workflow status
+      description: Updates non-final RBI interface workflow status. Use approval endpoint for approved/exported/closed states.
+      x-permission-required: rbi.interface.update
+      x-audit-event-generated: RBI_CASE_STATUS_UPDATED
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [open, under_review, data_required, assessment_in_progress, ready_for_review]
+      responses:
+        '200': { description: RBI case status updated }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /rbi/cases/{caseId}/approve:
+    post:
+      summary: Approve RBI interface summary for export or inspection planning
+      description: Requires senior_engineer/admin authority. AI agents cannot approve, export, close, or finalize RBI cases.
+      x-permission-required: rbi.interface.approve
+      x-audit-event-generated: RBI_CASE_APPROVED
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [approved, exported, closed]
+      responses:
+        '200': { description: RBI case approved }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -601,6 +726,37 @@ components:
         assigned_engineer: { type: string, format: uuid }
         due_date: { type: string, format: date }
         required_next_action: { type: string }
+
+    RbiCaseCreateRequest:
+      type: object
+      required: [asset_id]
+      additionalProperties: true
+      properties:
+        asset_id: { type: string, format: uuid }
+        inspection_event_id: { type: string, format: uuid }
+        calculation_run_id: { type: string, format: uuid }
+        system: { type: string }
+        component: { type: string }
+        damage_mechanism: { type: string }
+        probability_driver: { type: string }
+        consequence_driver: { type: string }
+        risk_category: { type: string }
+        recommended_interval: { type: string }
+        inspection_plan_reference: { type: string }
+        evidence_links:
+          type: array
+          items: { type: object }
+        input_placeholders:
+          type: object
+          properties:
+            consequence_of_failure: { type: string }
+            probability_of_failure: { type: string }
+            damage_mechanism: { type: string }
+            inspection_effectiveness: { type: string }
+            fluid_service: { type: string }
+            inventory: { type: string }
+            operating_severity: { type: string }
+            mitigation_controls: { type: string }
     ErrorEnvelope:
       type: object
       required: [error]
@@ -758,6 +914,37 @@ components:
                   type: array
                   items: { type: object }
         auditLogId: { type: string }
+
+    RbiCaseCreateRequest:
+      type: object
+      required: [asset_id]
+      additionalProperties: true
+      properties:
+        asset_id: { type: string, format: uuid }
+        inspection_event_id: { type: string, format: uuid }
+        calculation_run_id: { type: string, format: uuid }
+        system: { type: string }
+        component: { type: string }
+        damage_mechanism: { type: string }
+        probability_driver: { type: string }
+        consequence_driver: { type: string }
+        risk_category: { type: string }
+        recommended_interval: { type: string }
+        inspection_plan_reference: { type: string }
+        evidence_links:
+          type: array
+          items: { type: object }
+        input_placeholders:
+          type: object
+          properties:
+            consequence_of_failure: { type: string }
+            probability_of_failure: { type: string }
+            damage_mechanism: { type: string }
+            inspection_effectiveness: { type: string }
+            fluid_service: { type: string }
+            inventory: { type: string }
+            operating_severity: { type: string }
+            mitigation_controls: { type: string }
     ErrorEnvelope:
       type: object
       properties:
@@ -775,3 +962,7 @@ components:
 # Sprint 7 governance hardening notes
 # FFS case creation rejects cross-asset evidence links with error code CROSS_ASSET_EVIDENCE_LINK_BLOCKED.
 # Demo header authentication is local-development only; production deployments require verified JWT/session identity and DB-backed RBAC.
+
+# Sprint 8 RBI interface governance notes
+# RBI cases are qualitative/semi-quantitative placeholders unless approved quantitative Formula Registry rules are provided.
+# No proprietary API RP 581 quantitative rules are embedded in this implementation.
