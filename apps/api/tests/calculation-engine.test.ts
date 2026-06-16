@@ -32,6 +32,7 @@ describe('Deterministic calculation engine', () => {
     ndt_measurements: [
       {
         measurement_id: 'NDT-OLD',
+        source_entity_id: '11111111-1111-4111-8111-111111111111',
         component: 'shell',
         shell_course_no: 1,
         cml_tml_id: 'CML-001',
@@ -40,10 +41,11 @@ describe('Deterministic calculation engine', () => {
         measured_thickness_unit: 'mm',
         reading_date: '2020-01-01',
         is_critical: true,
-        evidence_file_id: 'evidence-1'
+        evidence_file_id: '22222222-2222-4222-8222-222222222222'
       },
       {
         measurement_id: 'NDT-NEW',
+        source_entity_id: '33333333-3333-4333-8333-333333333333',
         component: 'shell',
         shell_course_no: 1,
         cml_tml_id: 'CML-001',
@@ -52,7 +54,7 @@ describe('Deterministic calculation engine', () => {
         measured_thickness_unit: 'mm',
         reading_date: '2024-01-01',
         is_critical: true,
-        evidence_file_id: 'evidence-2'
+        evidence_file_id: '44444444-4444-4444-8444-444444444444'
       }
     ],
     evidence_links: [],
@@ -86,6 +88,15 @@ describe('Deterministic calculation engine', () => {
     expect(result.remaining_life[0]?.remaining_life_years).toBeGreaterThan(3.9);
   });
 
+  it('preserves NDT source entity and evidence identifiers in normalized inputs', () => {
+    const result = runDeterministicCalculation(baseContext);
+    const measurements = result.normalized_inputs.ndt_measurements;
+    expect(Array.isArray(measurements)).toBe(true);
+    const first = Array.isArray(measurements) ? measurements[0] as Record<string, unknown> : undefined;
+    expect(first?.source_entity_id).toBe('11111111-1111-4111-8111-111111111111');
+    expect(first?.evidence_file_id).toBe('22222222-2222-4222-8222-222222222222');
+  });
+
   it('blocks calculation output when engineering validation has blocking severity', () => {
     const result = runDeterministicCalculation({
       ...baseContext,
@@ -101,6 +112,7 @@ describe('Deterministic calculation engine', () => {
     const rates = calculateCorrosionRates([
       {
         measurement_id: 'old',
+        source_entity_id: null,
         component: 'shell',
         shell_course_no: 1,
         cml_tml_id: 'CML-1',
@@ -115,6 +127,7 @@ describe('Deterministic calculation engine', () => {
       },
       {
         measurement_id: 'new',
+        source_entity_id: null,
         component: 'shell',
         shell_course_no: 1,
         cml_tml_id: 'CML-1',

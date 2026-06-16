@@ -1,6 +1,6 @@
-# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 5.5
+# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 6
 
-Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 5.5.
+Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 6.
 
 Completed implementation state covered by this dictionary:
 
@@ -11,6 +11,7 @@ Completed implementation state covered by this dictionary:
 - Sprint 4 — Engineering Data Dictionary and Validation Engine.
 - Sprint 5 — Formula Registry.
 - Sprint 5.5 — baseline reproducibility and documentation alignment.
+- Sprint 6 — deterministic universal calculation engine and calculation traceability records.
 
 ## Governance Boundary
 
@@ -19,7 +20,7 @@ Completed implementation state covered by this dictionary:
 - AI extraction runtime is not implemented in this baseline. Future AI output must go to extraction/staging tables only and must not write final engineering tables directly.
 - AI must not approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
 - No API/API-ASME formula expression is hard-coded or invented in this schema. Formula Registry stores controlled metadata and placeholders only unless an authorized engineer enters licensed/approved source content.
-- Engineering calculations, report issue, work-order integration, AI extraction runtime, and full FFS/RBI calculations remain outside the implemented baseline.
+- Universal deterministic engineering calculations are implemented for AIM-owned screening logic only. Report issue, work-order integration, AI extraction runtime, API/API-ASME formula execution, and full FFS/RBI calculations remain outside the implemented baseline.
 
 ## Implemented Table Inventory
 
@@ -42,10 +43,13 @@ Completed implementation state covered by this dictionary:
 | engineering_data_dictionary | Implemented | senior_engineer / qa_qc | Field registry used by deterministic validation. |
 | validation_runs | Implemented | engineer / senior_engineer / qa_qc | Stores validation result snapshots. |
 | formula_registry | Implemented | admin / senior_engineer | Controlled formula metadata/versioning registry. No executable API/API-ASME formulas are embedded. |
-| formula_test_runs | Implemented | admin / senior_engineer | Placeholder formula test-run records. No calculation engine execution. |
+| formula_test_runs | Implemented | admin / senior_engineer | Placeholder formula test-run records. No API/API-ASME formula execution. |
+| calculation_runs | Sprint 6 implemented | engineer / senior_engineer | Deterministic calculation run headers, input snapshot hash, formula version trace, validation status, output summary, review/approval placeholders, and lock protection. |
+| calculation_inputs | Sprint 6 implemented | engineer / senior_engineer | Field-level normalized calculation inputs, including NDT source entity and evidence reference where available. |
+| calculation_outputs | Sprint 6 implemented | engineer / senior_engineer | Field-level deterministic outputs and engineering warnings. |
 | audit_logs | Implemented | admin / qa_qc | Audit trail for critical create/update/delete/review/approval/governance actions. |
 
-Supporting baseline tables also exist in the clean-clone schema and are used as references or future integration points: `inspection_events`, `calculation_runs`, `calculation_inputs`, `calculation_outputs`, `engineering_reviews`, `approval_records`, `ffs_cases`, and `rbi_cases`. These supporting tables are not full functional modules yet.
+Supporting baseline tables also exist in the clean-clone schema and are used as references or future integration points: `inspection_events`, `engineering_reviews`, `approval_records`, `ffs_cases`, and `rbi_cases`. Sprint 6 promotes `calculation_runs`, `calculation_inputs`, and `calculation_outputs` from supporting schema to implemented deterministic calculation traceability tables.
 
 ## Role and Access Tables
 
@@ -400,7 +404,7 @@ Validation examples currently represented: missing code edition, missing tank di
 | validation_rules | jsonb | yes | default {} / [] | Validation metadata. |
 | blocking_rules | jsonb | yes | default [] | Blocking governance rules. |
 | test_case_reference | text | optional |  | Reference to approved validation workbook/fixture. |
-| status | text | yes | draft, under_review, approved, deprecated, locked | Formula lifecycle. Draft/deprecated formulas must not be used for production calculation. |
+| status | text | yes | draft, under_review, approved, deprecated, locked | Formula lifecycle. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. |
 | version | text | yes | unique with formula_id | Formula version. Editing approved formula creates a new version. |
 | effective_date | date | optional |  | Effective date. |
 | approved_by | uuid | optional | FK users.id | Human approver. AI agent cannot approve. |
@@ -419,7 +423,7 @@ Formula Registry governance:
 - API-controlled formulas must not embed copyrighted standard text or invented expressions.
 - `expression_body` may be a controlled placeholder for API-controlled formulas.
 - `formula_expression_source` must identify the controlled source approach, e.g. licensed standard manual entry, engineer-approved workbook, or approved fixture.
-- Production calculation may query only approved/locked, versioned formulas. The calculation engine itself is not implemented in this baseline.
+- Production calculation may query only approved/locked, versioned formulas. Sprint 6 implements a universal deterministic calculation engine only; API/API-ASME formula execution remains prohibited unless a future controlled executor is explicitly implemented.
 
 ### formula_test_runs
 
@@ -435,6 +439,63 @@ Formula Registry governance:
 | message | text | yes |  | Test run message. |
 | run_by | uuid | optional | FK users.id | User who ran the placeholder test. |
 | created_at | timestamptz | yes | default now() | Test run timestamp. |
+
+## Deterministic Calculation Engine
+
+### calculation_runs
+
+| Field | Type | Required | Key / Reference | Notes |
+|---|---|---:|---|---|
+| id | uuid | yes | PK | Calculation run record ID. |
+| run_id | text | yes | unique | Human-readable run identifier generated by Sprint 6. |
+| asset_id | uuid | yes | FK assets.id | Asset being calculated. |
+| inspection_event_id | uuid | optional | FK inspection_events.id | Related inspection event when available. |
+| formula_registry_id | uuid | yes | FK formula_registry.id | Approved/locked Formula Registry record used by the deterministic engine. |
+| run_version | integer | yes | unique with asset/formula | Revision number; locked runs are not overwritten. |
+| status / run_status | text | yes |  | Calculation lifecycle state. |
+| formula_set_version | text | yes |  | Formula ID/version string used for traceability. |
+| input_snapshot_hash | text | yes | indexed | SHA-256 hash of the canonical input snapshot. |
+| validation_status | text | yes |  | `passed` or `blocked` deterministic validation result. |
+| output_summary | jsonb | yes |  | Summary counts, trigger candidates, and interval placeholder output. |
+| input_snapshot_json | jsonb | yes |  | Raw calculation request/context snapshot. |
+| unit_normalized_input_json | jsonb | yes |  | Unit-normalized inputs used by the deterministic engine. |
+| validation_result_json | jsonb | yes |  | Validation result used before calculation output. |
+| warnings_json | jsonb | yes |  | Engineering warnings generated by deterministic rules. |
+| review_status / approval_status | text | yes |  | Review/approval placeholders for future governance sprint. |
+| initiated_by / created_by | uuid | optional | FK users.id | User initiating the run. |
+| locked_flag | boolean | yes | protected by trigger | Locked calculation records cannot be modified or deleted. |
+| created_at | timestamptz | yes | default now() | Creation timestamp. |
+
+### calculation_inputs
+
+| Field | Type | Required | Key / Reference | Notes |
+|---|---|---:|---|---|
+| id | uuid | yes | PK | Calculation input row ID. |
+| calculation_run_id | uuid | yes | FK calculation_runs.id | Parent calculation run. |
+| input_name | text | yes |  | Normalized input field path. |
+| raw_value | text | optional |  | Serialized raw source row. |
+| normalized_value | numeric | optional |  | Numeric normalized value. |
+| raw_unit / normalized_unit | text | optional |  | Unit traceability. |
+| source_entity_type | text | optional |  | Example: `ndt_measurement`. |
+| source_entity_id | uuid | optional | entity reference | NDT measurement UUID when available. |
+| evidence_file_id | uuid | optional | FK evidence_files.id | Evidence file used by the source input when available. |
+| validation_status | text | yes |  | `valid`, `warning`, or `blocked`. |
+| created_at | timestamptz | yes | default now() | Creation timestamp. |
+
+### calculation_outputs
+
+| Field | Type | Required | Key / Reference | Notes |
+|---|---|---:|---|---|
+| id | uuid | yes | PK | Calculation output row ID. |
+| calculation_run_id | uuid | yes | FK calculation_runs.id | Parent calculation run. |
+| output_name | text | yes |  | Output field path. |
+| output_value | numeric | optional |  | Numeric output where applicable. |
+| output_unit | text | optional |  | Output unit. |
+| output_json | jsonb | yes |  | Structured output row. |
+| warning_code / warning_message | text | optional |  | Warning traceability for warning outputs. |
+| created_at | timestamptz | yes | default now() | Creation timestamp. |
+
+Sprint 6 deterministic outputs are screening outputs only. They do not embed or execute API/API-ASME clause formulas. API-controlled calculations remain Formula Registry controlled metadata until a future authorized executor is implemented.
 
 ## Audit Trail
 
@@ -456,18 +517,18 @@ Formula Registry governance:
 | metadata_json | jsonb | yes | default {} | Additional metadata, including governance context. |
 | created_at | timestamptz | yes | default now() | Audit timestamp. |
 
-Audit coverage currently includes important asset, evidence, NDT, workflow/error, validation, and Formula Registry actions. Future calculation/report/work-order modules must continue this pattern.
+Audit coverage currently includes important asset, evidence, NDT, workflow/error, validation, Formula Registry, and deterministic calculation-run creation actions. Future calculation review/approval, report, and work-order modules must continue this pattern.
 
 ## Supporting Baseline Tables
 
-These tables exist in the clean-clone schema but are not full feature modules yet:
+These tables exist in the clean-clone schema and are either supporting references or implemented Sprint 6 traceability records:
 
 | Table | Status | Notes |
 |---|---|---|
 | inspection_events | Baseline implemented | Referenced by evidence and NDT. Full inspection workspace is future work. |
-| calculation_runs | Baseline implemented | No calculation engine. Future runs must store input snapshot, normalized inputs, formula version, validation result, warnings, reviewer/approver, timestamps, and evidence links. |
-| calculation_inputs | Baseline implemented | Future calculation input traceability. |
-| calculation_outputs | Baseline implemented | Future calculation output traceability. |
+| calculation_runs | Sprint 6 implemented | Deterministic run header with asset, formula registry version, run status, input snapshot hash, validation status, output summary, review/approval placeholders, locked flag, and audit traceability. |
+| calculation_inputs | Sprint 6 implemented | Field-level normalized input rows. NDT measurement inputs store `source_entity_type`, `source_entity_id`, and `evidence_file_id` where available. |
+| calculation_outputs | Sprint 6 implemented | Field-level output rows for corrosion-rate, remaining-life, warning, and trigger-candidate outputs. |
 | engineering_reviews | Baseline implemented | Future human review workflow. |
 | approval_records | Baseline implemented | Future approval records for issued engineering actions. |
 | ffs_cases | Baseline implemented | API 579/FFS trigger shell only. No FFS assessment implemented. |
@@ -475,7 +536,7 @@ These tables exist in the clean-clone schema but are not full feature modules ye
 
 ## Future / Not Implemented Tables
 
-These remain planned and are not implemented in the Sprint 5.5 baseline:
+These remain planned and are not implemented in the Sprint 6 baseline:
 
 | Table / Area | Status | Rule |
 |---|---|---|
@@ -491,9 +552,9 @@ These remain planned and are not implemented in the Sprint 5.5 baseline:
 2. n8n must call AIM APIs and must not write directly to PostgreSQL.
 3. AI extraction is not implemented; future AI output must remain staging-only.
 4. AI cannot approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
-5. Evidence linkage is mandatory for NDT approval gates and must be extended to calculation/report/decision gates when those modules are implemented.
-6. Formula Registry is metadata/version governance only; no API/API-ASME formula expression is invented or embedded.
-7. Draft/deprecated formulas must not be used for production calculation.
+5. Evidence linkage is mandatory for NDT approval gates; Sprint 6 calculation inputs preserve available NDT/evidence traceability and future calculation approval gates must enforce this linkage before final approval.
+6. Formula Registry governs metadata/versioning and the Sprint 6 universal deterministic engine registration; no API/API-ASME formula expression is invented or embedded.
+7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas.
 8. Missing critical engineering data produces deterministic validation warnings or blocking results according to validation scope.
 9. Every important create/update/delete/review/approval/governance action must write audit logs.
-10. Clean-clone migrations 0001 through 0006 are part of the implemented baseline.
+10. Clean-clone migrations 0001 through 0007 are part of the implemented Sprint 6 baseline.

@@ -13,6 +13,7 @@ export type CalculationWarning = {
 
 export type NormalizedMeasurement = {
   measurement_id: string;
+  source_entity_id: string | null;
   component: string;
   shell_course_no: number | null;
   cml_tml_id: string | null;
@@ -160,7 +161,8 @@ function normalizedMeasurementFrom(record: Record<string, unknown>, index: numbe
   const component = asString(valueAt(record, ['component'])) ?? 'unknown_component';
   if (thickness === undefined || !readingDate) return undefined;
   return {
-    measurement_id: asString(valueAt(record, ['measurement_id', 'id'])) ?? `input-ndt-${index + 1}`,
+    measurement_id: asString(valueAt(record, ['measurement_id'])) ?? asString(valueAt(record, ['measurement_code'])) ?? asString(valueAt(record, ['id'])) ?? `input-ndt-${index + 1}`,
+    source_entity_id: asString(valueAt(record, ['source_entity_id', 'id'])) ?? null,
     component,
     shell_course_no: asNumber(valueAt(record, ['shell_course_no'])) ?? null,
     cml_tml_id: asString(valueAt(record, ['cml_tml_id'])) ?? null,

@@ -18,6 +18,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isUuid(value: string | undefined | null): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function uuidOrNull(value: string | undefined | null): string | null {
+  return isUuid(value) ? value : null;
+}
+
 function validationError(res: ApiResponse, field: string, message: string): void {
   res.status(400).json({
     error: {
@@ -221,7 +229,14 @@ async function nextRunVersion(client: Queryable, assetId: string, formulaRegistr
   return Number(result.rows[0]?.next_version ?? '1');
 }
 
-function flattenInputRows(calculation: DeterministicCalculationResult): Array<{ name: string; rawValue: string; normalizedValue: number | null; unit: string | null; sourceId?: string }> {
+function flattenInputRows(calculation: DeterministicCalculationResult): Array<{
+  name: string;
+  rawValue: string;
+  normalizedValue: number | null;
+  unit: string | null;
+  sourceEntityId: string | null;
+  evidenceFileId: string | null;
+}> {
   const measurements = Array.isArray(calculation.normalized_inputs.ndt_measurements) ? calculation.normalized_inputs.ndt_measurements : [];
   return measurements
     .filter(isPlainObject)
@@ -230,7 +245,8 @@ function flattenInputRows(calculation: DeterministicCalculationResult): Array<{ 
       rawValue: JSON.stringify(measurement),
       normalizedValue: asNumber(measurement.measured_thickness_mm) ?? null,
       unit: 'mm',
-      sourceId: asString(measurement.measurement_id)
+      sourceEntityId: uuidOrNull(asString(measurement.source_entity_id)),
+      evidenceFileId: uuidOrNull(asString(measurement.evidence_file_id))
     }));
 }
 
@@ -303,6 +319,23 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
         error: {
           code: 'APPROVED_FORMULA_REQUIRED',
           message: 'Calculation requires an approved or locked Formula Registry record. Draft and deprecated formulas cannot be used.'
+        }
+      });
+      return;
+    }
+
+    if (formula.formula_type !== 'universal_deterministic') {
+      await client.query('rollback');
+      res.status(400).json({
+        error: {
+          code: 'NON_DETERMINISTIC_FORMULA_BLOCKED',
+          message: 'The deterministic calculation engine may execute only approved or locked universal_deterministic formulas. API-controlled formulas remain metadata-only and must not be executed by this engine.',
+          details: [{
+            field: 'formula_id',
+            severity: 'blocking',
+            requested_formula_type: formula.formula_type,
+            required_formula_type: 'universal_deterministic'
+          }]
         }
       });
       return;
@@ -391,9 +424,19 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
       await client.query(
         `insert into calculation_inputs(
           calculation_run_id, input_name, raw_value, normalized_value, raw_unit, normalized_unit,
-          source_entity_type, source_entity_id, validation_status
-        ) values ($1, $2, $3, $4, $5, $6, 'ndt_measurement', null, $7)`,
-        [runId, row.name, row.rawValue, row.normalizedValue, row.unit, row.unit, validationStatus === 'blocked' ? 'blocked' : 'valid']
+          source_entity_type, source_entity_id, evidence_file_id, validation_status
+        ) values ($1, $2, $3, $4, $5, $6, 'ndt_measurement', $7, $8, $9)`,
+        [
+          runId,
+          row.name,
+          row.rawValue,
+          row.normalizedValue,
+          row.unit,
+          row.unit,
+          row.sourceEntityId,
+          row.evidenceFileId,
+          validationStatus === 'blocked' ? 'blocked' : 'valid'
+        ]
       );
     }
 

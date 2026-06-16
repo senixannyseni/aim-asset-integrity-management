@@ -315,7 +315,7 @@ assetsRouter.post('/assets', requirePermission('asset.create'), async (req, res,
   }
 });
 
-assetsRouter.get('/assets/:assetId', async (req, res) => {
+assetsRouter.get('/assets/:assetId', requirePermission('asset.read'), async (req, res, next) => {
   try {
     const assetId = req.params.assetId;
 
@@ -342,7 +342,7 @@ assetsRouter.get('/assets/:assetId', async (req, res) => {
 
     res.json({ data });
   } catch (error) {
-    // keep your existing catch block here
+    next(error);
   }
 });
 

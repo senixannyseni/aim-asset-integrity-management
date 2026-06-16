@@ -1,6 +1,6 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 6 Deterministic Calculation Engine Complete**
+Sprint status: **Sprint 6 Deterministic Calculation Engine Complete — Governance Hardened**
 
 This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 6: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, and universal deterministic calculation execution. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
 
@@ -13,7 +13,7 @@ This repository implements the AIM+n8n Tank Integrity Module foundation through 
 - n8n must not write directly to PostgreSQL.
 - AI extraction output must go to extraction/staging tables only when implemented.
 - AI must not approve engineering data, calculations, integrity decisions, formulas, or issued reports.
-- No engineering calculation is implemented in the current repo.
+- A universal deterministic calculation engine is implemented for AIM-owned calculations only.
 - API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas remain controlled placeholders unless entered by authorized engineers from licensed standards or approved fixtures.
 
 ## Implemented Modules
@@ -89,6 +89,7 @@ db/migrations/0003_governance_hardening.sql
 db/migrations/0004_evidence_ndt_data_room.sql
 db/migrations/0005_engineering_validation_engine.sql
 db/migrations/0006_formula_registry_module.sql
+db/migrations/0007_deterministic_calculation_engine.sql
 ```
 
 Run from an empty PostgreSQL database:
@@ -109,6 +110,7 @@ Seed scripts are idempotent and can be re-run safely.
 - `/validation`
 - `/formulas`
 - `/formulas/[formulaId]`
+- `/calculations`
 
 ## Key API Routes
 
@@ -124,6 +126,8 @@ Seed scripts are idempotent and can be re-run safely.
 - `POST /api/v1/engineering/validate-input`
 - `GET /api/v1/engineering/data-dictionary`
 - Formula Registry endpoints under `/api/v1/formulas`
+- `POST /api/v1/engineering/calculate`
+- `GET /api/v1/engineering/calculations`
 - `POST /api/v1/workflow-events`
 - `GET/POST /api/v1/error-logs`
 
@@ -152,7 +156,7 @@ pnpm dev:web
 
 ## Current Limitations
 
-- No engineering calculation engine is implemented.
+- Universal deterministic calculation execution is implemented for AIM-owned unit conversion, corrosion-rate, remaining-life screening, comparator, warning, and placeholder interval logic.
 - No API/API-ASME formula expression is embedded or executed.
 - Evidence binary upload/signed object-storage URL flow is not production-ready.
 - AI extraction/staging runtime is not implemented.
@@ -163,3 +167,11 @@ pnpm dev:web
 ### Sprint 6 — Deterministic Calculation Engine
 
 Implemented `/api/v1/engineering/calculate` and `/api/v1/engineering/calculations` for universal deterministic calculations only. The calculation engine starts with input snapshot and validation result, blocks on blocking validation severity, stores calculation run/input/output records, and generates warning candidates for thickness, corrosion rate, remaining life, missing evidence, FFS trigger, and RBI trigger review. API/API-ASME formula expressions remain controlled by Formula Registry metadata and are not hard-coded.
+
+### Sprint 6 Governance Hardening
+
+- Asset detail route is protected by `asset.read` RBAC.
+- Deterministic calculation execution is restricted to approved/locked `universal_deterministic` Formula Registry records.
+- API-controlled formulas remain metadata-only and are blocked from deterministic execution.
+- Calculation input rows preserve NDT `source_entity_id` and `evidence_file_id` where available.
+- OpenAPI documents implemented asset geometry and shell-course read endpoints.
