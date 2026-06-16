@@ -10,10 +10,12 @@
 | 5 | Formula Registry Module | Complete |
 | 5.5 | Baseline Reproducibility and Documentation Alignment | Complete |
 | 6 | Deterministic Calculation Engine | Complete |
+| 6.5 | Sprint 6 Calculation Governance Hardening | Complete |
+| 7 | FFS Trigger Workflow | Complete |
 
 ## Boundary
 
-AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups.
+AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups. Sprint 7 creates FFS trigger workflow cases only; it does not execute FFS calculations or declare fitness for service.
 
 ## Current Implemented Routes
 
@@ -23,11 +25,12 @@ AIM remains the system of record. n8n may call AIM APIs only and must not write 
 - Engineering Validation: `/api/v1/engineering/data-dictionary`, `/api/v1/engineering/validate-input`
 - Formula Registry: `/api/v1/formulas`, `/api/v1/formulas/approved/{formulaId}`, version/compare/approve/deprecate/test-run endpoints
 - Deterministic Calculations: `/api/v1/engineering/calculate`, `/api/v1/engineering/calculations`
+- FFS Trigger Workflow: `/api/v1/ffs/cases`, `/api/v1/ffs/cases/from-calculation`, `/api/v1/ffs/cases/{caseId}/status`, `/api/v1/ffs/cases/{caseId}/close`
 - Operations: `/api/v1/workflow-events`, `/api/v1/error-logs`
 
 ## Reproducibility Requirement
 
-A clean checkout must contain and apply migrations `0001` through `0007` in order. Use:
+A clean checkout must contain and apply migrations `0001` through `0008` in order. Use:
 
 ```powershell
 pnpm db:migrate

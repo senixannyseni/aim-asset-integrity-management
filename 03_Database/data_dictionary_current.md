@@ -1,6 +1,6 @@
-# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 6
+# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 7
 
-Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 6.
+Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 7.
 
 Completed implementation state covered by this dictionary:
 
@@ -12,6 +12,7 @@ Completed implementation state covered by this dictionary:
 - Sprint 5 — Formula Registry.
 - Sprint 5.5 — baseline reproducibility and documentation alignment.
 - Sprint 6 — deterministic universal calculation engine and calculation traceability records.
+- Sprint 7 — API 579-1/ASME FFS-1 trigger workflow governance cases.
 
 ## Governance Boundary
 
@@ -47,9 +48,11 @@ Completed implementation state covered by this dictionary:
 | calculation_runs | Sprint 6 implemented | engineer / senior_engineer | Deterministic calculation run headers, input snapshot hash, formula version trace, validation status, output summary, review/approval placeholders, and lock protection. |
 | calculation_inputs | Sprint 6 implemented | engineer / senior_engineer | Field-level normalized calculation inputs, including NDT source entity and evidence reference where available. |
 | calculation_outputs | Sprint 6 implemented | engineer / senior_engineer | Field-level deterministic outputs and engineering warnings. |
+| ffs_trigger_rules | Sprint 7 implemented | senior_engineer | Configured trigger rules for FFS case creation. Trigger only; no fitness declaration. |
+| ffs_cases | Sprint 7 implemented | engineer / senior_engineer | FFS trigger workflow cases requiring engineer review and senior engineer/admin final disposition approval. |
 | audit_logs | Implemented | admin / qa_qc | Audit trail for critical create/update/delete/review/approval/governance actions. |
 
-Supporting baseline tables also exist in the clean-clone schema and are used as references or future integration points: `inspection_events`, `engineering_reviews`, `approval_records`, `ffs_cases`, and `rbi_cases`. Sprint 6 promotes `calculation_runs`, `calculation_inputs`, and `calculation_outputs` from supporting schema to implemented deterministic calculation traceability tables.
+Supporting baseline tables also exist in the clean-clone schema and are used as references or future integration points: `inspection_events`, `engineering_reviews`, `approval_records`, and `rbi_cases`. Sprint 6 promotes `calculation_runs`, `calculation_inputs`, and `calculation_outputs` from supporting schema to implemented deterministic calculation traceability tables. Sprint 7 promotes `ffs_cases` to an implemented FFS trigger workflow governance table and adds `ffs_trigger_rules`.
 
 ## Role and Access Tables
 
@@ -404,7 +407,7 @@ Validation examples currently represented: missing code edition, missing tank di
 | validation_rules | jsonb | yes | default {} / [] | Validation metadata. |
 | blocking_rules | jsonb | yes | default [] | Blocking governance rules. |
 | test_case_reference | text | optional |  | Reference to approved validation workbook/fixture. |
-| status | text | yes | draft, under_review, approved, deprecated, locked | Formula lifecycle. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. |
+| status | text | yes | draft, under_review, approved, deprecated, locked | Formula lifecycle. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. Sprint 7 FFS trigger workflow does not execute FFS formulas. |
 | version | text | yes | unique with formula_id | Formula version. Editing approved formula creates a new version. |
 | effective_date | date | optional |  | Effective date. |
 | approved_by | uuid | optional | FK users.id | Human approver. AI agent cannot approve. |
@@ -499,6 +502,51 @@ Sprint 6 deterministic outputs are screening outputs only. They do not embed or 
 
 ## Audit Trail
 
+
+### ffs_trigger_rules
+
+| Field | Type | Required | Key / Reference | Notes |
+|---|---|---:|---|---|
+| id | uuid | yes | PK | Internal trigger rule ID. |
+| rule_id | text | yes | unique | Stable configured trigger rule ID, e.g. FFS-TRIG-LOCAL-THIN-AREA. |
+| rule_name | text | yes |  | Human-readable rule name. |
+| damage_mechanism | text | yes |  | local_thin_area, crack_like_indication, dent_gouge, severe_corrosion, settlement_concern, out_of_roundness, brittle_fracture_concern, thickness_below_screening. |
+| trigger_source_type | text | yes |  | calculation_warning or manual_finding. |
+| warning_codes | text[] | yes | default {} | Calculation warning codes that can create FFS cases. |
+| default_severity | text | yes | info/warning/blocking/critical | Default workflow severity. |
+| required_next_action | text | yes |  | Required human action. |
+| active_flag | boolean | yes | default true | Enables/disables configured trigger. |
+| governance_note | text | yes |  | Clarifies trigger-only governance. |
+| created_at / updated_at | timestamptz | yes |  | Audit timestamps. |
+
+### ffs_cases
+
+| Field | Type | Required | Key / Reference | Notes |
+|---|---|---:|---|---|
+| id | uuid | yes | PK | Internal FFS case UUID. |
+| case_id | text | yes | unique | Human-readable FFS case ID. |
+| asset_id | uuid | yes | FK assets.id | Tank asset under review. |
+| inspection_event_id | uuid | optional | FK inspection_events.id | Related inspection event. |
+| calculation_run_id | uuid | optional | FK calculation_runs.id | Source calculation run when case is created from warning outputs. |
+| component | text | yes |  | Tank component such as shell, floor, roof, nozzle, foundation. |
+| damage_mechanism | text | yes |  | Triggered damage mechanism category. |
+| trigger_source | text | yes |  | manual_finding, calculation_warning, inspection_review, etc. |
+| trigger_reason | text | yes |  | Plain-language trigger reason. Does not declare fitness. |
+| trigger_rule_id | text | yes | references configured rule ID | Rule that created or categorized the case. |
+| severity | text | yes | info/warning/blocking/critical | Workflow severity. |
+| evidence_links | jsonb | yes | default [] | Supporting evidence references snapshot. Evidence_links records may also point to the FFS case. |
+| trigger_measurements_json | jsonb | yes | default [] | Supporting measurements, calculation inputs, or finding references. |
+| assigned_engineer / owner_user_id | uuid | optional | FK users.id | Assigned engineer/reviewer. |
+| status | text | yes | open, under_review, data_required, assessment_in_progress, accepted, repair_required, monitor, closed | FFS workflow state. |
+| due_date | date | optional |  | Review due date. |
+| required_next_action | text | yes |  | Next action required; trigger cases cannot auto-dispose. |
+| final_disposition | text | optional |  | Final disposition entered only during senior engineer/admin closure. |
+| approval_record_id | uuid | optional | FK approval_records.id | Required to close final FFS disposition. |
+| created_by / updated_by | uuid | optional | FK users.id | Actor traceability. |
+| created_at / updated_at | timestamptz | yes |  | Audit timestamps. |
+
+FFS cases are trigger/governance records only. They do not perform API 579-1/ASME FFS-1 calculations and do not declare fitness for service. AI agents cannot close FFS cases. Final disposition requires senior engineer/admin approval and an approval record.
+
 ### audit_logs
 
 | Field | Type | Required | Key / Reference | Notes |
@@ -531,12 +579,13 @@ These tables exist in the clean-clone schema and are either supporting reference
 | calculation_outputs | Sprint 6 implemented | Field-level output rows for corrosion-rate, remaining-life, warning, and trigger-candidate outputs. |
 | engineering_reviews | Baseline implemented | Future human review workflow. |
 | approval_records | Baseline implemented | Future approval records for issued engineering actions. |
-| ffs_cases | Baseline implemented | API 579/FFS trigger shell only. No FFS assessment implemented. |
+| ffs_cases | Sprint 7 implemented | API 579-1/ASME FFS-1 trigger workflow governance. Trigger only; no FFS calculation or fitness declaration. |
+| ffs_trigger_rules | Sprint 7 implemented | Configured trigger rules for calculation warnings and manual findings. |
 | rbi_cases | Baseline implemented | RBI interface shell only. No API RP 581 quantitative RBI implemented. |
 
 ## Future / Not Implemented Tables
 
-These remain planned and are not implemented in the Sprint 6 baseline:
+These remain planned and are not implemented in the Sprint 7 baseline:
 
 | Table / Area | Status | Rule |
 |---|---|---|
@@ -552,9 +601,9 @@ These remain planned and are not implemented in the Sprint 6 baseline:
 2. n8n must call AIM APIs and must not write directly to PostgreSQL.
 3. AI extraction is not implemented; future AI output must remain staging-only.
 4. AI cannot approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
-5. Evidence linkage is mandatory for NDT approval gates; Sprint 6 calculation inputs preserve available NDT/evidence traceability and future calculation approval gates must enforce this linkage before final approval.
+5. Evidence linkage is mandatory for NDT approval gates; Sprint 6 calculation inputs preserve available NDT/evidence traceability; Sprint 7 FFS cases preserve supporting measurement/evidence snapshots and future calculation approval gates must enforce this linkage before final approval.
 6. Formula Registry governs metadata/versioning and the Sprint 6 universal deterministic engine registration; no API/API-ASME formula expression is invented or embedded.
-7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas.
+7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. Sprint 7 FFS trigger workflow does not execute FFS formulas.
 8. Missing critical engineering data produces deterministic validation warnings or blocking results according to validation scope.
 9. Every important create/update/delete/review/approval/governance action must write audit logs.
-10. Clean-clone migrations 0001 through 0007 are part of the implemented Sprint 6 baseline.
+10. Clean-clone migrations 0001 through 0008 are part of the implemented Sprint 7 baseline.

@@ -1,4 +1,4 @@
-# AIM Tank Integrity ERD — Implemented Schema Through Sprint 5.5
+# AIM Tank Integrity ERD — Implemented Schema Through Sprint 7
 
 ```mermaid
 erDiagram
@@ -39,15 +39,21 @@ erDiagram
   calculation_runs ||--o{ calculation_outputs : outputs
   evidence_files ||--o{ calculation_inputs : input_evidence
 
-  assets ||--o{ ffs_cases : future_ffs_trigger
+  assets ||--o{ ffs_cases : ffs_trigger_cases
   assets ||--o{ rbi_cases : future_rbi_interface
-  calculation_runs ||--o{ ffs_cases : future_trigger_source
+  calculation_runs ||--o{ ffs_cases : calculation_warning_source
+  ffs_trigger_rules ||--o{ ffs_cases : configured_trigger
 ```
 
 ## Boundary
 
-AIM/PostgreSQL stores final structured engineering data, metadata, validation snapshots, Formula Registry metadata, workflow events, error logs, and audit logs. n8n may create workflow events and error logs through AIM APIs only. Universal deterministic calculation execution is included through Sprint 6. No API/API-ASME formula expression execution, AI extraction runtime, report generation, or CMMS work-order integration is included.
+AIM/PostgreSQL stores final structured engineering data, metadata, validation snapshots, Formula Registry metadata, workflow events, error logs, and audit logs. n8n may create workflow events and error logs through AIM APIs only. Universal deterministic calculation execution is included through Sprint 6. FFS trigger workflow governance is included through Sprint 7. No API/API-ASME formula expression execution, FFS assessment calculation, AI extraction runtime, report generation, or CMMS work-order integration is included.
 
 ## Formula Registry Note
 
 Formula Registry rows represent controlled metadata versions. Formula expressions for API-controlled logic must remain controlled placeholders until manually entered and approved by authorized engineers using licensed sources or approved fixtures. The required `formula_expression_source` field preserves formula source traceability.
+
+
+## FFS Trigger Workflow Note
+
+FFS cases are governance trigger records aligned to API 579-1/ASME FFS-1 workflow needs. They preserve trigger reason, supporting measurements, evidence snapshots, workflow status, and approval record linkage. They do not declare fitness for service or execute FFS calculations. Final disposition requires senior engineer/admin approval; AI agents cannot close cases.

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.6.1
-  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 6. Deterministic universal calculation engine is implemented; no API/API-ASME formula expressions are hard-coded.
+  version: 0.7.0
+  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 7. Deterministic universal calculation engine and FFS trigger workflow governance are implemented; no API/API-ASME formula expressions are hard-coded.
 servers:
   - url: http://localhost:4000/api/v1
 security:
@@ -427,6 +427,129 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200': { description: Calculation run list }
+
+  /ffs/cases:
+    get:
+      summary: List FFS trigger cases
+      description: Lists API 579-1/ASME FFS-1 governance trigger cases. Cases do not declare fitness for service.
+      x-permission-required: ffs.read
+      parameters:
+        - in: query
+          name: asset_id
+          required: false
+          schema: { type: string, format: uuid }
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [open, under_review, data_required, assessment_in_progress, accepted, repair_required, monitor, closed]
+      responses:
+        '200': { description: FFS case list }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      summary: Manually create an FFS trigger case
+      description: Creates an engineer-review case from a finding or manual trigger. This endpoint never declares fitness for service.
+      x-permission-required: ffs.create
+      x-audit-event-generated: FFS_CASE_CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FfsCaseCreateRequest'
+      responses:
+        '201': { description: FFS case created }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /ffs/cases/from-calculation:
+    post:
+      summary: Create FFS cases from calculation warnings
+      description: Creates FFS trigger cases from deterministic calculation warning outputs. Trigger only; no fitness declaration.
+      x-permission-required: ffs.trigger
+      x-audit-event-generated: FFS_CASES_TRIGGERED_FROM_CALCULATION
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [calculation_run_id]
+              properties:
+                calculation_run_id: { type: string }
+                assigned_engineer: { type: string, format: uuid }
+                due_date: { type: string, format: date }
+      responses:
+        '201': { description: FFS cases created from calculation warning outputs }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /ffs/cases/{caseId}:
+    get:
+      summary: Get FFS case detail
+      x-permission-required: ffs.read
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: FFS case detail }
+        '404': { description: FFS case not found }
+  /ffs/cases/{caseId}/status:
+    patch:
+      summary: Update FFS workflow status
+      description: Updates non-final FFS workflow status. Use close endpoint for final disposition.
+      x-permission-required: ffs.update
+      x-audit-event-generated: FFS_CASE_STATUS_UPDATED
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [open, under_review, data_required, assessment_in_progress, accepted, repair_required, monitor]
+                assigned_engineer: { type: string, format: uuid }
+                due_date: { type: string, format: date }
+      responses:
+        '200': { description: FFS case status updated }
+        '400': { $ref: '#/components/responses/ValidationError' }
+  /ffs/cases/{caseId}/close:
+    post:
+      summary: Approve final FFS disposition and close case
+      description: Requires senior_engineer/admin authority. AI agents cannot close FFS cases. Does not perform FFS calculation.
+      x-permission-required: ffs.approve
+      x-audit-event-generated: FFS_CASE_FINAL_DISPOSITION_APPROVED
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [final_disposition]
+              properties:
+                final_disposition: { type: string }
+                approval_comment: { type: string }
+      responses:
+        '200': { description: Final FFS disposition approved and case closed }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -453,6 +576,31 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
   schemas:
+
+    FfsCaseCreateRequest:
+      type: object
+      required: [asset_id, component, damage_mechanism, trigger_reason]
+      properties:
+        asset_id: { type: string, format: uuid }
+        component: { type: string }
+        damage_mechanism:
+          type: string
+          enum: [local_thin_area, crack_like_indication, dent_gouge, severe_corrosion, settlement_concern, out_of_roundness, brittle_fracture_concern, thickness_below_screening, engineering_review_required]
+        trigger_source: { type: string, default: manual_finding }
+        trigger_rule_id: { type: string }
+        trigger_reason: { type: string }
+        severity:
+          type: string
+          enum: [info, warning, blocking, critical]
+        evidence_links:
+          type: array
+          items: { type: object }
+        supporting_measurements:
+          type: array
+          items: { type: object }
+        assigned_engineer: { type: string, format: uuid }
+        due_date: { type: string, format: date }
+        required_next_action: { type: string }
     ErrorEnvelope:
       type: object
       required: [error]

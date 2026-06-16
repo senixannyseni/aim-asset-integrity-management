@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 6 Deterministic Calculation Engine Complete — Governance Hardened**
+Sprint status: **Sprint 7 FFS Trigger Workflow Complete**
 
-This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 6: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, and universal deterministic calculation execution. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 7: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, and FFS trigger workflow governance. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -90,6 +90,7 @@ db/migrations/0004_evidence_ndt_data_room.sql
 db/migrations/0005_engineering_validation_engine.sql
 db/migrations/0006_formula_registry_module.sql
 db/migrations/0007_deterministic_calculation_engine.sql
+db/migrations/0008_ffs_trigger_workflow.sql
 ```
 
 Run from an empty PostgreSQL database:
@@ -111,6 +112,7 @@ Seed scripts are idempotent and can be re-run safely.
 - `/formulas`
 - `/formulas/[formulaId]`
 - `/calculations`
+- `/ffs`
 
 ## Key API Routes
 
@@ -128,6 +130,10 @@ Seed scripts are idempotent and can be re-run safely.
 - Formula Registry endpoints under `/api/v1/formulas`
 - `POST /api/v1/engineering/calculate`
 - `GET /api/v1/engineering/calculations`
+- `GET/POST /api/v1/ffs/cases`
+- `POST /api/v1/ffs/cases/from-calculation`
+- `PATCH /api/v1/ffs/cases/{caseId}/status`
+- `POST /api/v1/ffs/cases/{caseId}/close`
 - `POST /api/v1/workflow-events`
 - `GET/POST /api/v1/error-logs`
 
@@ -175,3 +181,21 @@ Implemented `/api/v1/engineering/calculate` and `/api/v1/engineering/calculation
 - API-controlled formulas remain metadata-only and are blocked from deterministic execution.
 - Calculation input rows preserve NDT `source_entity_id` and `evidence_file_id` where available.
 - OpenAPI documents implemented asset geometry and shell-course read endpoints.
+
+
+### Sprint 7 — FFS Trigger Workflow
+
+Implemented API 579-1/ASME FFS-1-aligned trigger workflow governance. FFS cases can be created manually from findings or from deterministic calculation warnings. The workflow records trigger reason, supporting measurements, evidence links, required next action, assignment, status, and final disposition approval.
+
+Important boundary: FFS trigger cases do **not** declare fitness for service. Final FFS disposition requires senior engineer/admin approval and writes an approval record and audit log. AI agents cannot close FFS cases.
+
+Implemented route/UI scope:
+
+- `/ffs` frontend workflow page.
+- `GET /api/v1/ffs/cases`.
+- `POST /api/v1/ffs/cases`.
+- `POST /api/v1/ffs/cases/from-calculation`.
+- `PATCH /api/v1/ffs/cases/{caseId}/status`.
+- `POST /api/v1/ffs/cases/{caseId}/close`.
+
+Workflow statuses: `open`, `under_review`, `data_required`, `assessment_in_progress`, `accepted`, `repair_required`, `monitor`, `closed`.

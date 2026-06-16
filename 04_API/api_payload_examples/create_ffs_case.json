@@ -1,0 +1,23 @@
+{
+  "asset_id": "replace-with-asset-uuid",
+  "component": "shell",
+  "damage_mechanism": "local_thin_area",
+  "trigger_source": "manual_finding",
+  "trigger_rule_id": "FFS-TRIG-LOCAL-THIN-AREA",
+  "trigger_reason": "Manual finding indicates local thin area requiring FFS trigger review.",
+  "severity": "blocking",
+  "supporting_measurements": [
+    {
+      "measurement_id": "manual-finding-001",
+      "component": "shell",
+      "note": "Supporting measurement/evidence reference entered by engineer."
+    }
+  ],
+  "evidence_links": [
+    {
+      "evidence_file_id": "replace-with-evidence-uuid",
+      "linked_entity_type": "finding"
+    }
+  ],
+  "required_next_action": "Engineer review required. FFS trigger does not declare fitness for service."
+}
