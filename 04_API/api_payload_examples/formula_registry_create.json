@@ -1,0 +1,35 @@
+{
+  "formula_id": "API653-SHELL-THICKNESS-CONTROLLED",
+  "formula_name": "API 653 Shell Thickness Controlled Placeholder",
+  "code_basis": "API 653 / Engineering Basis",
+  "code_edition": "User-supplied licensed edition required",
+  "clause_reference": "Manual licensed reference only; no clause text reproduced",
+  "component": "shell",
+  "damage_mechanism": "corrosion",
+  "formula_type": "api_controlled",
+  "expression_type": "controlled_placeholder",
+  "expression_body": "CONTROLLED_PLACEHOLDER_REQUIRES_LICENSED_ENGINEER_ENTRY",
+  "input_schema": {
+    "measured_thickness_mm": "number",
+    "material_allowable_stress_mpa": "number"
+  },
+  "output_schema": {
+    "status": "string",
+    "warnings": "array"
+  },
+  "unit_rules": {
+    "thickness": "mm",
+    "stress": "MPa"
+  },
+  "validation_rules": {
+    "requires_evidence": true,
+    "requires_code_edition": true
+  },
+  "blocking_rules": [
+    "draft formulas cannot be used for production calculation",
+    "API-controlled expressions require authorized engineer entry"
+  ],
+  "test_case_reference": "07_Calculation/validation_workbook.xlsx",
+  "status": "draft",
+  "version": "0.1.0"
+}

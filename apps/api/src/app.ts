@@ -10,6 +10,7 @@ import { rbacDemoRouter } from './routes/rbac-demo.js';
 import { evidenceRouter } from './routes/evidence.js';
 import { ndtRouter } from './routes/ndt.js';
 import { engineeringValidationRouter } from './routes/engineering-validation.js';
+import { formulasRouter } from './routes/formulas.js';
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
@@ -39,6 +40,7 @@ export function createApp() {
   app.use('/api/v1', evidenceRouter);
   app.use('/api/v1', ndtRouter);
   app.use('/api/v1', engineeringValidationRouter);
+  app.use('/api/v1', formulasRouter);
 
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const message = error instanceof Error ? error.message : 'Unknown server error.';

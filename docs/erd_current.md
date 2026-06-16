@@ -31,3 +31,15 @@ erDiagram
 ## Boundary
 
 AIM/PostgreSQL stores final structured engineering data and validation snapshots. n8n may create workflow events and error logs through AIM APIs only. No engineering formula execution, AI extraction runtime, or report generation is included in Sprint 4.
+
+## Sprint 5 Formula Registry Addendum
+
+```mermaid
+erDiagram
+  users ||--o{ formula_registry : creates_updates_approves
+  formula_registry ||--o{ formula_registry : previous_version
+  formula_registry ||--o{ formula_test_runs : placeholder_test_runs
+  formula_registry ||--o{ calculation_runs : future_approved_formula_source
+```
+
+Formula Registry rows represent controlled metadata versions. Formula expressions for API-controlled logic must remain controlled placeholders until manually entered and approved by authorized engineers using licensed sources or approved fixtures.

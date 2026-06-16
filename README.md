@@ -191,3 +191,23 @@ Sprint 4 adds deterministic validation governance for engineering readiness. Use
 - Frontend: `http://localhost:3000/validation`
 
 No engineering calculation, API/API-ASME formula execution, AI extraction runtime, or report generation is implemented in Sprint 4.
+
+## Sprint 5 — Formula Registry Module
+
+Sprint 5 adds a controlled Formula Registry for formula metadata, versioning, approval, deprecation, and placeholder test governance. It does not execute engineering calculations and does not include any API/API-ASME formula expressions. API-controlled formulas must remain controlled placeholders unless manually entered by an authorized engineer from licensed standards or approved fixtures.
+
+Routes:
+
+- `GET /api/v1/formulas`
+- `POST /api/v1/formulas`
+- `GET /api/v1/formulas/approved/{formulaId}`
+- `GET /api/v1/formulas/{formulaId}/versions`
+- `GET /api/v1/formulas/{formulaId}/compare`
+- `PATCH /api/v1/formulas/records/{recordId}`
+- `POST /api/v1/formulas/records/{recordId}/approve`
+- `POST /api/v1/formulas/records/{recordId}/deprecate`
+- `POST /api/v1/formulas/records/{recordId}/test-run`
+
+Frontend:
+
+- `http://localhost:3000/formulas`
