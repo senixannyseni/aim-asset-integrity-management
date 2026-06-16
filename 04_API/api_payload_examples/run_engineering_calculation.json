@@ -1,0 +1,52 @@
+```powershell
+@'
+{
+  "calculation_type": "universal_thickness_screening",
+  "formula_set_version": "SPRINT-6-UNIVERSAL-DETERMINISTIC-001",
+  "asset_id": "replace-with-asset-uuid",
+  "input_snapshot": {
+    "asset": {
+      "tank_tag": "TK-001",
+      "code_edition": "User-supplied licensed edition required"
+    },
+    "geometry": {
+      "diameter": 20,
+      "diameter_unit": "m",
+      "shell_height": 12,
+      "shell_height_unit": "m"
+    },
+    "thickness_history": [
+      {
+        "component": "shell",
+        "shell_course_no": 1,
+        "reading_date": "2024-01-01",
+        "measured_thickness": 11.2,
+        "measured_thickness_unit": "mm"
+      },
+      {
+        "component": "shell",
+        "shell_course_no": 1,
+        "reading_date": "2026-01-01",
+        "measured_thickness": 10.8,
+        "measured_thickness_unit": "mm"
+      }
+    ],
+    "screening_rules": {
+      "retirement_thickness": 8,
+      "retirement_thickness_unit": "mm",
+      "high_corrosion_rate_threshold_mm_per_year": 0.25,
+      "remaining_life_warning_years": 5
+    },
+    "evidence_links": [
+      {
+        "evidence_file_id": "replace-with-evidence-uuid",
+        "linked_entity_type": "ndt_measurement"
+      }
+    ]
+  },
+  "validation_context": {
+    "block_on_validation_severity": "blocking"
+  },
+  "notes": "Example payload only. API/API-ASME formulas are not embedded. API-dependent formulas must be resolved through Formula Registry."
+}
+'@ | Set-Content .\04_API\api_payload_examples\run_engineering_calculation.json
