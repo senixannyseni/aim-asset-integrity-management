@@ -14,10 +14,11 @@
 | 7 | FFS Trigger Workflow | Complete |
 | 7.5 | Sprint 7 Governance and Security Hardening | Complete |
 | 8 | RBI Interface and Trigger Workflow | Complete |
+| 8.5 | Sprint 8 Evidence Linkage and Security Boundary Hardening | Complete |
 
 ## Boundary
 
-AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups. Sprint 7 creates FFS trigger workflow cases only; it does not execute FFS calculations or declare fitness for service. Sprint 8 creates RBI interface workflow cases only; it does not implement proprietary quantitative API RP 581 rules.
+AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups. Sprint 7 creates FFS trigger workflow cases only; it does not execute FFS calculations or declare fitness for service. Sprint 8 creates RBI interface workflow cases only; it does not implement proprietary quantitative API RP 581 rules. Sprint 8.5 hardens evidence link same-asset boundaries and clarifies OpenAPI dev/internal exclusions.
 
 ## Current Implemented Routes
 
@@ -65,3 +66,11 @@ Status: Complete.
 - Supports manual engineering-review creation and calculation-warning creation.
 - Preserves calculation_run, inspection_event, evidence, and placeholder input references.
 - Quantitative API RP 581 calculations are not implemented or embedded.
+
+
+## Sprint 8.5 Evidence Linkage and Security Boundary Hardening
+
+- Generic evidence links enforce same-asset ownership for implemented asset-owned entities.
+- NDT approval cannot use linked evidence from another asset.
+- FFS/RBI same-asset evidence validation and from-calculation traceability are preserved.
+- OpenAPI explicitly marks health and RBAC demo routes as local-dev/internal exclusions.

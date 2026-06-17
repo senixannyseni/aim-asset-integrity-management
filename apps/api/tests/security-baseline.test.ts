@@ -26,4 +26,12 @@ describe('Sprint 7 security hardening baseline', () => {
     expect(app).toContain('Internal server error.');
     expect(app).toContain('requestId');
   });
+
+
+  it('makes OpenAPI dev/internal route scope explicit', () => {
+    const openapi = readRepoFile('04_API/openapi.yaml');
+    expect(openapi).toContain('x-internal-routes-excluded');
+    expect(openapi).toContain('/health');
+    expect(openapi).toContain('/rbac/demo/asset-read');
+  });
 });

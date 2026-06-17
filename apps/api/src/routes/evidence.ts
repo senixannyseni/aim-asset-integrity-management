@@ -135,9 +135,23 @@ function mapEvidenceLink(row: DbRow): Record<string, unknown> {
   };
 }
 
-async function entityExists(client: PoolClient, entityType: EvidenceLinkEntityType, entityId: string): Promise<boolean> {
+type LinkedEntityAssetResolution = {
+  exists: boolean;
+  assetId: string | null;
+  assetOwned: boolean;
+};
+
+async function resolveLinkedEntityAsset(
+  client: PoolClient,
+  entityType: EvidenceLinkEntityType,
+  entityId: string
+): Promise<LinkedEntityAssetResolution> {
+  if (entityType === 'asset') {
+    const result = await client.query<{ id: string }>('select id from assets where id = $1 and deleted_at is null limit 1', [entityId]);
+    return { exists: (result.rowCount ?? 0) > 0, assetId: result.rows[0]?.id ?? null, assetOwned: true };
+  }
+
   const tableByType: Partial<Record<EvidenceLinkEntityType, string>> = {
-    asset: 'assets',
     inspection_event: 'inspection_events',
     ndt_measurement: 'ndt_measurements',
     calculation_run: 'calculation_runs',
@@ -146,10 +160,30 @@ async function entityExists(client: PoolClient, entityType: EvidenceLinkEntityTy
   };
 
   const table = tableByType[entityType];
-  if (!table) return true;
+  if (!table) {
+    return { exists: true, assetId: null, assetOwned: false };
+  }
 
-  const result = await client.query(`select id from ${table} where id = $1 limit 1`, [entityId]);
-  return (result.rowCount ?? 0) > 0;
+  const result = await client.query<{ asset_id: string | null }>(`select asset_id from ${table} where id = $1 limit 1`, [entityId]);
+  const row = result.rows[0];
+  return { exists: Boolean(row), assetId: row?.asset_id ?? null, assetOwned: true };
+}
+
+function crossAssetEvidenceError(
+  res: ApiResponse,
+  input: { evidenceFileId: string; evidenceAssetId: string | null; linkedEntityType: EvidenceLinkEntityType; linkedEntityId: string; linkedEntityAssetId: string | null }
+): void {
+  res.status(409).json({
+    error: {
+      code: 'CROSS_ASSET_EVIDENCE_LINK_BLOCKED',
+      message: 'Evidence file and linked entity must belong to the same asset before evidence_links can be created.',
+      details: input
+    }
+  });
+}
+
+function hasSameAssetBoundary(evidenceAssetId: string | null, linkedEntityAssetId: string | null): boolean {
+  return Boolean(evidenceAssetId && linkedEntityAssetId && evidenceAssetId === linkedEntityAssetId);
 }
 
 async function nextEvidenceCode(client: PoolClient): Promise<string> {
@@ -385,21 +419,34 @@ evidenceRouter.post('/evidence/:evidenceId/links', requirePermission('evidence.l
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const evidenceResult = await client.query('select id from evidence_files where id = $1', [evidenceId]);
-    if (evidenceResult.rowCount === 0) {
+    const evidenceResult = await client.query<{ id: string; asset_id: string | null }>('select id, asset_id from evidence_files where id = $1', [evidenceId]);
+    const evidence = evidenceResult.rows[0];
+    if (!evidence) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'EVIDENCE_NOT_FOUND', message: 'Evidence file not found.' } });
       return;
     }
 
-    const exists = await entityExists(client, linkedEntityType, linkedEntityId);
-    if (!exists) {
+    const linkedEntity = await resolveLinkedEntityAsset(client, linkedEntityType, linkedEntityId);
+    if (!linkedEntity.exists) {
       await client.query('rollback');
       res.status(404).json({
         error: {
           code: 'LINKED_ENTITY_NOT_FOUND',
           message: 'Linked entity does not exist in implemented AIM tables.'
         }
+      });
+      return;
+    }
+
+    if (linkedEntity.assetOwned && !hasSameAssetBoundary(evidence.asset_id, linkedEntity.assetId)) {
+      await client.query('rollback');
+      crossAssetEvidenceError(res, {
+        evidenceFileId: evidenceId,
+        evidenceAssetId: evidence.asset_id,
+        linkedEntityType,
+        linkedEntityId,
+        linkedEntityAssetId: linkedEntity.assetId
       });
       return;
     }

@@ -1,6 +1,6 @@
-# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 8
+# AIM Tank Integrity Data Dictionary — Current Implemented Schema Through Sprint 8.5
 
-Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 8.
+Status: aligned to the implemented AIM+n8n Tank Integrity Module baseline through Sprint 8.5.
 
 Completed implementation state covered by this dictionary:
 
@@ -14,6 +14,7 @@ Completed implementation state covered by this dictionary:
 - Sprint 6 — deterministic universal calculation engine and calculation traceability records.
 - Sprint 7 — API 579-1/ASME FFS-1 trigger workflow governance cases.
 - Sprint 8 — API RP 580/581 RBI interface and trigger workflow governance cases.
+- Sprint 8.5 — evidence linkage and security boundary hardening.
 
 ## Governance Boundary
 
@@ -38,7 +39,7 @@ Completed implementation state covered by this dictionary:
 | shell_courses | Implemented | engineer | Shell course master data. Thickness and course height values are normalized to millimeters. |
 | materials | Implemented | engineer / qa_qc | Material reference selector with Sprint 4 allowable-stress readiness fields. |
 | evidence_files | Implemented | inspector / engineer | Evidence metadata and object-storage-compatible path registry. Binary object handling remains storage-layer responsibility. |
-| evidence_links | Implemented | inspector / engineer | Evidence-to-entity traceability table. Used by NDT approval evidence gate. |
+| evidence_links | Implemented | inspector / engineer | Evidence-to-entity traceability table. Same-asset linkage is enforced for asset, inspection_event, ndt_measurement, calculation_run, ffs_case, and rbi_case targets. Used by NDT approval evidence gate. |
 | ndt_measurements | Implemented | inspector / engineer / qa_qc | NDT UT thickness measurement records with review/approval status and evidence gate. |
 | workflow_events | Implemented | service / admin | AIM API event intake for n8n orchestration events. |
 | error_logs | Implemented | service / admin / qa_qc | AIM API error/failure logging baseline. |
@@ -299,7 +300,7 @@ Evidence governance notes:
 | created_at | timestamptz | yes | default now() |  | Creation timestamp. |
 | updated_at | timestamptz | yes | default now() |  | Last update timestamp. |
 
-Approval/evidence gate: critical NDT records cannot be approved unless either `evidence_file_id` is present and valid or a valid `evidence_links` record exists for the NDT measurement.
+Approval/evidence gate: critical NDT records cannot be approved unless either `evidence_file_id` is present and valid for the same asset or a valid same-asset `evidence_links` record exists for the NDT measurement. Cross-asset linked evidence is blocked with `CROSS_ASSET_EVIDENCE_LINK_BLOCKED`.
 
 ## Workflow and Error Governance
 
@@ -610,7 +611,7 @@ These remain planned and are not implemented in the Sprint 8 baseline:
 7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. Sprint 7 FFS and Sprint 8 RBI trigger workflows do not execute API/API-ASME formulas.
 8. Missing critical engineering data produces deterministic validation warnings or blocking results according to validation scope.
 9. Every important create/update/delete/review/approval/governance action must write audit logs.
-10. Clean-clone migrations 0001 through 0009 are part of the implemented Sprint 8 baseline.
+10. Clean-clone migrations 0001 through 0009 are part of the implemented Sprint 8.5 baseline.
 
 
 ## Sprint 7 Governance and Security Hardening Notes
@@ -689,3 +690,13 @@ RBI interface cases are governance records aligned to API RP 580/581 workflow ne
 - `evidence_links` may link `evidence_files` to `rbi_case` records after same-asset validation.
 - Quantitative API RP 581 probability/consequence/risk rules are not implemented or embedded.
 - Future quantitative RBI must use approved Formula Registry metadata and a controlled executor.
+
+
+## Sprint 8.5 Evidence Linkage and Security Boundary Hardening Notes
+
+- Generic `evidence_links` creation validates that `evidence_files.asset_id` matches the linked entity `asset_id` for `asset`, `inspection_event`, `ndt_measurement`, `calculation_run`, `ffs_case`, and `rbi_case` links.
+- Unsupported or future entities without implemented asset ownership are not used to bypass approval gates.
+- NDT approval uses only direct evidence or linked evidence belonging to the same asset as the NDT measurement.
+- Cross-asset evidence links are rejected with `CROSS_ASSET_EVIDENCE_LINK_BLOCKED`.
+- FFS and RBI manual evidence validation remains in place, and FFS/RBI from-calculation routes preserve calculation run, source entity, and evidence traceability.
+- OpenAPI explicitly marks health and RBAC demo routes as local-dev/internal exclusions from the production engineering API contract.

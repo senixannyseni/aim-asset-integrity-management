@@ -57,3 +57,16 @@ API error responses must avoid exposing raw internal error messages in productio
 ## n8n boundary
 
 n8n must call AIM APIs only. n8n must not write directly to PostgreSQL or mutate final AIM system-of-record tables outside approved APIs.
+
+
+## Evidence linkage boundary
+
+Evidence links must not cross asset boundaries for implemented asset-owned entities. The API must validate that `evidence_files.asset_id` matches the linked entity asset before creating links to asset, inspection event, NDT measurement, calculation run, FFS case, or RBI case records.
+
+Critical NDT approval may use direct or linked evidence only when the evidence belongs to the same asset as the NDT measurement. Cross-asset evidence must be rejected with `CROSS_ASSET_EVIDENCE_LINK_BLOCKED`.
+
+FFS and RBI routes must preserve same-asset evidence validation and maintain calculation run, source entity, and evidence traceability for cases created from calculation warnings.
+
+## OpenAPI route scope
+
+Health and RBAC demo endpoints are local-development/internal readiness routes. They are intentionally excluded from the production engineering workflow OpenAPI contract and are documented through the `x-internal-routes-excluded` extension.

@@ -28,7 +28,7 @@ export function evaluateNdtEvidenceGate(input: NdtEvidenceGateInput): NdtEvidenc
   if (hasDirectEvidence || hasLinkedEvidence) {
     return {
       status: 'pass',
-      reason: 'NDT record has traceable evidence through direct evidence_file_id or evidence_links.'
+      reason: 'NDT record has traceable same-asset evidence through direct evidence_file_id or validated evidence_links.'
     };
   }
 

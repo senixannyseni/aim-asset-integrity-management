@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 8 RBI Interface and Trigger Workflow Complete**
+Sprint status: **Sprint 8.5 Evidence Linkage and Security Boundary Hardening Complete**
 
-This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 8: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, and RBI interface trigger workflow governance. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 8.5: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger workflow governance, and evidence linkage/security boundary hardening. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -84,6 +84,14 @@ This repository implements the AIM+n8n Tank Integrity Module foundation through 
 - RBI cases can be created manually or from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated anomalies, or engineering review.
 - Risk summary and inspection plan recommendation are auditable and clearly labeled by calculation basis.
 
+### Sprint 8.5 — Evidence Linkage and Security Boundary Hardening
+
+- Generic `evidence_links` creation validates same-asset ownership for asset, inspection event, NDT measurement, calculation run, FFS case, and RBI case links.
+- Cross-asset evidence links are rejected with `CROSS_ASSET_EVIDENCE_LINK_BLOCKED`.
+- NDT critical approval cannot rely on linked evidence from another asset.
+- OpenAPI explicitly marks health and RBAC demo routes as local-dev/internal and outside the production engineering API contract.
+- Security baseline remains explicit: demo-header auth is local-dev only; production requires JWT/session identity, DB-backed RBAC, signed object-storage URLs, and malware scanning.
+
 ## Local Setup
 
 ```powershell
@@ -111,6 +119,7 @@ db/migrations/0005_engineering_validation_engine.sql
 db/migrations/0006_formula_registry_module.sql
 db/migrations/0007_deterministic_calculation_engine.sql
 db/migrations/0008_ffs_trigger_workflow.sql
+db/migrations/0009_rbi_interface_trigger_workflow.sql
 ```
 
 Run from an empty PostgreSQL database:
@@ -133,6 +142,7 @@ Seed scripts are idempotent and can be re-run safely.
 - `/formulas/[formulaId]`
 - `/calculations`
 - `/ffs`
+- `/rbi`
 
 ## Key API Routes
 
@@ -245,3 +255,13 @@ Status: Complete.
 - Supports manual engineering-review creation and calculation-warning creation.
 - Preserves source calculation run, source measurement, evidence, and placeholder inputs.
 - Uses qualitative/semi-quantitative placeholder basis only. No proprietary quantitative API RP 581 logic is implemented.
+
+
+## Sprint 8.5 Evidence Linkage and Security Boundary Hardening
+
+- AIM remains the system of record for evidence metadata and evidence links.
+- n8n remains API-only orchestration and must not create evidence links by direct database writes.
+- Evidence links to asset-owned entities must be same-asset links.
+- Critical NDT approval cannot pass based on cross-asset linked evidence.
+- FFS/RBI evidence snapshots and from-calculation traceability are preserved.
+- Health and RBAC demo routes are local-dev/internal and intentionally excluded from the production OpenAPI engineering workflow contract.

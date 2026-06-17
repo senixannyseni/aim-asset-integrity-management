@@ -1,12 +1,19 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.8.0
-  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 8. Deterministic universal calculation engine, FFS trigger workflow, and RBI interface workflow governance are implemented; no API/API-ASME formula expressions are hard-coded or proprietary quantitative API RP 581 rules embedded.
+  version: 0.8.5
+  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 8.5 evidence linkage/security boundary hardening. Deterministic universal calculation engine, FFS trigger workflow, and RBI interface workflow governance are implemented; no API/API-ASME formula expressions are hard-coded or proprietary quantitative API RP 581 rules embedded.
 servers:
   - url: http://localhost:4000/api/v1
 security:
   - DemoRoleHeaders: []
+x-internal-routes-excluded:
+  note: Health and RBAC demo routes are intentionally excluded from the production OpenAPI contract. They are local-dev/internal readiness endpoints, not engineering workflow APIs.
+  routes:
+    - /health
+    - /health/db
+    - /api/v1/rbac/demo/asset-read
+    - /api/v1/rbac/demo/calculation-approve
 paths:
   /assets:
     get:
@@ -960,6 +967,8 @@ components:
 
 
 # Sprint 7 governance hardening notes
+# Sprint 8.5 evidence linkage hardening: generic evidence_links rejects cross-asset links with CROSS_ASSET_EVIDENCE_LINK_BLOCKED.
+# NDT approval cannot use linked evidence from another asset.
 # FFS case creation rejects cross-asset evidence links with error code CROSS_ASSET_EVIDENCE_LINK_BLOCKED.
 # Demo header authentication is local-development only; production deployments require verified JWT/session identity and DB-backed RBAC.
 

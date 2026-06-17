@@ -21,6 +21,8 @@ export const ndtRouter = Router();
 type ApiResponse = Response<Record<string, unknown>>;
 type DbRow = Record<string, unknown>;
 
+type LinkedEvidenceRow = { evidence_file_id: string; asset_id: string | null };
+
 function validationError(res: ApiResponse, issues: ValidationIssue[]): void {
   res.status(400).json({
     error: {
@@ -148,18 +150,44 @@ function validationStatusForEvidence(evidenceFileId: string | undefined, isCriti
   return { status: 'warning', message: 'NDT measurement has no direct evidence; link evidence before approval if critical.' };
 }
 
-async function getLinkedEvidenceIds(client: PoolClient, measurementId: string): Promise<string[]> {
-  const result = await client.query<{ evidence_file_id: string }>(
-    `select evidence_file_id from evidence_links where linked_entity_type = 'ndt_measurement' and linked_entity_id = $1`,
+async function getLinkedEvidenceRows(client: PoolClient, measurementId: string): Promise<LinkedEvidenceRow[]> {
+  const result = await client.query<LinkedEvidenceRow>(
+    `select el.evidence_file_id, ef.asset_id
+     from evidence_links el
+     join evidence_files ef on ef.id = el.evidence_file_id
+     where el.linked_entity_type = 'ndt_measurement' and el.linked_entity_id = $1`,
     [measurementId]
   );
-  return result.rows.map((row) => row.evidence_file_id);
+  return result.rows;
+}
+
+function linkedEvidenceIds(rows: LinkedEvidenceRow[]): string[] {
+  return rows.map((row) => row.evidence_file_id);
+}
+
+function sameAssetLinkedEvidenceIds(rows: LinkedEvidenceRow[], assetId: string): string[] {
+  return rows.filter((row) => row.asset_id === assetId).map((row) => row.evidence_file_id);
+}
+
+function crossAssetLinkedEvidenceIds(rows: LinkedEvidenceRow[], assetId: string): string[] {
+  return rows.filter((row) => row.asset_id !== assetId).map((row) => row.evidence_file_id);
+}
+
+function crossAssetEvidenceError(res: ApiResponse, invalidEvidenceFileIds: string[]): void {
+  res.status(409).json({
+    error: {
+      code: 'CROSS_ASSET_EVIDENCE_LINK_BLOCKED',
+      message: 'Linked evidence files for NDT approval must belong to the same asset as the NDT measurement.',
+      details: { invalid_evidence_file_ids: invalidEvidenceFileIds }
+    }
+  });
 }
 
 async function loadNdtMeasurement(client: PoolClient, measurementId: string): Promise<DbRow | undefined> {
   const result = await client.query<DbRow>(
     `select nm.*, ef.id as evidence_id, ef.evidence_code, ef.file_name, ef.original_filename, ef.file_type, ef.file_extension,
-            ef.object_storage_path, ef.object_storage_uri, ef.checksum, ef.checksum_sha256, ef.evidence_status, ef.status as evidence_file_status
+            ef.object_storage_path, ef.object_storage_uri, ef.checksum, ef.checksum_sha256, ef.evidence_status, ef.status as evidence_file_status,
+            ef.asset_id as direct_evidence_asset_id
      from ndt_measurements nm
      left join evidence_files ef on ef.id = nm.evidence_file_id
      where nm.id = $1`,
@@ -321,13 +349,27 @@ ndtRouter.get('/ndt/measurements/:measurementId', requirePermission('ndt.read'),
       res.status(404).json({ error: { code: 'NDT_MEASUREMENT_NOT_FOUND', message: 'NDT measurement not found.' } });
       return;
     }
-    const linkedEvidenceIds = await getLinkedEvidenceIds(client, measurementId);
+    const linkedEvidenceRows = await getLinkedEvidenceRows(client, measurementId);
+    const assetId = String(row.asset_id);
+    const validLinkedEvidenceIds = sameAssetLinkedEvidenceIds(linkedEvidenceRows, assetId);
+    const invalidLinkedEvidenceIds = crossAssetLinkedEvidenceIds(linkedEvidenceRows, assetId);
+    const directEvidenceFileId = typeof row.evidence_file_id === 'string' && (!row.direct_evidence_asset_id || row.direct_evidence_asset_id === row.asset_id)
+      ? row.evidence_file_id
+      : null;
     const evidenceGate = evaluateNdtEvidenceGate({
       isCritical: Boolean(row.is_critical),
-      directEvidenceFileId: typeof row.evidence_file_id === 'string' ? row.evidence_file_id : null,
-      linkedEvidenceFileIds: linkedEvidenceIds
+      directEvidenceFileId,
+      linkedEvidenceFileIds: validLinkedEvidenceIds
     });
-    res.json({ data: { ...mapNdt(row), linked_evidence_file_ids: linkedEvidenceIds, evidence_gate: evidenceGate } });
+    res.json({
+      data: {
+        ...mapNdt(row),
+        linked_evidence_file_ids: linkedEvidenceIds(linkedEvidenceRows),
+        valid_linked_evidence_file_ids: validLinkedEvidenceIds,
+        invalid_linked_evidence_file_ids: invalidLinkedEvidenceIds,
+        evidence_gate: evidenceGate
+      }
+    });
   } catch (error) {
     next(error);
   } finally {
@@ -473,11 +515,22 @@ ndtRouter.post('/ndt/measurements/:measurementId/approve', requirePermission('nd
       return;
     }
 
-    const linkedEvidenceIds = await getLinkedEvidenceIds(client, measurementId);
+    const assetId = String(before.asset_id);
+    const linkedEvidenceRows = await getLinkedEvidenceRows(client, measurementId);
+    const invalidLinkedEvidenceIds = crossAssetLinkedEvidenceIds(linkedEvidenceRows, assetId);
+    if (invalidLinkedEvidenceIds.length > 0) {
+      await client.query('rollback');
+      crossAssetEvidenceError(res, invalidLinkedEvidenceIds);
+      return;
+    }
+
+    const directEvidenceFileId = typeof before.evidence_file_id === 'string' && (!before.direct_evidence_asset_id || before.direct_evidence_asset_id === before.asset_id)
+      ? before.evidence_file_id
+      : null;
     const evidenceGate = evaluateNdtEvidenceGate({
       isCritical: Boolean(before.is_critical),
-      directEvidenceFileId: typeof before.evidence_file_id === 'string' ? before.evidence_file_id : null,
-      linkedEvidenceFileIds: linkedEvidenceIds
+      directEvidenceFileId,
+      linkedEvidenceFileIds: sameAssetLinkedEvidenceIds(linkedEvidenceRows, assetId)
     });
 
     if (evidenceGate.status === 'blocked') {
