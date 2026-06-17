@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 8.5 Evidence Linkage and Security Boundary Hardening Complete**
+Sprint status: **Sprint 9 Evidence Linkage and Security Boundary Hardening Complete**
 
-This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 8.5: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger workflow governance, and evidence linkage/security boundary hardening. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 9: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger workflow governance, and evidence linkage/security boundary hardening. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -84,7 +84,7 @@ This repository implements the AIM+n8n Tank Integrity Module foundation through 
 - RBI cases can be created manually or from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated anomalies, or engineering review.
 - Risk summary and inspection plan recommendation are auditable and clearly labeled by calculation basis.
 
-### Sprint 8.5 — Evidence Linkage and Security Boundary Hardening
+### Sprint 9 — Evidence Linkage and Security Boundary Hardening
 
 - Generic `evidence_links` creation validates same-asset ownership for asset, inspection event, NDT measurement, calculation run, FFS case, and RBI case links.
 - Cross-asset evidence links are rejected with `CROSS_ASSET_EVIDENCE_LINK_BLOCKED`.
@@ -257,7 +257,7 @@ Status: Complete.
 - Uses qualitative/semi-quantitative placeholder basis only. No proprietary quantitative API RP 581 logic is implemented.
 
 
-## Sprint 8.5 Evidence Linkage and Security Boundary Hardening
+## Sprint 9 Evidence Linkage and Security Boundary Hardening
 
 - AIM remains the system of record for evidence metadata and evidence links.
 - n8n remains API-only orchestration and must not create evidence links by direct database writes.
@@ -265,3 +265,14 @@ Status: Complete.
 - Critical NDT approval cannot pass based on cross-asset linked evidence.
 - FFS/RBI evidence snapshots and from-calculation traceability are preserved.
 - Health and RBAC demo routes are local-dev/internal and intentionally excluded from the production OpenAPI engineering workflow contract.
+
+
+## Sprint 9 Engineering Review and Approval Workflow
+
+Implemented governance workflow for engineering reviews and senior engineer approval records. Review statuses are draft, submitted_for_review, returned_for_revision, reviewed, submitted_for_approval, approved, rejected, and locked. Engineer roles may review data and calculation results; senior_engineer/admin approval is required for final approval, rejection, override approval, and locking. AI agents cannot approve, reject, override, or finalize engineering decisions. Locked calculation/review/approval records are immutable; revisions must be created as new records.
+
+Implemented tables/fields include engineering_reviews and approval_records extensions for calculation_run_id, asset_id, checklist_json, comments_json, override_json, reason, affected_field, original_value_json, override_value_json, evidence_links, revision_no, approval_status/review_status, approver/reviewer metadata, timestamps, locked_flag, and audit trail linkage.
+
+Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
+
+No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.

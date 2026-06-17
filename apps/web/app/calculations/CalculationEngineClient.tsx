@@ -11,6 +11,7 @@ type AssetOption = {
 };
 
 type CalculationResponse = {
+  calculation_run_id: string;
   run_id: string;
   run_status: string;
   validation_status: string;
@@ -123,6 +124,7 @@ export default function CalculationEngineClient() {
           <Link className="secondary-button" href="/validation">Validation</Link>
           <Link className="secondary-button" href="/formulas">Formula Registry</Link>
           <Link className="secondary-button" href="/ndt">NDT</Link>
+          <Link className="secondary-button" href="/reviews">Reviews</Link>
         </div>
       </header>
 
@@ -163,6 +165,7 @@ export default function CalculationEngineClient() {
                 <article><h2>{result.calculation.warnings.length}</h2><p>Warnings</p></article>
               </div>
               <p><strong>Run:</strong> {result.run_id}</p>
+              <p><Link className="secondary-button" href={`/calculations/${result.calculation_run_id}`}>Open Audit Trail</Link></p>
               <p><strong>Status:</strong> {result.run_status}</p>
               <p><strong>Validation:</strong> {result.validation_status}</p>
               <p><strong>Formula set:</strong> {result.formula_set_version}</p>

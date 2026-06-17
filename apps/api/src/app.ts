@@ -14,6 +14,7 @@ import { formulasRouter } from './routes/formulas.js';
 import { calculationsRouter } from './routes/calculations.js';
 import { ffsRouter } from './routes/ffs.js';
 import { rbiRouter } from './routes/rbi.js';
+import { engineeringReviewsRouter } from './routes/engineering-reviews.js';
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
@@ -47,6 +48,7 @@ export function createApp() {
   app.use('/api/v1', calculationsRouter);
   app.use('/api/v1', ffsRouter);
   app.use('/api/v1', rbiRouter);
+  app.use('/api/v1', engineeringReviewsRouter);
 
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === 'number'

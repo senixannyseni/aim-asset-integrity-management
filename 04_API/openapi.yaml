@@ -682,6 +682,119 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /engineering/reviews:
+    get:
+      summary: List engineering review records
+      x-permission-required: engineering_review.read
+      responses:
+        '200': { description: Engineering review list }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      summary: Create engineering review record
+      x-permission-required: engineering_review.create
+      x-audit-event-generated: ENGINEERING_REVIEW_CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EngineeringReviewCreateRequest' }
+      responses:
+        '201': { description: Engineering review created }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+  /engineering/reviews/{reviewId}:
+    get:
+      summary: Get engineering review with approvals and audit trail
+      x-permission-required: engineering_review.read
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Engineering review detail }
+        '404': { description: Review not found }
+  /engineering/reviews/{reviewId}/status:
+    patch:
+      summary: Update engineering review status, checklist, and review comment
+      x-permission-required: engineering_review.update
+      x-audit-event-generated: ENGINEERING_REVIEW_STATUS_UPDATED
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Engineering review status updated }
+        '409': { description: Locked review immutable }
+  /engineering/reviews/{reviewId}/comments:
+    post:
+      summary: Add engineering review comment
+      x-permission-required: engineering_review.comment
+      x-audit-event-generated: ENGINEERING_REVIEW_COMMENT_ADDED
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201': { description: Review comment added }
+  /approval-records:
+    get:
+      summary: List approval records
+      x-permission-required: approval_record.read
+      responses:
+        '200': { description: Approval record list }
+    post:
+      summary: Create approval request
+      x-permission-required: approval_record.create
+      x-audit-event-generated: APPROVAL_RECORD_CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalRecordCreateRequest' }
+      responses:
+        '201': { description: Approval request created }
+  /approval-records/{approvalId}/approve:
+    post:
+      summary: Senior engineer approval or controlled override approval
+      x-permission-required: approval_record.approve
+      x-audit-event-generated: APPROVAL_RECORD_APPROVED or ENGINEERING_OVERRIDE_APPROVED
+      parameters:
+        - in: path
+          name: approvalId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Approval completed and target calculation locked where applicable }
+        '400': { description: Override requires reason, affected field, original value, override value, and evidence }
+        '403': { description: Senior engineer approval required; AI agent cannot approve }
+        '409': { description: Locked approval immutable }
+  /approval-records/{approvalId}/reject:
+    post:
+      summary: Senior engineer rejection of approval request
+      x-permission-required: approval_record.reject
+      x-audit-event-generated: APPROVAL_RECORD_REJECTED
+      parameters:
+        - in: path
+          name: approvalId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Approval request rejected }
+  /engineering/calculations/{runId}:
+    get:
+      summary: Get calculation detail with inputs, outputs, engineering reviews, approvals, and audit trail
+      x-permission-required: calculation.read
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Calculation detail and audit trail }
+        '404': { description: Calculation run not found }
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -764,6 +877,31 @@ components:
             inventory: { type: string }
             operating_severity: { type: string }
             mitigation_controls: { type: string }
+    EngineeringReviewCreateRequest:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        entity_type:
+          type: string
+          enum: [asset, calculation_run, ndt_measurement, ffs_case, rbi_case, finding]
+        entity_id: { type: string, format: uuid }
+        review_type: { type: string }
+        review_status:
+          type: string
+          enum: [draft, submitted_for_review, returned_for_revision, reviewed, submitted_for_approval, approved, rejected, locked]
+        checklist: { type: object }
+        review_comment: { type: string }
+    ApprovalRecordCreateRequest:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        review_id: { type: string, format: uuid }
+        entity_type: { type: string }
+        entity_id: { type: string, format: uuid }
+        calculation_run_id: { type: string, format: uuid }
+        approval_type: { type: string, enum: [final_result, override] }
+        checklist: { type: object }
+        approval_comment: { type: string }
     ErrorEnvelope:
       type: object
       required: [error]
@@ -952,6 +1090,31 @@ components:
             inventory: { type: string }
             operating_severity: { type: string }
             mitigation_controls: { type: string }
+    EngineeringReviewCreateRequest:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        entity_type:
+          type: string
+          enum: [asset, calculation_run, ndt_measurement, ffs_case, rbi_case, finding]
+        entity_id: { type: string, format: uuid }
+        review_type: { type: string }
+        review_status:
+          type: string
+          enum: [draft, submitted_for_review, returned_for_revision, reviewed, submitted_for_approval, approved, rejected, locked]
+        checklist: { type: object }
+        review_comment: { type: string }
+    ApprovalRecordCreateRequest:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        review_id: { type: string, format: uuid }
+        entity_type: { type: string }
+        entity_id: { type: string, format: uuid }
+        calculation_run_id: { type: string, format: uuid }
+        approval_type: { type: string, enum: [final_result, override] }
+        checklist: { type: object }
+        approval_comment: { type: string }
     ErrorEnvelope:
       type: object
       properties:
@@ -975,3 +1138,7 @@ components:
 # Sprint 8 RBI interface governance notes
 # RBI cases are qualitative/semi-quantitative placeholders unless approved quantitative Formula Registry rules are provided.
 # No proprietary API RP 581 quantitative rules are embedded in this implementation.
+
+# Sprint 9 engineering review and approval workflow governance notes
+# Engineers may review calculation/data records; senior_engineer/admin approval is required for final approval, overrides, rejection, and locking.
+# Override approval requires affected field/result, original value, override value, reason, evidence, approver, and audit timestamp. AI agents cannot approve, reject, override, or lock engineering decisions.

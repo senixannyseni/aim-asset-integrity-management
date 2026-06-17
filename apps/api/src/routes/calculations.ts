@@ -296,6 +296,49 @@ calculationsRouter.get('/engineering/calculations', requirePermission('calculati
   }
 });
 
+
+calculationsRouter.get('/engineering/calculations/:runId', requirePermission('calculation.read'), async (req, res, next) => {
+  try {
+    const runId = asString(req.params.runId);
+    const runResult = await pool.query<DbRow>(
+      `select * from calculation_runs where id = $1 or run_id = $1 limit 1`,
+      [runId]
+    );
+    const run = runResult.rows[0];
+    if (!run) {
+      res.status(404).json({ error: { code: 'CALCULATION_RUN_NOT_FOUND', message: 'Calculation run not found.' } });
+      return;
+    }
+    const calculationRunId = String(run.id);
+    const [inputs, outputs, reviews, approvals, auditTrail] = await Promise.all([
+      pool.query<DbRow>('select * from calculation_inputs where calculation_run_id = $1 order by created_at, input_name', [calculationRunId]),
+      pool.query<DbRow>('select * from calculation_outputs where calculation_run_id = $1 order by created_at, output_name', [calculationRunId]),
+      pool.query<DbRow>('select * from engineering_reviews where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by created_at desc', [calculationRunId, 'calculation_run']),
+      pool.query<DbRow>('select * from approval_records where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by created_at desc', [calculationRunId, 'calculation_run']),
+      pool.query<DbRow>(
+        `select * from audit_logs
+         where (entity_type = 'calculation_run' and entity_id = $1)
+            or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where calculation_run_id = $1 or (entity_type = 'calculation_run' and entity_id = $1)))
+            or (entity_type = 'approval_record' and entity_id in (select id from approval_records where calculation_run_id = $1 or (entity_type = 'calculation_run' and entity_id = $1)))
+         order by created_at desc`,
+        [calculationRunId]
+      )
+    ]);
+    res.json({
+      data: {
+        ...mapRun(run),
+        inputs: inputs.rows,
+        outputs: outputs.rows,
+        engineering_reviews: reviews.rows,
+        approval_records: approvals.rows,
+        audit_trail: auditTrail.rows
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 calculationsRouter.post('/engineering/calculate', requirePermission('calculation.run'), async (req, res, next) => {
   if (!isPlainObject(req.body)) {
     validationError(res, 'body', 'JSON object body is required.');

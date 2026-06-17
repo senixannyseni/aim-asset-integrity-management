@@ -504,3 +504,45 @@ where r.role_code = 'qa_qc'
 on conflict do nothing;
 
 -- ai_agent intentionally receives no rbi.interface.* approval/finalization permissions.
+
+-- Sprint 9 engineering review and approval workflow permissions synchronization.
+insert into permissions(permission_code, description) values
+  ('engineering_review.read', 'Read engineering review and approval workflow records'),
+  ('engineering_review.create', 'Create engineering review workflow records'),
+  ('engineering_review.update', 'Update engineering review workflow status and checklist'),
+  ('engineering_review.comment', 'Add engineering review comments'),
+  ('engineering_review.approve', 'Approve or lock engineering review workflow records'),
+  ('engineering_review.override', 'Approve controlled engineering overrides'),
+  ('approval_record.read', 'Read engineering approval records'),
+  ('approval_record.create', 'Create engineering approval requests'),
+  ('approval_record.approve', 'Approve engineering approval records'),
+  ('approval_record.reject', 'Reject engineering approval records')
+on conflict (permission_code) do update set description = excluded.description;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in (
+  'engineering_review.read','engineering_review.create','engineering_review.update','engineering_review.comment',
+  'approval_record.read','approval_record.create'
+)
+where r.role_code in ('engineer','senior_engineer','qa_qc')
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in (
+  'engineering_review.approve','engineering_review.override','approval_record.approve','approval_record.reject'
+)
+where r.role_code in ('admin','senior_engineer')
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('engineering_review.read','approval_record.read')
+where r.role_code = 'client_viewer'
+on conflict do nothing;
+
+-- ai_agent intentionally receives no engineering review, approval, override, reject, or lock permissions.

@@ -37,6 +37,7 @@ describe('Sprint 7 RBAC seed consistency', () => {
   it('documents DB seed synchronization with TypeScript role map', () => {
     expect(seed).toContain('Sprint 7 governance hardening permission synchronization');
     expect(seed).toContain('Sprint 8 RBI interface permissions synchronization');
+    expect(seed).toContain('Sprint 9 engineering review and approval workflow permissions synchronization');
     for (const role of Object.keys(ROLE_PERMISSIONS) as Role[]) {
       expect(seed).toContain(role);
     }

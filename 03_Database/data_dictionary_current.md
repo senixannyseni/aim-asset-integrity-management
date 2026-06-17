@@ -611,7 +611,7 @@ These remain planned and are not implemented in the Sprint 8 baseline:
 7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. Sprint 7 FFS and Sprint 8 RBI trigger workflows do not execute API/API-ASME formulas.
 8. Missing critical engineering data produces deterministic validation warnings or blocking results according to validation scope.
 9. Every important create/update/delete/review/approval/governance action must write audit logs.
-10. Clean-clone migrations 0001 through 0009 are part of the implemented Sprint 8.5 baseline.
+10. Clean-clone migrations 0001 through 0010 are part of the implemented Sprint 8.5 baseline.
 
 
 ## Sprint 7 Governance and Security Hardening Notes
@@ -700,3 +700,14 @@ RBI interface cases are governance records aligned to API RP 580/581 workflow ne
 - Cross-asset evidence links are rejected with `CROSS_ASSET_EVIDENCE_LINK_BLOCKED`.
 - FFS and RBI manual evidence validation remains in place, and FFS/RBI from-calculation routes preserve calculation run, source entity, and evidence traceability.
 - OpenAPI explicitly marks health and RBAC demo routes as local-dev/internal exclusions from the production engineering API contract.
+
+
+## Sprint 9 Engineering Review and Approval Workflow
+
+Implemented governance workflow for engineering reviews and senior engineer approval records. Review statuses are draft, submitted_for_review, returned_for_revision, reviewed, submitted_for_approval, approved, rejected, and locked. Engineer roles may review data and calculation results; senior_engineer/admin approval is required for final approval, rejection, override approval, and locking. AI agents cannot approve, reject, override, or finalize engineering decisions. Locked calculation/review/approval records are immutable; revisions must be created as new records.
+
+Implemented tables/fields include engineering_reviews and approval_records extensions for calculation_run_id, asset_id, checklist_json, comments_json, override_json, reason, affected_field, original_value_json, override_value_json, evidence_links, revision_no, approval_status/review_status, approver/reviewer metadata, timestamps, locked_flag, and audit trail linkage.
+
+Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
+
+No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.
