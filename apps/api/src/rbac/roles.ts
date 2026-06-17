@@ -68,6 +68,7 @@ export const PERMISSIONS = [
   'integrity_decision.create',
   'integrity_decision.review',
   'integrity_decision.approve',
+  'report.read',
   'report.generate',
   'report.review',
   'report.approve',
@@ -107,7 +108,8 @@ const readOnlyPermissions: Permission[] = [
   'rbi.interface.read',
   'validation.read',
   'engineering_review.read',
-  'approval_record.read'
+  'approval_record.read',
+  'report.read'
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -182,6 +184,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'rbi.interface.review',
     'integrity_decision.create',
     'integrity_decision.review',
+    'report.read',
     'report.generate',
     'report.review',
     'work_order.create',
@@ -245,9 +248,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'integrity_decision.create',
     'integrity_decision.review',
     'integrity_decision.approve',
+    'report.read',
     'report.generate',
     'report.review',
     'report.approve',
+    'report.issue',
     'work_order.create',
     'work_order.update',
     'work_order.close',
@@ -283,6 +288,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'rbi.interface.read',
     'rbi.interface.review',
     'integrity_decision.review',
+    'report.read',
     'report.review',
     'report.approve',
     'validation.read',

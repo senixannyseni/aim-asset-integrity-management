@@ -276,3 +276,20 @@ Implemented tables/fields include engineering_reviews and approval_records exten
 Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
 
 No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.
+
+
+## Sprint 10 Report Generation Complete
+
+Implemented Tank Integrity report generation with DOCX/PDF output payloads, report versioning, draft/approved/issued status governance, Formula Registry traceability, calculation run traceability, evidence register, FFS/RBI trigger summary, validation warnings, and review/approval record integration.
+
+New route:
+- /reports
+
+New API endpoints:
+- GET /api/v1/reports
+- GET /api/v1/reports/{reportId}
+- POST /api/v1/reports/generate
+- POST /api/v1/reports/{reportId}/approve
+- POST /api/v1/reports/{reportId}/issue
+
+Boundary: no API/API-ASME formula expression is embedded or invented; reports cite Formula Registry metadata and calculation traceability only. Draft reports remain clearly marked draft until approved.

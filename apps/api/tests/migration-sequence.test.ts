@@ -9,7 +9,7 @@ const repoRoot = path.resolve(__dirname, '../../..');
 const migrationsDir = path.join(repoRoot, 'db/migrations');
 
 describe('Migration reproducibility baseline', () => {
-  it('tracks all migrations required for a clean Sprint 9 database setup', () => {
+  it('tracks all migrations required for a clean Sprint 10 database setup', () => {
     const files = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql')).sort();
     expect(files).toEqual([
       '0001_baseline.sql',
@@ -21,7 +21,8 @@ describe('Migration reproducibility baseline', () => {
       '0007_deterministic_calculation_engine.sql',
       '0008_ffs_trigger_workflow.sql',
       '0009_rbi_interface_trigger_workflow.sql',
-      '0010_engineering_review_approval_workflow.sql'
+      '0010_engineering_review_approval_workflow.sql',
+      '0011_report_generation_engine.sql'
     ]);
   });
 
@@ -48,6 +49,15 @@ describe('Migration reproducibility baseline', () => {
     expect(migration).toContain('prevent_locked_engineering_review_change');
     expect(migration).toContain('prevent_locked_approval_record_change');
     expect(migration).toContain('ai_agent intentionally receives no engineering review, approval, override, reject, or lock permissions');
+  });
+
+
+  it('tracks report generation governance without embedding API/API-ASME formulas', () => {
+    const migration = fs.readFileSync(path.join(migrationsDir, '0011_report_generation_engine.sql'), 'utf8');
+    expect(migration).toContain('create table if not exists reports');
+    expect(migration).toContain('TANK-INTEGRITY-CONSULTANT-REPORT');
+    expect(migration).toContain('No API/API-ASME formula expression is embedded or invented');
+    expect(migration).toContain('ai_agent intentionally receives no report generation, approval, issue, or finalization permissions');
   });
 
 });

@@ -311,10 +311,10 @@ calculationsRouter.get('/engineering/calculations/:runId', requirePermission('ca
     }
     const calculationRunId = String(run.id);
     const [inputs, outputs, reviews, approvals, auditTrail] = await Promise.all([
-      pool.query<DbRow>('select * from calculation_inputs where calculation_run_id = $1 order by created_at, input_name', [calculationRunId]),
-      pool.query<DbRow>('select * from calculation_outputs where calculation_run_id = $1 order by created_at, output_name', [calculationRunId]),
-      pool.query<DbRow>('select * from engineering_reviews where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by created_at desc', [calculationRunId, 'calculation_run']),
-      pool.query<DbRow>('select * from approval_records where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by created_at desc', [calculationRunId, 'calculation_run']),
+      pool.query<DbRow>('select * from calculation_inputs where calculation_run_id = $1 order by input_name', [calculationRunId]),
+      pool.query<DbRow>('select * from calculation_outputs where calculation_run_id = $1 order by output_name', [calculationRunId]),
+      pool.query<DbRow>('select * from engineering_reviews where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc', [calculationRunId, 'calculation_run']),
+      pool.query<DbRow>('select * from approval_records where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc', [calculationRunId, 'calculation_run']),
       pool.query<DbRow>(
         `select * from audit_logs
          where (entity_type = 'calculation_run' and entity_id = $1)

@@ -1,0 +1,632 @@
+import { Router, type Request, type Response } from 'express';
+import type { PoolClient } from 'pg';
+import { pool } from '../db/client.js';
+import { requirePermission } from '../middleware/rbac.js';
+import { contentHash, renderConsultantReportText, renderDocxBase64, renderPdfBase64, type ReportDocument, type ReportSection } from '../modules/reporting/template-engine.js';
+
+export const reportsRouter = Router();
+
+type DbRow = Record<string, unknown>;
+type ApiResponse = Response<Record<string, unknown>>;
+type Queryable = {
+  query: <T extends DbRow = DbRow>(text: string, values?: unknown[]) => Promise<{ rows: T[]; rowCount: number | null }>;
+};
+
+const REPORT_STATUSES = ['draft', 'generated', 'under_review', 'approved', 'issued', 'superseded', 'rejected'] as const;
+type ReportStatus = typeof REPORT_STATUSES[number];
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function isUuid(value: string | undefined | null): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function validationError(res: ApiResponse, field: string, message: string, code = 'VALIDATION_FAILED'): void {
+  res.status(400).json({
+    error: {
+      code,
+      message: 'Request validation failed.',
+      details: [{ field, message, severity: 'error' }]
+    }
+  });
+}
+
+function actorUserId(req: Request): string | null {
+  const id = req.user?.id;
+  if (!id || id === '00000000-0000-0000-0000-000000000000') return null;
+  return id;
+}
+
+function actorRoles(req: Request): string[] {
+  return req.user?.roles ?? [];
+}
+
+function isSeniorReportActor(req: Request): boolean {
+  const roles = req.user?.roles ?? [];
+  return roles.includes('admin') || roles.includes('senior_engineer');
+}
+
+function isAiAgent(req: Request): boolean {
+  return (req.user?.roles ?? []).includes('ai_agent');
+}
+
+async function writeAudit(
+  client: PoolClient,
+  req: Request,
+  eventType: string,
+  entityType: string,
+  entityId: string | null,
+  before: unknown,
+  after: unknown,
+  metadata: Record<string, unknown> = {}
+): Promise<string | undefined> {
+  const result = await client.query<{ id: string }>(
+    `insert into audit_logs(
+      event_type,
+      actor_user_id,
+      actor_role_codes,
+      entity_type,
+      entity_id,
+      request_id,
+      before_json,
+      after_json,
+      metadata_json
+    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    returning id`,
+    [
+      eventType,
+      actorUserId(req),
+      actorRoles(req),
+      entityType,
+      entityId,
+      req.header('x-request-id') ?? null,
+      JSON.stringify(before ?? null),
+      JSON.stringify(after ?? null),
+      JSON.stringify(metadata)
+    ]
+  );
+  return result.rows[0]?.id;
+}
+
+function jsonValue(value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function jsonArray(value: unknown): unknown[] {
+  const parsed = jsonValue(value);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function summarize(value: unknown): string {
+  if (value === null || value === undefined) return 'not available';
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function mapReport(row: DbRow): Record<string, unknown> {
+  return {
+    report_id: row.id,
+    report_code: row.report_code,
+    report_title: row.report_title,
+    report_type: row.report_type,
+    report_status: row.report_status,
+    report_version: row.report_version,
+    asset_id: row.asset_id,
+    calculation_run_id: row.calculation_run_id,
+    template_code: row.template_code,
+    docx_object_path: row.docx_object_path,
+    pdf_object_path: row.pdf_object_path,
+    input_snapshot_hash: row.input_snapshot_hash,
+    traceability: row.traceability_json,
+    validation_warnings: row.validation_warnings_json,
+    limitations: row.limitations_json,
+    locked_flag: row.locked_flag,
+    generated_at: row.generated_at,
+    approved_at: row.approved_at,
+    issued_at: row.issued_at,
+    created_at: row.created_at
+  };
+}
+
+function safeCodePart(value: unknown): string {
+  return String(value ?? 'RUN').replace(/[^A-Za-z0-9-]/g, '').slice(0, 32) || 'RUN';
+}
+
+function isReportableCalculation(run: DbRow): boolean {
+  const states = [run.run_status, run.status, run.review_status, run.approval_status].map((value) => asString(value));
+  return states.some((state) =>
+    ['ready_for_review', 'reviewed', 'submitted_for_approval', 'approved', 'locked'].includes(state ?? '')
+  ) || Boolean(run.locked_flag);
+}
+
+async function loadReportContext(client: Queryable, calculationRunId: string): Promise<{
+  run: DbRow;
+  asset: DbRow | undefined;
+  geometry: DbRow | undefined;
+  shellCourses: DbRow[];
+  ndtRows: DbRow[];
+  inputs: DbRow[];
+  outputs: DbRow[];
+  formula: DbRow | undefined;
+  evidence: DbRow[];
+  ffsCases: DbRow[];
+  rbiCases: DbRow[];
+  reviews: DbRow[];
+  approvals: DbRow[];
+  auditTrail: DbRow[];
+}> {
+  const runResult = await client.query<DbRow>('select * from calculation_runs where id = $1', [calculationRunId]);
+  const run = runResult.rows[0];
+  if (!run) {
+    const error = new Error('CALCULATION_RUN_NOT_FOUND');
+    (error as Error & { statusCode?: number }).statusCode = 404;
+    throw error;
+  }
+
+  const assetId = asString(run.asset_id);
+  const [assetResult, geometryResult, shellResult, inputResult, outputResult, formulaResult, evidenceResult, ffsResult, rbiResult, reviewResult, approvalResult, auditResult] = await Promise.all([
+    assetId ? client.query<DbRow>('select * from assets where id = $1', [assetId]) : Promise.resolve({ rows: [], rowCount: 0 }),
+    assetId ? client.query<DbRow>('select * from tank_geometry where asset_id = $1 limit 1', [assetId]) : Promise.resolve({ rows: [], rowCount: 0 }),
+    assetId ? client.query<DbRow>('select * from shell_courses where asset_id = $1 order by course_no', [assetId]) : Promise.resolve({ rows: [], rowCount: 0 }),
+    client.query<DbRow>('select * from calculation_inputs where calculation_run_id = $1 order by input_name, id', [calculationRunId]),
+    client.query<DbRow>('select * from calculation_outputs where calculation_run_id = $1 order by output_name, id', [calculationRunId]),
+    asString(run.formula_registry_id) ? client.query<DbRow>('select * from formula_registry where id = $1', [run.formula_registry_id]) : Promise.resolve({ rows: [], rowCount: 0 }),
+    assetId
+      ? client.query<DbRow>(
+          `select distinct on (ef.id)
+             ef.*,
+             coalesce(el.linked_entity_type, ci.source_entity_type) as linked_entity_type,
+             coalesce(el.linked_entity_id, ci.source_entity_id) as linked_entity_id,
+             ci.input_name as linked_measurement_or_result
+           from evidence_files ef
+           left join evidence_links el on el.evidence_file_id = ef.id
+           left join calculation_inputs ci on ci.evidence_file_id = ef.id and ci.calculation_run_id = $1
+           where ef.asset_id = $2
+             and (
+               ci.calculation_run_id = $1
+               or (el.linked_entity_type = 'calculation_run' and el.linked_entity_id = $1)
+               or ef.id in (select evidence_file_id from calculation_inputs where calculation_run_id = $1 and evidence_file_id is not null)
+             )
+           order by ef.id, ef.created_at desc
+           limit 200`,
+          [calculationRunId, assetId]
+        )
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    client.query<DbRow>('select * from ffs_cases where calculation_run_id = $1 order by created_at desc', [calculationRunId]),
+    client.query<DbRow>('select * from rbi_cases where calculation_run_id = $1 order by created_at desc', [calculationRunId]),
+    client.query<DbRow>('select * from engineering_reviews where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc', [calculationRunId, 'calculation_run']),
+    client.query<DbRow>('select * from approval_records where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc', [calculationRunId, 'calculation_run']),
+    client.query<DbRow>('select * from audit_logs where entity_id = $1 order by created_at desc limit 100', [calculationRunId])
+  ]);
+
+  const ndtIds = inputResult.rows
+    .filter((row) => row.source_entity_type === 'ndt_measurement' && row.source_entity_id)
+    .map((row) => String(row.source_entity_id));
+  const ndtRows = ndtIds.length > 0
+    ? (await client.query<DbRow>(`select * from ndt_measurements where id = any($1::uuid[]) order by component, shell_course_no, reading_date`, [ndtIds])).rows
+    : [];
+
+  return {
+    run,
+    asset: assetResult.rows[0],
+    geometry: geometryResult.rows[0],
+    shellCourses: shellResult.rows,
+    ndtRows,
+    inputs: inputResult.rows,
+    outputs: outputResult.rows,
+    formula: formulaResult.rows[0],
+    evidence: evidenceResult.rows,
+    ffsCases: ffsResult.rows,
+    rbiCases: rbiResult.rows,
+    reviews: reviewResult.rows,
+    approvals: approvalResult.rows,
+    auditTrail: auditResult.rows
+  };
+}
+
+function buildReportDocument(context: Awaited<ReturnType<typeof loadReportContext>>, title: string, status: ReportStatus): ReportDocument {
+  const run = context.run;
+  const formula = context.formula;
+  const asset = context.asset;
+  const outputSummary = jsonValue(run.output_summary);
+  const warnings = [...jsonArray(run.warnings_json), ...jsonArray(run.validation_result_json), ...jsonArray(run.validation_warnings_json)];
+  const limitations = [
+    'This report is generated from AIM structured records and evidence links. Engineering approval remains required before issue.',
+    'No API/API-ASME copyrighted formula text is embedded in this generated report.',
+    'FFS and RBI sections summarize trigger/interface cases only unless a separately approved assessment is attached.'
+  ];
+
+  const evidenceRegister = context.evidence.map((row) =>
+    `Evidence ${row.evidence_code ?? row.id}: ${row.file_name ?? row.original_filename}, method ${row.method ?? 'n/a'}, component ${row.component ?? 'n/a'}, date ${row.inspection_date ?? 'n/a'}, page/sheet ${row.page_or_sheet_ref ?? row.page_figure_table_reference ?? 'n/a'}, path ${row.object_storage_path ?? row.object_storage_uri ?? 'n/a'}, linked ${row.linked_entity_type ?? 'calculation input'} ${row.linked_entity_id ?? row.linked_measurement_or_result ?? ''}`
+  );
+
+  const sections: ReportSection[] = [
+    {
+      title: 'Engineering Basis Summary',
+      body: [
+        `Formula ID: ${formula?.formula_id ?? formula?.formula_code ?? 'not available'}`,
+        `Formula version: ${formula?.version ?? run.formula_set_version ?? 'not available'}`,
+        `Code basis: ${formula?.code_basis ?? 'AIM Engineering Basis / Formula Registry metadata'}`,
+        `Code edition: ${formula?.code_edition ?? formula?.edition ?? 'User-supplied licensed edition required'}`,
+        'API/API-ASME formula expressions are not reproduced in this report. Formula metadata and approved Formula Registry references are cited for traceability.'
+      ]
+    },
+    {
+      title: 'Asset Data Summary',
+      body: [
+        `Asset tag: ${asset?.asset_tag ?? asset?.tank_tag ?? 'not available'}`,
+        `Asset name: ${asset?.asset_name ?? 'not available'}`,
+        `Facility/location: ${asset?.facility ?? 'not available'} / ${asset?.location ?? asset?.area ?? 'not available'}`,
+        `Service fluid: ${asset?.service_fluid ?? 'not available'}`,
+        `Operating status: ${asset?.operating_status ?? 'not available'}`
+      ]
+    },
+    {
+      title: 'Inspection Data Summary',
+      body: [
+        `Inspection event ID: ${run.inspection_event_id ?? 'not linked'}`,
+        `Calculation run ID: ${run.id}`,
+        `Input snapshot hash/reference: ${run.input_snapshot_hash ?? 'not available'}`,
+        `Validation status: ${run.validation_status ?? 'not available'}`
+      ]
+    },
+    {
+      title: 'NDT Thickness Summary',
+      body: context.ndtRows.length > 0
+        ? context.ndtRows.map((row) => `${row.component ?? 'component'} course ${row.shell_course_no ?? 'n/a'} ${row.cml_tml_id ?? row.grid_ref ?? ''}: ${row.measured_thickness_mm ?? row.measured_thickness ?? 'n/a'} mm on ${row.reading_date ?? 'n/a'} (${row.method ?? 'method n/a'})`)
+        : ['No NDT rows were linked directly to this calculation run. Review calculation input records and evidence register.']
+    },
+    {
+      title: 'Calculation Result',
+      body: [
+        `Run status: ${run.run_status ?? run.status ?? 'not available'}`,
+        `Review status: ${run.review_status ?? 'not available'}`,
+        `Approval status: ${run.approval_status ?? 'not available'}`,
+        `Output summary: ${summarize(outputSummary)}`
+      ]
+    },
+    {
+      title: 'Corrosion Rate and Remaining Life',
+      body: context.outputs.filter((row) => String(row.output_name ?? '').match(/corrosion|remaining/i)).map((row) => `${row.output_name}: ${row.output_value ?? summarize(row.output_json)} ${row.output_unit ?? ''}`)
+        .concat(context.outputs.length === 0 ? ['No calculation output rows are available.'] : [])
+    },
+    {
+      title: 'Minimum Thickness Check',
+      body: context.outputs.filter((row) => String(row.output_name ?? '').match(/pass|fail|required|thickness|min/i)).map((row) => `${row.output_name}: ${row.output_value ?? summarize(row.output_json)} ${row.output_unit ?? ''}`)
+        .concat(['Minimum thickness checks are reported from deterministic outputs and/or controlled Formula Registry references only.'])
+    },
+    {
+      title: 'FFS/RBI Trigger Summary',
+      body: [
+        ...(context.ffsCases.length > 0 ? context.ffsCases.map((row) => `FFS ${row.case_id ?? row.id}: ${row.damage_mechanism ?? row.trigger_reason ?? 'trigger'} — status ${row.status}`) : ['No FFS trigger case linked to this calculation run.']),
+        ...(context.rbiCases.length > 0 ? context.rbiCases.map((row) => `RBI ${row.case_id ?? row.id}: ${row.risk_category ?? 'risk category n/a'} — ${row.calculation_basis ?? 'qualitative placeholder basis'}`) : ['No RBI interface case linked to this calculation run.'])
+      ]
+    },
+    {
+      title: 'Engineering Interpretation',
+      body: [
+        'Engineering interpretation must be completed or confirmed by qualified engineer/senior engineer before report issue.',
+        `Review records: ${context.reviews.length}. Approval records: ${context.approvals.length}.`
+      ]
+    },
+    {
+      title: 'Recommendations',
+      body: [
+        'Review all blocking validation findings before issue.',
+        'Confirm FFS/RBI trigger cases and required actions before final disposition.',
+        'Issue final report only after senior engineering approval record is complete.'
+      ]
+    },
+    {
+      title: 'Evidence Register',
+      body: evidenceRegister.length > 0 ? evidenceRegister : ['No evidence files were linked to the calculation run. This is a limitation that must be reviewed before issue.']
+    },
+    {
+      title: 'Review and Approval Record',
+      body: [
+        ...context.reviews.map((row) => `Review ${row.review_code ?? row.id}: ${row.review_status} — ${row.review_comment ?? 'no comment'}`),
+        ...context.approvals.map((row) => `Approval ${row.approval_code ?? row.id}: ${row.approval_status} — ${row.approval_comment ?? row.reason ?? 'no comment'}`),
+        ...(context.reviews.length === 0 && context.approvals.length === 0 ? ['No review/approval record is linked yet. Report remains draft.'] : [])
+      ]
+    },
+    {
+      title: 'Validation Warnings and Limitations',
+      body: [
+        ...(warnings.length > 0 ? warnings.map((warning) => summarize(warning)) : ['No validation warning payload was found on the calculation run.']),
+        ...limitations
+      ]
+    }
+  ];
+
+  return {
+    title,
+    status,
+    watermark: status === 'approved' || status === 'issued' ? 'APPROVED CONTROLLED REPORT' : 'DRAFT — NOT APPROVED FOR ISSUE',
+    generatedAt: new Date().toISOString(),
+    traceability: {
+      calculation_run_id: run.id,
+      run_id: run.run_id,
+      formula_id: formula?.formula_id ?? formula?.formula_code ?? null,
+      formula_version: formula?.version ?? run.formula_set_version ?? null,
+      code_basis: formula?.code_basis ?? null,
+      code_edition: formula?.code_edition ?? formula?.edition ?? null,
+      input_snapshot_reference: run.input_snapshot_hash ?? null
+    },
+    sections
+  };
+}
+
+reportsRouter.get('/reports', requirePermission('report.read'), async (_req, res, next) => {
+  try {
+    const result = await pool.query<DbRow>('select * from reports order by created_at desc limit 100');
+    res.json({ data: result.rows.map(mapReport) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+reportsRouter.get('/reports/:reportId', requirePermission('report.read'), async (req, res, next) => {
+  const reportId = req.params.reportId;
+  if (!reportId) {
+    res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'reportId is required.' } });
+    return;
+  }
+  try {
+    const result = await pool.query<DbRow>('select * from reports where id = $1', [reportId]);
+    const row = result.rows[0];
+    if (!row) {
+      res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
+      return;
+    }
+    res.json({ data: { ...mapReport(row), sections: row.sections_json, evidence_register: row.evidence_register_json } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+reportsRouter.post('/reports/generate', requirePermission('report.generate'), async (req, res, next) => {
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+
+  const calculationRunId = asString(req.body.calculation_run_id ?? req.body.calculationRunId);
+  if (!isUuid(calculationRunId)) {
+    validationError(res, 'calculation_run_id', 'calculation_run_id must be a valid UUID.');
+    return;
+  }
+
+  const requestedFormats = Array.isArray(req.body.output_formats)
+    ? req.body.output_formats.map((value) => asString(value)).filter((value): value is string => Boolean(value))
+    : ['docx', 'pdf'];
+  const formats = new Set(requestedFormats.map((value) => value.toLowerCase()));
+  const includeDocx = formats.has('docx');
+  const includePdf = formats.has('pdf');
+
+  if (!includeDocx && !includePdf) {
+    validationError(res, 'output_formats', 'At least one output format must be docx or pdf.');
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const context = await loadReportContext(client, calculationRunId);
+    if (!isReportableCalculation(context.run)) {
+      await client.query('rollback');
+      res.status(409).json({
+        error: {
+          code: 'CALCULATION_NOT_REPORT_READY',
+          message: 'Report can only be generated from a locked, approved, reviewed, or review-ready calculation run.'
+        }
+      });
+      return;
+    }
+
+    const templateResult = await client.query<DbRow>(
+      `select * from report_templates where template_code = $1 and status = 'active' order by created_at desc limit 1`,
+      ['TANK-INTEGRITY-CONSULTANT-REPORT']
+    );
+    const template = templateResult.rows[0];
+    if (!template) {
+      await client.query('rollback');
+      res.status(500).json({ error: { code: 'REPORT_TEMPLATE_NOT_FOUND', message: 'Default report template is not available.' } });
+      return;
+    }
+
+    const reportVersionResult = await client.query<{ next_version: string }>(
+      `select (coalesce(max(report_version), 0) + 1)::text as next_version from reports where calculation_run_id = $1`,
+      [calculationRunId]
+    );
+    const reportVersion = Number(reportVersionResult.rows[0]?.next_version ?? '1');
+    const title = asString(req.body.report_title ?? req.body.title) ?? `Tank Integrity Report - ${context.asset?.asset_tag ?? context.run.run_id ?? calculationRunId}`;
+    const reportDocument = buildReportDocument(context, title, 'draft');
+    const sectionsJson = reportDocument.sections;
+    const evidenceRegister = context.evidence.map((row) => ({
+      evidence_id: row.id,
+      evidence_code: row.evidence_code,
+      file_name: row.file_name ?? row.original_filename,
+      method: row.method,
+      component: row.component,
+      date: row.inspection_date,
+      page_or_sheet_ref: row.page_or_sheet_ref ?? row.page_figure_table_reference,
+      link_path: row.object_storage_path ?? row.object_storage_uri,
+      linked_measurement_or_result: row.linked_measurement_or_result ?? row.linked_entity_id
+    }));
+    const plainText = renderConsultantReportText(reportDocument);
+    const docxContent = includeDocx ? renderDocxBase64(reportDocument) : null;
+    const pdfContent = includePdf ? renderPdfBase64(reportDocument) : null;
+    const reportCode = `RPT-${safeCodePart(context.run.run_id ?? calculationRunId)}-V${reportVersion}`;
+    const basePath = `/reports/${context.asset?.asset_tag ?? context.run.asset_id}/${reportCode}/v${reportVersion}`;
+    const traceability = reportDocument.traceability;
+    const contentHashValue = contentHash({ traceability, sectionsJson, evidenceRegister, reportVersion });
+
+    const result = await client.query<DbRow>(
+      `insert into reports(
+        report_code,
+        report_title,
+        report_type,
+        report_status,
+        report_version,
+        asset_id,
+        calculation_run_id,
+        template_id,
+        template_code,
+        format_requested,
+        docx_object_path,
+        pdf_object_path,
+        docx_content_base64,
+        pdf_content_base64,
+        plain_text_content,
+        input_snapshot_hash,
+        content_hash,
+        traceability_json,
+        sections_json,
+        evidence_register_json,
+        validation_warnings_json,
+        limitations_json,
+        generated_by,
+        generated_at
+      ) values (
+        $1, $2, 'tank_integrity', 'draft', $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13,
+        $14, $15, $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb, $21, now()
+      ) returning *`,
+      [
+        reportCode,
+        title,
+        reportVersion,
+        context.run.asset_id,
+        calculationRunId,
+        template.id,
+        template.template_code,
+        JSON.stringify(Array.from(formats)),
+        includeDocx ? `${basePath}/report.docx` : null,
+        includePdf ? `${basePath}/report.pdf` : null,
+        docxContent,
+        pdfContent,
+        plainText,
+        context.run.input_snapshot_hash ?? null,
+        contentHashValue,
+        JSON.stringify(traceability),
+        JSON.stringify(sectionsJson),
+        JSON.stringify(evidenceRegister),
+        JSON.stringify(jsonArray(context.run.warnings_json)),
+        JSON.stringify(reportDocument.sections.find((section) => section.title === 'Validation Warnings and Limitations')?.body ?? []),
+        actorUserId(req)
+      ]
+    );
+    const created = result.rows[0];
+    const auditLogId = await writeAudit(client, req, 'REPORT_GENERATED', 'report', asString(created?.id) ?? null, null, mapReport(created ?? {}), {
+      calculation_run_id: calculationRunId,
+      template_code: template.template_code,
+      draft_until_approved: true,
+      no_api_formula_text_embedded: true
+    });
+    await client.query('commit');
+    res.status(201).json({ data: { ...mapReport(created ?? {}), outputs: { docx_base64: docxContent, pdf_base64: pdfContent } }, auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+reportsRouter.post('/reports/:reportId/approve', requirePermission('report.approve'), async (req, res, next) => {
+  const reportId = req.params.reportId;
+  if (!reportId) {
+    res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'reportId is required.' } });
+    return;
+  }
+  if (!isSeniorReportActor(req) || isAiAgent(req)) {
+    res.status(403).json({ error: { code: 'SENIOR_ENGINEER_REPORT_APPROVAL_REQUIRED', message: 'Report approval requires senior_engineer or admin. AI agents cannot approve reports.' } });
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const beforeResult = await client.query<DbRow>('select * from reports where id = $1 for update', [reportId]);
+    const before = beforeResult.rows[0];
+    if (!before) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
+      return;
+    }
+    if (before.locked_flag === true || before.report_status === 'issued') {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'LOCKED_REPORT_IMMUTABLE', message: 'Issued reports are immutable. Create a new report version.' } });
+      return;
+    }
+    const result = await client.query<DbRow>(
+      `update reports set report_status = 'approved', approved_by = $2, approved_at = now(), updated_at = now() where id = $1 returning *`,
+      [reportId, actorUserId(req)]
+    );
+    const updated = result.rows[0];
+    const auditLogId = await writeAudit(client, req, 'REPORT_APPROVED', 'report', reportId, mapReport(before), mapReport(updated ?? {}));
+    await client.query('commit');
+    res.json({ data: mapReport(updated ?? {}), auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue'), async (req, res, next) => {
+  const reportId = req.params.reportId;
+  if (!reportId) {
+    res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'reportId is required.' } });
+    return;
+  }
+  if (!isSeniorReportActor(req) || isAiAgent(req)) {
+    res.status(403).json({ error: { code: 'SENIOR_ENGINEER_REPORT_ISSUE_REQUIRED', message: 'Report issue requires senior_engineer or admin. AI agents cannot issue reports.' } });
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const beforeResult = await client.query<DbRow>('select * from reports where id = $1 for update', [reportId]);
+    const before = beforeResult.rows[0];
+    if (!before) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
+      return;
+    }
+    if (before.report_status !== 'approved') {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'REPORT_APPROVAL_REQUIRED', message: 'Report must be approved before issue.' } });
+      return;
+    }
+    const result = await client.query<DbRow>(
+      `update reports set report_status = 'issued', locked_flag = true, issued_by = $2, issued_at = now(), updated_at = now() where id = $1 returning *`,
+      [reportId, actorUserId(req)]
+    );
+    const updated = result.rows[0];
+    const auditLogId = await writeAudit(client, req, 'REPORT_ISSUED', 'report', reportId, mapReport(before), mapReport(updated ?? {}));
+    await client.query('commit');
+    res.json({ data: mapReport(updated ?? {}), auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});

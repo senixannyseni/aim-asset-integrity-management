@@ -593,7 +593,7 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
       `select * from calculation_outputs
        where calculation_run_id = $1
          and warning_code is not null
-       order by created_at`,
+       order by input_name asc`,
       [run.id]
     );
     const warningCodes = warningCodesFromRows(outputResult.rows);

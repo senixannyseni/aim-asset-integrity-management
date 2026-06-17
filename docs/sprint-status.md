@@ -85,3 +85,12 @@ Implemented tables/fields include engineering_reviews and approval_records exten
 Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
 
 No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.
+
+
+## Sprint 10 — Report Generation
+
+Status: Complete.
+
+Implemented report template engine, report versioning/status, DOCX/PDF output payload rendering, report generation endpoint, report UI route, evidence register, validation warning/limitation section, FFS/RBI trigger summary, and review/approval traceability.
+
+Governance: reports generated from locked or review-ready calculation runs only; draft until approved; issued reports are locked. No API/API-ASME formula expression is embedded.

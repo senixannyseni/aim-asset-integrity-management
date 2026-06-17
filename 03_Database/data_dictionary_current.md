@@ -711,3 +711,42 @@ Implemented tables/fields include engineering_reviews and approval_records exten
 Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
 
 No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.
+
+
+## Sprint 10 Report Generation Tables
+
+### report_templates
+
+| Field | Description |
+|---|---|
+| id | Primary UUID. |
+| template_code | Unique controlled template identifier. |
+| template_name | Human-readable template name. |
+| template_version | Controlled template version. |
+| output_formats | JSON list of supported output formats, currently DOCX and PDF. |
+| sections_json | Controlled section list for report generation. |
+| status | draft, active, or retired. |
+
+### reports
+
+| Field | Description |
+|---|---|
+| id | Primary UUID. |
+| report_code | Unique report identifier. |
+| report_title | Report title shown in DOCX/PDF output. |
+| report_status | draft, generated, under_review, approved, issued, superseded, or rejected. |
+| report_version | Version number per calculation run. |
+| asset_id | Linked asset. |
+| calculation_run_id | Source calculation run; report generation requires locked or review-ready calculation. |
+| template_id/template_code | Template used to render the report. |
+| docx_object_path/pdf_object_path | Object-storage compatible output paths. |
+| docx_content_base64/pdf_content_base64 | Generated output payloads for local sprint baseline. |
+| input_snapshot_hash | Calculation input snapshot reference. |
+| content_hash | Deterministic report content hash. |
+| traceability_json | formula_id, formula_version, code_basis, code_edition, calculation_run_id, and input snapshot reference. |
+| sections_json | Rendered report sections. |
+| evidence_register_json | Evidence register listing evidence_id, filename, method, component, date, page/sheet reference, path, and linked measurement/result. |
+| validation_warnings_json | Validation warnings and limitations included in report. |
+| locked_flag | True for issued/locked records; changes require a new report version. |
+
+Governance: reports are DRAFT until approved and issued reports are immutable. No API/API-ASME formula expression is embedded or invented in report content.

@@ -1,0 +1,6 @@
+{
+  "calculation_run_id": "replace-with-locked-or-review-ready-calculation-run-uuid",
+  "report_title": "Tank Integrity Assessment Report - TK-001",
+  "output_formats": ["docx", "pdf"],
+  "notes": "Draft report only. Final issue requires report approval workflow. No API/API-ASME formula text is embedded."
+}

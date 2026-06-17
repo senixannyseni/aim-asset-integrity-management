@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.8.5
-  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 8.5 evidence linkage/security boundary hardening. Deterministic universal calculation engine, FFS trigger workflow, and RBI interface workflow governance are implemented; no API/API-ASME formula expressions are hard-coded or proprietary quantitative API RP 581 rules embedded.
+  version: 0.10.0
+  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 10 report generation. Deterministic universal calculation, FFS/RBI trigger workflow, engineering review/approval, and draft DOCX/PDF report generation are implemented; no API/API-ASME formula expressions are hard-coded or proprietary quantitative API RP 581 rules embedded.
 servers:
   - url: http://localhost:4000/api/v1
 security:
@@ -795,6 +795,64 @@ paths:
       responses:
         '200': { description: Calculation detail and audit trail }
         '404': { description: Calculation run not found }
+
+  /reports:
+    get:
+      summary: List generated tank integrity reports
+      x-permission-required: report.read
+      responses:
+        '200': { description: Report list }
+  /reports/generate:
+    post:
+      summary: Generate DOCX/PDF draft tank integrity report from locked or review-ready calculation run
+      x-permission-required: report.generate
+      x-audit-event-generated: REPORT_GENERATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportGenerateRequest'
+      responses:
+        '201': { description: Draft report generated }
+        '409': { description: Calculation is not locked or review-ready }
+  /reports/{reportId}:
+    get:
+      summary: Get generated report detail and traceability
+      x-permission-required: report.read
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Report detail }
+  /reports/{reportId}/approve:
+    post:
+      summary: Approve generated report
+      x-permission-required: report.approve
+      x-audit-event-generated: REPORT_APPROVED
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Report approved }
+        '403': { description: Senior engineer/admin approval required }
+  /reports/{reportId}/issue:
+    post:
+      summary: Issue approved report and lock the issued record
+      x-permission-required: report.issue
+      x-audit-event-generated: REPORT_ISSUED
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Report issued and locked }
+        '409': { description: Report must be approved before issue }
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -902,6 +960,33 @@ components:
         approval_type: { type: string, enum: [final_result, override] }
         checklist: { type: object }
         approval_comment: { type: string }
+
+    ReportGenerateRequest:
+      type: object
+      required: [calculation_run_id]
+      properties:
+        calculation_run_id: { type: string, format: uuid }
+        report_title: { type: string }
+        output_formats:
+          type: array
+          items:
+            type: string
+            enum: [docx, pdf]
+      description: Generates a draft report only. Draft remains not approved until report.approve workflow is completed.
+    GeneratedReport:
+      type: object
+      properties:
+        report_id: { type: string, format: uuid }
+        report_code: { type: string }
+        report_status:
+          type: string
+          enum: [draft, generated, under_review, approved, issued, superseded, rejected]
+        report_version: { type: integer }
+        calculation_run_id: { type: string, format: uuid }
+        input_snapshot_hash: { type: string }
+        traceability: { type: object }
+        docx_object_path: { type: string }
+        pdf_object_path: { type: string }
     ErrorEnvelope:
       type: object
       required: [error]
@@ -1115,6 +1200,33 @@ components:
         approval_type: { type: string, enum: [final_result, override] }
         checklist: { type: object }
         approval_comment: { type: string }
+
+    ReportGenerateRequest:
+      type: object
+      required: [calculation_run_id]
+      properties:
+        calculation_run_id: { type: string, format: uuid }
+        report_title: { type: string }
+        output_formats:
+          type: array
+          items:
+            type: string
+            enum: [docx, pdf]
+      description: Generates a draft report only. Draft remains not approved until report.approve workflow is completed.
+    GeneratedReport:
+      type: object
+      properties:
+        report_id: { type: string, format: uuid }
+        report_code: { type: string }
+        report_status:
+          type: string
+          enum: [draft, generated, under_review, approved, issued, superseded, rejected]
+        report_version: { type: integer }
+        calculation_run_id: { type: string, format: uuid }
+        input_snapshot_hash: { type: string }
+        traceability: { type: object }
+        docx_object_path: { type: string }
+        pdf_object_path: { type: string }
     ErrorEnvelope:
       type: object
       properties:
@@ -1142,3 +1254,10 @@ components:
 # Sprint 9 engineering review and approval workflow governance notes
 # Engineers may review calculation/data records; senior_engineer/admin approval is required for final approval, overrides, rejection, and locking.
 # Override approval requires affected field/result, original value, override value, reason, evidence, approver, and audit timestamp. AI agents cannot approve, reject, override, or lock engineering decisions.
+
+
+# Sprint 10 report generation governance notes
+# /reports/generate creates DOCX/PDF draft outputs from locked or review-ready calculation runs.
+# Reports cite formula_id, formula_version, code_basis, code_edition, calculation_run_id, and input snapshot hash.
+# Draft reports are explicitly marked DRAFT until approved; issued reports are locked and require a new version for changes.
+# No API/API-ASME formula expression is embedded or invented in generated report content.

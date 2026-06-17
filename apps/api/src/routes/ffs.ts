@@ -544,7 +544,7 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
       `select source_entity_id, evidence_file_id, input_name, normalized_value, normalized_unit
        from calculation_inputs
        where calculation_run_id = $1
-       order by created_at asc`,
+       order by input_name asc`,
       [run.id]
     );
     const evidenceLinks = inputResult.rows
