@@ -1,258 +1,392 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.10.0
-  description: Current implemented AIM+n8n Tank Integrity endpoints through Sprint 10 report generation. Deterministic universal calculation, FFS/RBI trigger workflow, engineering review/approval, and draft DOCX/PDF report generation are implemented; no API/API-ASME formula expressions are hard-coded or proprietary quantitative API RP 581 rules embedded.
+  version: 0.14.0
+  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through Phase 1.4 OpenAPI + Contract Alignment. AIM is the system of
+    record; PostgreSQL stores final structured engineering data; object storage stores original evidence. n8n remains orchestration-only and must
+    call AIM backend APIs only. AI extraction output is staging-only and requires human engineering review before promotion. This contract documents
+    implemented auth, AI extraction/staging, evidence governance, approval, and report issue gates; it does not implement API 579/API 581, CMMS,
+    3D processing, or invented API/API-ASME formulas.
 servers:
-  - url: http://localhost:4000/api/v1
+- url: http://localhost:4000
+  description: Local/development API root; implemented paths include /api/v1.
 security:
-  - DemoRoleHeaders: []
+- bearerAuth: []
 x-internal-routes-excluded:
-  note: Health and RBAC demo routes are intentionally excluded from the production OpenAPI contract. They are local-dev/internal readiness endpoints, not engineering workflow APIs.
+  note: Health and RBAC demo routes are intentionally excluded from the production OpenAPI contract. They are local-dev/internal readiness endpoints,
+    not engineering workflow APIs.
   routes:
-    - /health
-    - /health/db
-    - /api/v1/rbac/demo/asset-read
-    - /api/v1/rbac/demo/calculation-approve
+  - /health
+  - /health/db
+  - /api/v1/rbac/demo/asset-read
+  - /api/v1/rbac/demo/calculation-approve
 paths:
-  /assets:
+  /api/v1/assets:
     get:
       summary: List tank assets
       x-permission-required: asset.read
       responses:
-        '200': { description: Asset list }
+        '200':
+          description: Asset list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Create tank asset
       x-permission-required: asset.create
       x-audit-event-generated: ASSET_CREATED
       responses:
-        '201': { description: Asset created }
-  /assets/{assetId}:
+        '201':
+          description: Asset created
+      security:
+      - bearerAuth: []
+  /api/v1/assets/{assetId}:
     get:
       summary: Get tank asset detail with geometry and shell courses
       x-permission-required: asset.read
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Asset detail }
+        '200':
+          description: Asset detail
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     patch:
       summary: Update tank asset
       x-permission-required: asset.update
       x-audit-event-generated: ASSET_UPDATED
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Asset updated }
+        '200':
+          description: Asset updated
+      security:
+      - bearerAuth: []
     delete:
       summary: Soft delete tank asset
       x-permission-required: asset.delete
       x-audit-event-generated: ASSET_DELETED
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Asset retired/deleted }
-  /assets/{assetId}/geometry:
+        '200':
+          description: Asset retired/deleted
+      security:
+      - bearerAuth: []
+  /api/v1/assets/{assetId}/geometry:
     get:
       summary: Get tank geometry for an asset
       x-permission-required: asset.read
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Geometry detail }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '200':
+          description: Geometry detail
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     put:
       summary: Upsert tank geometry
       x-permission-required: asset.update
       x-audit-event-generated: TANK_GEOMETRY_CREATED or TANK_GEOMETRY_UPDATED
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Geometry upserted }
-  /assets/{assetId}/shell-courses:
+        '200':
+          description: Geometry upserted
+      security:
+      - bearerAuth: []
+  /api/v1/assets/{assetId}/shell-courses:
     get:
       summary: List shell courses for an asset
       x-permission-required: asset.read
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Shell course list }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '200':
+          description: Shell course list
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Create shell course
       x-permission-required: asset.update
       x-audit-event-generated: SHELL_COURSE_CREATED
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '201': { description: Shell course created }
-  /assets/{assetId}/shell-courses/{courseId}:
+        '201':
+          description: Shell course created
+      security:
+      - bearerAuth: []
+  /api/v1/assets/{assetId}/shell-courses/{courseId}:
     patch:
       summary: Update shell course
       x-permission-required: asset.update
       x-audit-event-generated: SHELL_COURSE_UPDATED
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
-        - in: path
-          name: courseId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: courseId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Shell course updated }
+        '200':
+          description: Shell course updated
+      security:
+      - bearerAuth: []
     delete:
       summary: Delete shell course
       x-permission-required: asset.update
       x-audit-event-generated: SHELL_COURSE_DELETED
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
-        - in: path
-          name: courseId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: courseId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Shell course deleted }
-  /materials:
+        '200':
+          description: Shell course deleted
+      security:
+      - bearerAuth: []
+  /api/v1/materials:
     get:
       summary: List material master options
       x-permission-required: asset.read
       responses:
-        '200': { description: Material list }
-  /evidence:
+        '200':
+          description: Material list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/evidence:
     get:
       summary: List evidence files
       x-permission-required: evidence.read
       responses:
-        '200': { description: Evidence list }
-  /evidence/upload:
+        '200':
+          description: Evidence list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/evidence/upload:
     post:
       summary: Register evidence metadata and object storage path
       x-permission-required: evidence.upload
       x-audit-event-generated: EVIDENCE_UPLOADED
       responses:
-        '201': { description: Evidence registered }
-  /evidence/{evidenceId}:
+        '201':
+          description: Evidence registered
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/evidence/{evidenceId}:
     get:
       summary: Get evidence metadata
       x-permission-required: evidence.read
       parameters:
-        - in: path
-          name: evidenceId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Evidence detail }
-  /evidence/{evidenceId}/open:
+        '200':
+          description: Evidence detail
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/evidence/{evidenceId}/open:
     get:
       summary: Open object storage evidence link
       x-permission-required: evidence.open
       parameters:
-        - in: path
-          name: evidenceId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Evidence open metadata }
-  /evidence/{evidenceId}/links:
+        '200':
+          description: Evidence open metadata
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/evidence/{evidenceId}/links:
     post:
       summary: Link evidence to asset, inspection, NDT, calculation, finding, FFS, or RBI entity
       x-permission-required: evidence.link
       x-audit-event-generated: EVIDENCE_LINKED
       parameters:
-        - in: path
-          name: evidenceId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '201': { description: Evidence link created }
-  /ndt/measurements:
+        '201':
+          description: Evidence link created
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/ndt/measurements:
     get:
       summary: List NDT measurements
       x-permission-required: ndt.read
       responses:
-        '200': { description: NDT measurement list }
+        '200':
+          description: NDT measurement list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Create NDT measurement
       x-permission-required: ndt.create
       x-audit-event-generated: NDT_MEASUREMENT_CREATED
       responses:
-        '201': { description: NDT measurement created }
-  /ndt/measurements/bulk-import:
+        '201':
+          description: NDT measurement created
+      security:
+      - bearerAuth: []
+  /api/v1/ndt/measurements/bulk-import:
     post:
       summary: Bulk import NDT measurements
       x-permission-required: ndt.import
       x-audit-event-generated: NDT_MEASUREMENT_BULK_IMPORTED
       responses:
-        '201': { description: NDT measurements imported }
-  /ndt/measurements/{measurementId}:
+        '201':
+          description: NDT measurements imported
+      security:
+      - bearerAuth: []
+  /api/v1/ndt/measurements/{measurementId}:
     get:
       summary: Get NDT measurement detail
       x-permission-required: ndt.read
       parameters:
-        - in: path
-          name: measurementId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: measurementId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: NDT measurement detail }
-  /ndt/measurements/{measurementId}/review:
+        '200':
+          description: NDT measurement detail
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/ndt/measurements/{measurementId}/review:
     post:
       summary: Review NDT measurement without approval
       x-permission-required: ndt.review
       x-audit-event-generated: NDT_MEASUREMENT_REVIEWED
       parameters:
-        - in: path
-          name: measurementId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: measurementId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: NDT measurement reviewed }
-  /ndt/measurements/{measurementId}/approve:
+        '200':
+          description: NDT measurement reviewed
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/ndt/measurements/{measurementId}/approve:
     post:
       summary: Approve NDT measurement after evidence gate
       x-permission-required: ndt.approve
       x-audit-event-generated: NDT_MEASUREMENT_APPROVED
       parameters:
-        - in: path
-          name: measurementId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: measurementId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: NDT measurement approved }
-  /engineering/data-dictionary:
+        '200':
+          description: NDT measurement approved
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/engineering/data-dictionary:
     get:
       summary: List active engineering data dictionary fields
       x-permission-required: validation.read
       responses:
-        '200': { description: Engineering data dictionary }
-  /engineering/validate-input:
+        '200':
+          description: Engineering data dictionary
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/engineering/validate-input:
     post:
       summary: Run deterministic engineering validation and persist validation run snapshot
       x-permission-required: validation.run
@@ -264,30 +398,49 @@ paths:
             schema:
               $ref: '#/components/schemas/EngineeringValidationRequest'
       responses:
-        '201': { description: Validation result snapshot }
-  /workflow-events:
+        '201':
+          description: Validation result snapshot
+      security:
+      - bearerAuth: []
+  /api/v1/workflow-events:
     post:
       summary: Receive n8n workflow event through AIM API
       x-permission-required: workflow_event.create
       responses:
-        '201': { description: Workflow event recorded }
-  /error-logs:
+        '201':
+          description: Workflow event recorded
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: unspecified
+  /api/v1/error-logs:
     get:
       summary: List error logs
       x-permission-required: error_log.read
       responses:
-        '200': { description: Error log list }
+        '200':
+          description: Error log list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Create error log through AIM API
       x-permission-required: error_log.create
       responses:
-        '201': { description: Error log recorded }
-  /formulas:
+        '201':
+          description: Error log recorded
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: unspecified
+  /api/v1/formulas:
     get:
       summary: List Formula Registry versions
       x-permission-required: formula.read
       responses:
-        '200': { description: Formula list }
+        '200':
+          description: Formula list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Create Formula Registry draft
       x-permission-required: formula.create
@@ -300,60 +453,88 @@ paths:
             schema:
               $ref: '#/components/schemas/FormulaRegistryPayload'
       responses:
-        '201': { description: Formula created }
-        '400': { $ref: '#/components/responses/ValidationError' }
-  /formulas/approved/{formulaId}:
+        '201':
+          description: Formula created
+        '400':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - bearerAuth: []
+  /api/v1/formulas/approved/{formulaId}:
     get:
       summary: Query production-usable approved/locked formula by formula_id and optional version
       x-permission-required: formula.read
       parameters:
-        - in: path
-          name: formulaId
-          required: true
-          schema: { type: string }
-        - in: query
-          name: version
-          required: false
-          schema: { type: string }
+      - in: path
+        name: formulaId
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: version
+        required: false
+        schema:
+          type: string
       responses:
-        '200': { description: Approved formula metadata }
-        '404': { description: Approved formula not found }
-  /formulas/{formulaId}/versions:
+        '200':
+          description: Approved formula metadata
+        '404':
+          description: Approved formula not found
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: required
+      x-human-review-required: true
+  /api/v1/formulas/{formulaId}/versions:
     get:
       summary: List versions for a formula_id
       x-permission-required: formula.read
       parameters:
-        - in: path
-          name: formulaId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: formulaId
+        required: true
+        schema:
+          type: string
       responses:
-        '200': { description: Formula version list }
-  /formulas/{formulaId}/compare:
+        '200':
+          description: Formula version list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/formulas/{formulaId}/compare:
     get:
       summary: Compare two formula versions
       x-permission-required: formula.read
       parameters:
-        - in: path
-          name: formulaId
-          required: true
-          schema: { type: string }
-        - in: query
-          name: from_version
-          required: true
-          schema: { type: string }
-        - in: query
-          name: to_version
-          required: true
-          schema: { type: string }
+      - in: path
+        name: formulaId
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: from_version
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: to_version
+        required: true
+        schema:
+          type: string
       responses:
-        '200': { description: Formula comparison }
-  /formulas/records/{recordId}:
+        '200':
+          description: Formula comparison
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/formulas/records/{recordId}:
     get:
       summary: Get Formula Registry record detail
       x-permission-required: formula.read
       responses:
-        '200': { description: Formula detail }
+        '200':
+          description: Formula detail
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     patch:
       summary: Update draft formula or create new draft version when editing approved/locked formula
       x-permission-required: formula.update
@@ -366,36 +547,51 @@ paths:
             schema:
               $ref: '#/components/schemas/FormulaRegistryPayload'
       responses:
-        '200': { description: Formula updated or new version created }
-        '400': { $ref: '#/components/responses/ValidationError' }
-  /formulas/records/{recordId}/approve:
+        '200':
+          description: Formula updated or new version created
+        '400':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - bearerAuth: []
+  /api/v1/formulas/records/{recordId}/approve:
     post:
       summary: Approve and lock a Formula Registry version
       x-permission-required: formula.approve
       x-role-restriction: admin or senior_engineer
       x-audit-event-generated: FORMULA_APPROVED
       responses:
-        '200': { description: Formula approved }
-  /formulas/records/{recordId}/deprecate:
+        '200':
+          description: Formula approved
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/formulas/records/{recordId}/deprecate:
     post:
       summary: Deprecate a Formula Registry version
       x-permission-required: formula.retire
       x-role-restriction: admin or senior_engineer
       x-audit-event-generated: FORMULA_DEPRECATED
       responses:
-        '200': { description: Formula deprecated }
-  /formulas/records/{recordId}/test-run:
+        '200':
+          description: Formula deprecated
+      security:
+      - bearerAuth: []
+  /api/v1/formulas/records/{recordId}/test-run:
     post:
       summary: Run placeholder formula test-case check without executing engineering formula
       x-permission-required: formula.test
       x-role-restriction: admin or senior_engineer
       x-audit-event-generated: FORMULA_TEST_PLACEHOLDER_RUN
       responses:
-        '201': { description: Placeholder test run recorded }
-  /engineering/calculate:
+        '201':
+          description: Placeholder test run recorded
+      security:
+      - bearerAuth: []
+  /api/v1/engineering/calculate:
     post:
       summary: Run deterministic engineering calculation
-      description: Runs universal deterministic calculations only. API/API-ASME-dependent calculations must use approved Formula Registry metadata and are not hard-coded. Calculation blocks when validation severity is blocking.
+      description: Runs universal deterministic calculations only. API/API-ASME-dependent calculations must use approved Formula Registry metadata
+        and are not hard-coded. Calculation blocks when validation severity is blocking.
       x-permission-required: calculation.run
       x-audit-event-generated: CALCULATION_RUN_CREATED
       requestBody:
@@ -423,38 +619,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-  /engineering/calculations:
+      security:
+      - bearerAuth: []
+  /api/v1/engineering/calculations:
     get:
       summary: List calculation runs
       x-permission-required: calculation.read
       parameters:
-        - in: query
-          name: asset_id
-          required: false
-          schema: { type: string, format: uuid }
+      - in: query
+        name: asset_id
+        required: false
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Calculation run list }
-
-  /ffs/cases:
+        '200':
+          description: Calculation run list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/ffs/cases:
     get:
       summary: List FFS trigger cases
       description: Lists API 579-1/ASME FFS-1 governance trigger cases. Cases do not declare fitness for service.
       x-permission-required: ffs.read
       parameters:
-        - in: query
-          name: asset_id
-          required: false
-          schema: { type: string, format: uuid }
-        - in: query
-          name: status
-          required: false
-          schema:
-            type: string
-            enum: [open, under_review, data_required, assessment_in_progress, accepted, repair_required, monitor, closed]
+      - in: query
+        name: asset_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        required: false
+        schema:
+          type: string
+          enum:
+          - open
+          - under_review
+          - data_required
+          - assessment_in_progress
+          - accepted
+          - repair_required
+          - monitor
+          - closed
       responses:
-        '200': { description: FFS case list }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '200':
+          description: FFS case list
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Manually create an FFS trigger case
       description: Creates an engineer-review case from a finding or manual trigger. This endpoint never declares fitness for service.
@@ -467,11 +687,17 @@ paths:
             schema:
               $ref: '#/components/schemas/FfsCaseCreateRequest'
       responses:
-        '201': { description: FFS case created }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /ffs/cases/from-calculation:
+        '201':
+          description: FFS case created
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+  /api/v1/ffs/cases/from-calculation:
     post:
       summary: Create FFS cases from calculation warnings
       description: Creates FFS trigger cases from deterministic calculation warning outputs. Trigger only; no fitness declaration.
@@ -483,104 +709,166 @@ paths:
           application/json:
             schema:
               type: object
-              required: [calculation_run_id]
+              required:
+              - calculation_run_id
               properties:
-                calculation_run_id: { type: string }
-                assigned_engineer: { type: string, format: uuid }
-                due_date: { type: string, format: date }
+                calculation_run_id:
+                  type: string
+                assigned_engineer:
+                  type: string
+                  format: uuid
+                due_date:
+                  type: string
+                  format: date
       responses:
-        '201': { description: FFS cases created from calculation warning outputs }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /ffs/cases/{caseId}:
+        '201':
+          description: FFS cases created from calculation warning outputs
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/ffs/cases/{caseId}:
     get:
       summary: Get FFS case detail
       x-permission-required: ffs.read
       parameters:
-        - in: path
-          name: caseId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
       responses:
-        '200': { description: FFS case detail }
-        '404': { description: FFS case not found }
-  /ffs/cases/{caseId}/status:
+        '200':
+          description: FFS case detail
+        '404':
+          description: FFS case not found
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/ffs/cases/{caseId}/status:
     patch:
       summary: Update FFS workflow status
       description: Updates non-final FFS workflow status. Use close endpoint for final disposition.
       x-permission-required: ffs.update
       x-audit-event-generated: FFS_CASE_STATUS_UPDATED
       parameters:
-        - in: path
-          name: caseId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [status]
+              required:
+              - status
               properties:
                 status:
                   type: string
-                  enum: [open, under_review, data_required, assessment_in_progress, accepted, repair_required, monitor]
-                assigned_engineer: { type: string, format: uuid }
-                due_date: { type: string, format: date }
+                  enum:
+                  - open
+                  - under_review
+                  - data_required
+                  - assessment_in_progress
+                  - accepted
+                  - repair_required
+                  - monitor
+                assigned_engineer:
+                  type: string
+                  format: uuid
+                due_date:
+                  type: string
+                  format: date
       responses:
-        '200': { description: FFS case status updated }
-        '400': { $ref: '#/components/responses/ValidationError' }
-  /ffs/cases/{caseId}/close:
+        '200':
+          description: FFS case status updated
+        '400':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - bearerAuth: []
+  /api/v1/ffs/cases/{caseId}/close:
     post:
       summary: Approve final FFS disposition and close case
       description: Requires senior_engineer/admin authority. AI agents cannot close FFS cases. Does not perform FFS calculation.
       x-permission-required: ffs.approve
       x-audit-event-generated: FFS_CASE_FINAL_DISPOSITION_APPROVED
       parameters:
-        - in: path
-          name: caseId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [final_disposition]
+              required:
+              - final_disposition
               properties:
-                final_disposition: { type: string }
-                approval_comment: { type: string }
+                final_disposition:
+                  type: string
+                approval_comment:
+                  type: string
       responses:
-        '200': { description: Final FFS disposition approved and case closed }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
-  /rbi/cases:
+        '200':
+          description: Final FFS disposition approved and case closed
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+  /api/v1/rbi/cases:
     get:
       summary: List RBI interface cases
-      description: Lists API RP 580/581 governance interface cases. Quantitative API RP 581 rules are not implemented unless supplied through Formula Registry.
+      description: Lists API RP 580/581 governance interface cases. Quantitative API RP 581 rules are not implemented unless supplied through
+        Formula Registry.
       x-permission-required: rbi.interface.read
       parameters:
-        - in: query
-          name: asset_id
-          required: false
-          schema: { type: string, format: uuid }
-        - in: query
-          name: status
-          required: false
-          schema:
-            type: string
-            enum: [open, under_review, data_required, assessment_in_progress, ready_for_review, approved, exported, closed]
+      - in: query
+        name: asset_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        required: false
+        schema:
+          type: string
+          enum:
+          - open
+          - under_review
+          - data_required
+          - assessment_in_progress
+          - ready_for_review
+          - approved
+          - exported
+          - closed
       responses:
-        '200': { description: RBI case list }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '200':
+          description: RBI case list
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Manually create an RBI interface case
-      description: Creates a qualitative/semi-quantitative placeholder RBI interface case from engineering review. Does not implement proprietary API RP 581 quantitative rules.
+      description: Creates a qualitative/semi-quantitative placeholder RBI interface case from engineering review. Does not implement proprietary
+        API RP 581 quantitative rules.
       x-permission-required: rbi.interface.create
       x-audit-event-generated: RBI_CASE_CREATED
       requestBody:
@@ -590,14 +878,21 @@ paths:
             schema:
               $ref: '#/components/schemas/RbiCaseCreateRequest'
       responses:
-        '201': { description: RBI case created }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /rbi/cases/from-calculation:
+        '201':
+          description: RBI case created
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+  /api/v1/rbi/cases/from-calculation:
     post:
       summary: Create RBI case from calculation warnings
-      description: Creates an RBI interface case from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated anomaly, or engineering review. Trigger only; no quantitative API RP 581 calculation.
+      description: Creates an RBI interface case from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated
+        anomaly, or engineering review. Trigger only; no quantitative API RP 581 calculation.
       x-permission-required: rbi.interface.create
       x-audit-event-generated: RBI_CASE_CREATED_FROM_CALCULATION
       requestBody:
@@ -606,67 +901,99 @@ paths:
           application/json:
             schema:
               type: object
-              required: [calculation_run_id]
+              required:
+              - calculation_run_id
               properties:
-                calculation_run_id: { type: string }
-                system: { type: string }
-                component: { type: string }
-                damage_mechanism: { type: string }
+                calculation_run_id:
+                  type: string
+                system:
+                  type: string
+                component:
+                  type: string
+                damage_mechanism:
+                  type: string
       responses:
-        '201': { description: RBI case created from calculation warning outputs }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /rbi/cases/{caseId}:
+        '201':
+          description: RBI case created from calculation warning outputs
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/rbi/cases/{caseId}:
     get:
       summary: Get RBI case detail
       x-permission-required: rbi.interface.read
       parameters:
-        - in: path
-          name: caseId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
       responses:
-        '200': { description: RBI case detail }
-        '404': { description: RBI case not found }
-  /rbi/cases/{caseId}/status:
+        '200':
+          description: RBI case detail
+        '404':
+          description: RBI case not found
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/rbi/cases/{caseId}/status:
     patch:
       summary: Update RBI workflow status
       description: Updates non-final RBI interface workflow status. Use approval endpoint for approved/exported/closed states.
       x-permission-required: rbi.interface.update
       x-audit-event-generated: RBI_CASE_STATUS_UPDATED
       parameters:
-        - in: path
-          name: caseId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [status]
+              required:
+              - status
               properties:
                 status:
                   type: string
-                  enum: [open, under_review, data_required, assessment_in_progress, ready_for_review]
+                  enum:
+                  - open
+                  - under_review
+                  - data_required
+                  - assessment_in_progress
+                  - ready_for_review
       responses:
-        '200': { description: RBI case status updated }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /rbi/cases/{caseId}/approve:
+        '200':
+          description: RBI case status updated
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+  /api/v1/rbi/cases/{caseId}/approve:
     post:
       summary: Approve RBI interface summary for export or inspection planning
       description: Requires senior_engineer/admin authority. AI agents cannot approve, export, close, or finalize RBI cases.
       x-permission-required: rbi.interface.approve
       x-audit-event-generated: RBI_CASE_APPROVED
       parameters:
-        - in: path
-          name: caseId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
       requestBody:
         required: false
         content:
@@ -676,20 +1003,35 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: [approved, exported, closed]
+                  enum:
+                  - approved
+                  - exported
+                  - closed
       responses:
-        '200': { description: RBI case approved }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
-  /engineering/reviews:
+        '200':
+          description: RBI case approved
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/engineering/reviews:
     get:
       summary: List engineering review records
       x-permission-required: engineering_review.read
       responses:
-        '200': { description: Engineering review list }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '200':
+          description: Engineering review list
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: required
+      x-human-review-required: true
     post:
       summary: Create engineering review record
       x-permission-required: engineering_review.create
@@ -698,53 +1040,84 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/EngineeringReviewCreateRequest' }
+            schema:
+              $ref: '#/components/schemas/EngineeringReviewCreateRequest'
       responses:
-        '201': { description: Engineering review created }
-        '400': { $ref: '#/components/responses/ValidationFailed' }
-  /engineering/reviews/{reviewId}:
+        '201':
+          description: Engineering review created
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/engineering/reviews/{reviewId}:
     get:
       summary: Get engineering review with approvals and audit trail
       x-permission-required: engineering_review.read
       parameters:
-        - in: path
-          name: reviewId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: reviewId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Engineering review detail }
-        '404': { description: Review not found }
-  /engineering/reviews/{reviewId}/status:
+        '200':
+          description: Engineering review detail
+        '404':
+          description: Review not found
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: required
+      x-human-review-required: true
+  /api/v1/engineering/reviews/{reviewId}/status:
     patch:
       summary: Update engineering review status, checklist, and review comment
       x-permission-required: engineering_review.update
       x-audit-event-generated: ENGINEERING_REVIEW_STATUS_UPDATED
       parameters:
-        - in: path
-          name: reviewId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: reviewId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Engineering review status updated }
-        '409': { description: Locked review immutable }
-  /engineering/reviews/{reviewId}/comments:
+        '200':
+          description: Engineering review status updated
+        '409':
+          description: Locked review immutable
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/engineering/reviews/{reviewId}/comments:
     post:
       summary: Add engineering review comment
       x-permission-required: engineering_review.comment
       x-audit-event-generated: ENGINEERING_REVIEW_COMMENT_ADDED
       parameters:
-        - in: path
-          name: reviewId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: reviewId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '201': { description: Review comment added }
-  /approval-records:
+        '201':
+          description: Review comment added
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/approval-records:
     get:
       summary: List approval records
       x-permission-required: approval_record.read
       responses:
-        '200': { description: Approval record list }
+        '200':
+          description: Approval record list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
     post:
       summary: Create approval request
       x-permission-required: approval_record.create
@@ -753,58 +1126,111 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ApprovalRecordCreateRequest' }
+            schema:
+              $ref: '#/components/schemas/ApprovalRecordCreateRequest'
       responses:
-        '201': { description: Approval request created }
-  /approval-records/{approvalId}/approve:
+        '201':
+          description: Approval request created
+      security:
+      - bearerAuth: []
+  /api/v1/approval-records/{approvalId}/approve:
     post:
       summary: Senior engineer approval or controlled override approval
       x-permission-required: approval_record.approve
       x-audit-event-generated: APPROVAL_RECORD_APPROVED or ENGINEERING_OVERRIDE_APPROVED
       parameters:
-        - in: path
-          name: approvalId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: approvalId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Approval completed and target calculation locked where applicable }
-        '400': { description: Override requires reason, affected field, original value, override value, and evidence }
-        '403': { description: Senior engineer approval required; AI agent cannot approve }
-        '409': { description: Locked approval immutable }
-  /approval-records/{approvalId}/reject:
+        '200':
+          description: Approval completed and target calculation locked where applicable
+        '400':
+          description: Override requires reason
+          affected field: null
+          original value: null
+          override value: null
+          and evidence: null
+        '403':
+          description: Senior engineer approval required; AI agent cannot approve
+        '409':
+          description: Locked approval immutable
+      tags:
+      - Staging Review
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only, RBAC-controlled, and segregation-of-duty guarded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalActionRequest'
+  /api/v1/approval-records/{approvalId}/reject:
     post:
       summary: Senior engineer rejection of approval request
       x-permission-required: approval_record.reject
       x-audit-event-generated: APPROVAL_RECORD_REJECTED
       parameters:
-        - in: path
-          name: approvalId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: approvalId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Approval request rejected }
-  /engineering/calculations/{runId}:
+        '200':
+          description: Approval request rejected
+      tags:
+      - Staging Review
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+      x-source-of-truth-boundary: AIM is the system of record. Rejection requires human reason/comment and audit log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectionActionRequest'
+  /api/v1/engineering/calculations/{runId}:
     get:
       summary: Get calculation detail with inputs, outputs, engineering reviews, approvals, and audit trail
       x-permission-required: calculation.read
       parameters:
-        - in: path
-          name: runId
-          required: true
-          schema: { type: string }
+      - in: path
+        name: runId
+        required: true
+        schema:
+          type: string
       responses:
-        '200': { description: Calculation detail and audit trail }
-        '404': { description: Calculation run not found }
-
-  /reports:
+        '200':
+          description: Calculation detail and audit trail
+        '404':
+          description: Calculation run not found
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/reports:
     get:
       summary: List generated tank integrity reports
       x-permission-required: report.read
       responses:
-        '200': { description: Report list }
-  /reports/generate:
+        '200':
+          description: Report list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/reports/generate:
     post:
       summary: Generate DOCX/PDF draft tank integrity report from locked or review-ready calculation run
+      description: Sprint 10 report generation governance notes. Generates a draft report only under AIM governance controls; report issue remains blocked until required evidence, review, approval, and audit gates pass.
       x-permission-required: report.generate
       x-audit-event-generated: REPORT_GENERATED
       requestBody:
@@ -814,51 +1240,548 @@ paths:
             schema:
               $ref: '#/components/schemas/ReportGenerateRequest'
       responses:
-        '201': { description: Draft report generated }
-        '409': { description: Calculation is not locked or review-ready }
-  /reports/{reportId}:
+        '201':
+          description: Draft report generated
+        '409':
+          description: Calculation is not locked or review-ready
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/reports/{reportId}:
     get:
       summary: Get generated report detail and traceability
       x-permission-required: report.read
       parameters:
-        - in: path
-          name: reportId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: reportId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Report detail }
-  /reports/{reportId}/approve:
+        '200':
+          description: Report detail
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/reports/{reportId}/approve:
     post:
       summary: Approve generated report
       x-permission-required: report.approve
       x-audit-event-generated: REPORT_APPROVED
       parameters:
-        - in: path
-          name: reportId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: reportId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Report approved }
-        '403': { description: Senior engineer/admin approval required }
-  /reports/{reportId}/issue:
+        '200':
+          description: Report approved
+        '403':
+          description: Senior engineer/admin approval required
+      tags:
+      - Reports
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+      x-source-of-truth-boundary: AIM is the system of record. Report approval is human-only and audit logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalActionRequest'
+  /api/v1/reports/{reportId}/issue:
     post:
       summary: Issue approved report and lock the issued record
       x-permission-required: report.issue
-      x-audit-event-generated: REPORT_ISSUED
+      x-audit-event-generated: REPORT_ISSUED or REPORT_ISSUE_BLOCKED
       parameters:
-        - in: path
-          name: reportId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: reportId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
-        '200': { description: Report issued and locked }
-        '409': { description: Report must be approved before issue }
+        '200':
+          description: Report issued and locked
+        '409':
+          description: Report must be approved before issue
+      tags:
+      - Reports
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+      x-evidence-link-required: true
+      x-source-of-truth-boundary: AIM is the system of record. Report issue is blocked unless data, calculation, integrity decision, evidence,
+        and approval gates pass.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportIssueRequest'
+  /api/v1/auth/login:
+    post:
+      summary: Login with DB-backed user/role/permission context
+      security:
+      - bearerAuth: []
+      x-permission-required: public
+      responses:
+        '200':
+          description: Authenticated token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: auth.login_success or auth.login_failed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      tags:
+      - Auth
+      x-source-of-truth-boundary: AIM is the system of record. Public login creates AIM session/audit state; demo header auth is local/test only.
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh an AIM JWT access token
+      security:
+      - bearerAuth: []
+      x-permission-required: auth.refresh
+      responses:
+        '200':
+          description: Refreshed token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: auth.refresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRefreshRequest'
+      tags:
+      - Auth
+      x-source-of-truth-boundary: AIM is the system of record. Refresh sessions are DB-backed and revocable.
+  /api/v1/auth/logout:
+    post:
+      summary: Logout and revoke AIM refresh session
+      security:
+      - bearerAuth: []
+      x-permission-required: auth.logout
+      responses:
+        '200':
+          description: Logout completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: auth.logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLogoutRequest'
+      tags:
+      - Auth
+      x-source-of-truth-boundary: AIM is the system of record. Logout revokes AIM refresh/session state.
+  /api/v1/auth/me:
+    get:
+      summary: Get authenticated user, roles, and current permissions
+      security:
+      - bearerAuth: []
+      x-permission-required: auth.read
+      responses:
+        '200':
+          description: Authenticated user context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: none
+      tags:
+      - Auth
+      x-source-of-truth-boundary: AIM is the system of record. Permissions are derived from current DB-backed RBAC, not trusted from stale client
+        state.
+  /api/v1/extraction-jobs:
+    get:
+      summary: List AI extraction jobs
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.read
+      responses:
+        '200':
+          description: Extraction job list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: none
+      tags: &id001
+      - AI Extraction
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+    post:
+      summary: Create AI extraction job in AIM staging boundary
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.create
+      responses:
+        '201':
+          description: Extraction job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: extraction_job.created
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionJobCreateRequest'
+      tags: *id001
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+  /api/v1/extraction-jobs/{jobId}:
+    get:
+      summary: Get extraction job with fields and staging records
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.read
+      responses:
+        '200':
+          description: Extraction job detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: none
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags: *id001
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+  /api/v1/extraction-jobs/{jobId}/fields:
+    post:
+      summary: Store extracted fields only in extraction/staging tables
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.create
+      responses:
+        '201':
+          description: Extracted fields stored in staging
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: extraction_field.created
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionFieldsCreateRequest'
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags: *id001
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+      x-evidence-link-required: true
+  /api/v1/extraction-fields/{fieldId}/review:
+    post:
+      summary: Engineer review approve/correct/reject extracted field
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.review
+      responses:
+        '200':
+          description: Extraction field reviewed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: extraction_field.approved_by_engineer or extraction_field.rejected_by_engineer or manual_override.created
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionFieldReviewRequest'
+      parameters:
+      - in: path
+        name: fieldId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags: *id001
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+      x-evidence-link-required: true
+  /api/v1/staging-records/{stagingRecordId}/promote:
+    post:
+      summary: Promote reviewed staging record only after evidence and human review gates pass
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.promote
+      responses:
+        '200':
+          description: Staging promotion completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+      x-audit-event-generated: staging_record.promoted
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StagingPromotionRequest'
+      parameters:
+      - in: path
+        name: stagingRecordId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags: *id001
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+      x-evidence-link-required: true
+  /api/v1/evidence/{evidenceId}/download-url:
+    get:
+      summary: Create short-lived signed evidence download URL after RBAC check
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.open
+      responses:
+        '200':
+          description: Signed URL issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceSignedUrlResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: EVIDENCE_SIGNED_URL_CREATED
+      parameters:
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - Evidence
+      x-source-of-truth-boundary: AIM is the system of record. Object storage remains private; AIM issues and audits short-lived access.
+      x-evidence-link-required: false
+  /api/v1/evidence/{evidenceId}/delete-request:
+    post:
+      summary: Request controlled evidence deletion
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.delete_request
+      responses:
+        '200':
+          description: Delete request recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-audit-event-generated: EVIDENCE_DELETE_REQUESTED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceDeleteRequest'
+      parameters:
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - Evidence
+      x-source-of-truth-boundary: AIM is the system of record. Evidence is not deleted directly; linked evidence remains blocked from deletion.
+      x-evidence-link-required: false
+  /api/v1/evidence/{evidenceId}/delete-approve:
+    post:
+      summary: Approve or reject evidence deletion request; linked evidence deletion is blocked
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.delete_approve
+      responses:
+        '200':
+          description: Delete approval decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+      x-audit-event-generated: EVIDENCE_DELETE_APPROVED or LINKED_EVIDENCE_DELETE_BLOCKED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceDeleteApprovalRequest'
+      parameters:
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - Evidence
+      x-source-of-truth-boundary: AIM is the system of record. Linked evidence lineage is retained and cannot be bypassed.
+      x-evidence-link-required: true
+      x-human-review-required: true
 components:
   securitySchemes:
     DemoRoleHeaders:
       type: apiKey
       in: header
       name: x-aim-demo-roles
+      description: Local/test-only demo header fallback. Production API uses bearerAuth.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   responses:
     ValidationError:
       description: Validation failed
@@ -878,182 +1801,349 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
+    ValidationFailed:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    GateBlocked:
+      description: Governance gate blocked the operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Requested entity not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
   schemas:
-
     FfsCaseCreateRequest:
       type: object
-      required: [asset_id, component, damage_mechanism, trigger_reason]
+      required:
+      - asset_id
+      - component
+      - damage_mechanism
+      - trigger_reason
       properties:
-        asset_id: { type: string, format: uuid }
-        component: { type: string }
+        asset_id:
+          type: string
+          format: uuid
+        component:
+          type: string
         damage_mechanism:
           type: string
-          enum: [local_thin_area, crack_like_indication, dent_gouge, severe_corrosion, settlement_concern, out_of_roundness, brittle_fracture_concern, thickness_below_screening, engineering_review_required]
-        trigger_source: { type: string, default: manual_finding }
-        trigger_rule_id: { type: string }
-        trigger_reason: { type: string }
+          enum:
+          - local_thin_area
+          - crack_like_indication
+          - dent_gouge
+          - severe_corrosion
+          - settlement_concern
+          - out_of_roundness
+          - brittle_fracture_concern
+          - thickness_below_screening
+          - engineering_review_required
+        trigger_source:
+          type: string
+          default: manual_finding
+        trigger_rule_id:
+          type: string
+        trigger_reason:
+          type: string
         severity:
           type: string
-          enum: [info, warning, blocking, critical]
+          enum:
+          - info
+          - warning
+          - blocking
+          - critical
         evidence_links:
           type: array
-          items: { type: object }
+          items:
+            type: object
         supporting_measurements:
           type: array
-          items: { type: object }
-        assigned_engineer: { type: string, format: uuid }
-        due_date: { type: string, format: date }
-        required_next_action: { type: string }
-
+          items:
+            type: object
+        assigned_engineer:
+          type: string
+          format: uuid
+        due_date:
+          type: string
+          format: date
+        required_next_action:
+          type: string
     RbiCaseCreateRequest:
       type: object
-      required: [asset_id]
+      required:
+      - asset_id
       additionalProperties: true
       properties:
-        asset_id: { type: string, format: uuid }
-        inspection_event_id: { type: string, format: uuid }
-        calculation_run_id: { type: string, format: uuid }
-        system: { type: string }
-        component: { type: string }
-        damage_mechanism: { type: string }
-        probability_driver: { type: string }
-        consequence_driver: { type: string }
-        risk_category: { type: string }
-        recommended_interval: { type: string }
-        inspection_plan_reference: { type: string }
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+        calculation_run_id:
+          type: string
+          format: uuid
+        system:
+          type: string
+        component:
+          type: string
+        damage_mechanism:
+          type: string
+        probability_driver:
+          type: string
+        consequence_driver:
+          type: string
+        risk_category:
+          type: string
+        recommended_interval:
+          type: string
+        inspection_plan_reference:
+          type: string
         evidence_links:
           type: array
-          items: { type: object }
+          items:
+            type: object
         input_placeholders:
           type: object
           properties:
-            consequence_of_failure: { type: string }
-            probability_of_failure: { type: string }
-            damage_mechanism: { type: string }
-            inspection_effectiveness: { type: string }
-            fluid_service: { type: string }
-            inventory: { type: string }
-            operating_severity: { type: string }
-            mitigation_controls: { type: string }
+            consequence_of_failure:
+              type: string
+            probability_of_failure:
+              type: string
+            damage_mechanism:
+              type: string
+            inspection_effectiveness:
+              type: string
+            fluid_service:
+              type: string
+            inventory:
+              type: string
+            operating_severity:
+              type: string
+            mitigation_controls:
+              type: string
     EngineeringReviewCreateRequest:
       type: object
-      required: [entity_type, entity_id]
+      required:
+      - entity_type
+      - entity_id
       properties:
         entity_type:
           type: string
-          enum: [asset, calculation_run, ndt_measurement, ffs_case, rbi_case, finding]
-        entity_id: { type: string, format: uuid }
-        review_type: { type: string }
+          enum:
+          - asset
+          - calculation_run
+          - ndt_measurement
+          - ffs_case
+          - rbi_case
+          - finding
+        entity_id:
+          type: string
+          format: uuid
+        review_type:
+          type: string
         review_status:
           type: string
-          enum: [draft, submitted_for_review, returned_for_revision, reviewed, submitted_for_approval, approved, rejected, locked]
-        checklist: { type: object }
-        review_comment: { type: string }
+          enum:
+          - draft
+          - submitted_for_review
+          - returned_for_revision
+          - reviewed
+          - submitted_for_approval
+          - approved
+          - rejected
+          - locked
+        checklist:
+          type: object
+        review_comment:
+          type: string
     ApprovalRecordCreateRequest:
       type: object
-      required: [entity_type, entity_id]
+      required:
+      - entity_type
+      - entity_id
       properties:
-        review_id: { type: string, format: uuid }
-        entity_type: { type: string }
-        entity_id: { type: string, format: uuid }
-        calculation_run_id: { type: string, format: uuid }
-        approval_type: { type: string, enum: [final_result, override] }
-        checklist: { type: object }
-        approval_comment: { type: string }
-
+        review_id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        calculation_run_id:
+          type: string
+          format: uuid
+        approval_type:
+          type: string
+          enum:
+          - final_result
+          - override
+        checklist:
+          type: object
+        approval_comment:
+          type: string
     ReportGenerateRequest:
       type: object
-      required: [calculation_run_id]
+      required:
+      - calculation_run_id
       properties:
-        calculation_run_id: { type: string, format: uuid }
-        report_title: { type: string }
+        calculation_run_id:
+          type: string
+          format: uuid
+        report_title:
+          type: string
         output_formats:
           type: array
           items:
             type: string
-            enum: [docx, pdf]
+            enum:
+            - docx
+            - pdf
       description: Generates a draft report only. Draft remains not approved until report.approve workflow is completed.
     GeneratedReport:
       type: object
       properties:
-        report_id: { type: string, format: uuid }
-        report_code: { type: string }
+        report_id:
+          type: string
+          format: uuid
+        report_code:
+          type: string
         report_status:
           type: string
-          enum: [draft, generated, under_review, approved, issued, superseded, rejected]
-        report_version: { type: integer }
-        calculation_run_id: { type: string, format: uuid }
-        input_snapshot_hash: { type: string }
-        traceability: { type: object }
-        docx_object_path: { type: string }
-        pdf_object_path: { type: string }
+          enum:
+          - draft
+          - generated
+          - under_review
+          - approved
+          - issued
+          - superseded
+          - rejected
+        report_version:
+          type: integer
+        calculation_run_id:
+          type: string
+          format: uuid
+        input_snapshot_hash:
+          type: string
+        traceability:
+          type: object
+        docx_object_path:
+          type: string
+        pdf_object_path:
+          type: string
     ErrorEnvelope:
       type: object
-      required: [error]
       properties:
         error:
           type: object
-          required: [code, message]
+          required:
+          - code
+          - message
           properties:
-            code: { type: string }
-            message: { type: string }
+            code:
+              type: string
+            message:
+              type: string
             details:
               type: array
-              items: { type: object }
+              items:
+                type: object
+                additionalProperties: true
+            requestId:
+              type: string
+              nullable: true
     FormulaRegistryPayload:
       type: object
       required:
-        - formula_id
-        - formula_name
-        - code_basis
-        - code_edition
-        - clause_reference
-        - formula_type
-        - expression_type
-        - formula_expression_source
-        - input_schema
-        - output_schema
-        - unit_rules
-        - validation_rules
+      - formula_id
+      - formula_name
+      - code_basis
+      - code_edition
+      - clause_reference
+      - formula_type
+      - expression_type
+      - formula_expression_source
+      - input_schema
+      - output_schema
+      - unit_rules
+      - validation_rules
       properties:
-        formula_id: { type: string }
-        formula_name: { type: string }
-        code_basis: { type: string }
-        code_edition: { type: string }
+        formula_id:
+          type: string
+        formula_name:
+          type: string
+        code_basis:
+          type: string
+        code_edition:
+          type: string
         clause_reference:
           type: string
           description: Manual licensed reference only. Do not reproduce copyrighted clause text.
-        component: { type: string }
-        damage_mechanism: { type: string }
+        component:
+          type: string
+        damage_mechanism:
+          type: string
         formula_type:
           type: string
-          enum: [universal_deterministic, api_controlled, rbi_rule, ffs_trigger, report_phrase_rule]
+          enum:
+          - universal_deterministic
+          - api_controlled
+          - rbi_rule
+          - ffs_trigger
+          - report_phrase_rule
         expression_type:
           type: string
-          enum: [none, controlled_placeholder, engineer_entered, json_logic, text_rule]
+          enum:
+          - none
+          - controlled_placeholder
+          - engineer_entered
+          - json_logic
+          - text_rule
         expression_body:
           type: string
           description: Controlled placeholder unless entered by an authorized engineer from licensed sources or approved fixtures.
         formula_expression_source:
           type: string
           description: Required source traceability label, e.g. controlled_placeholder_manual_entry or licensed_engineer_entry reference.
-        input_schema: { type: object }
-        output_schema: { type: object }
-        unit_rules: { type: object }
+        input_schema:
+          type: object
+        output_schema:
+          type: object
+        unit_rules:
+          type: object
         validation_rules:
           oneOf:
-            - type: object
-            - type: array
+          - type: object
+          - type: array
         blocking_rules:
           type: array
-          items: { type: string }
-        test_case_reference: { type: string }
+          items:
+            type: string
+        test_case_reference:
+          type: string
         status:
           type: string
-          enum: [draft, under_review, approved, deprecated, locked]
-        version: { type: string }
-        effective_date: { type: string, format: date }
-        locked_flag: { type: boolean }
+          enum:
+          - draft
+          - under_review
+          - approved
+          - deprecated
+          - locked
+        version:
+          type: string
+        effective_date:
+          type: string
+          format: date
+        locked_flag:
+          type: boolean
     EngineeringValidationRequest:
       type: object
       additionalProperties: true
@@ -1063,31 +2153,39 @@ components:
           format: uuid
         validation_scope:
           type: string
-          enum: [general, calculation_readiness, thickness_check, final_approval]
+          enum:
+          - general
+          - calculation_readiness
+          - thickness_check
+          - final_approval
         asset:
           type: object
         geometry:
           type: object
         shell_courses:
           type: array
-          items: { type: object }
+          items:
+            type: object
         ndt_measurements:
           type: array
-          items: { type: object }
+          items:
+            type: object
         evidence_links:
           type: array
-          items: { type: object }
+          items:
+            type: object
         formula_registry:
           type: array
-          items: { type: object }
+          items:
+            type: object
         calculation_request:
           type: object
         approval_request:
           type: object
-
     EngineeringCalculationRequest:
       type: object
-      required: [asset_id]
+      required:
+      - asset_id
       additionalProperties: true
       properties:
         asset_id:
@@ -1103,18 +2201,27 @@ components:
           type: string
         calculation_scope:
           type: string
-          enum: [thickness_screening, corrosion_rate, remaining_life, inspection_interval_placeholder]
+          enum:
+          - thickness_screening
+          - corrosion_rate
+          - remaining_life
+          - inspection_interval_placeholder
         calculation_request:
           type: object
           properties:
-            thickness_check_requested: { type: boolean }
-            retirement_thickness_mm: { type: number }
-            controlled_formula_output: { type: object }
+            thickness_check_requested:
+              type: boolean
+            retirement_thickness_mm:
+              type: number
+            controlled_formula_output:
+              type: object
         thresholds:
           type: object
           properties:
-            high_corrosion_rate_mm_per_year: { type: number }
-            low_remaining_life_years: { type: number }
+            high_corrosion_rate_mm_per_year:
+              type: number
+            low_remaining_life_years:
+              type: number
         context:
           type: object
           description: Optional validation/calculation context override. Stored data is loaded by asset_id when omitted.
@@ -1124,140 +2231,499 @@ components:
         data:
           type: object
           properties:
-            run_id: { type: string }
-            run_status: { type: string }
-            validation_status: { type: string, enum: [passed, blocked] }
-            formula_set_version: { type: string }
-            input_snapshot_hash: { type: string }
-            output_summary: { type: object }
+            run_id:
+              type: string
+            run_status:
+              type: string
+            validation_status:
+              type: string
+              enum:
+              - passed
+              - blocked
+            formula_set_version:
+              type: string
+            input_snapshot_hash:
+              type: string
+            output_summary:
+              type: object
             calculation:
               type: object
               properties:
-                deterministic_engine_version: { type: string }
+                deterministic_engine_version:
+                  type: string
                 corrosion_rates:
                   type: array
-                  items: { type: object }
+                  items:
+                    type: object
                 remaining_life:
                   type: array
-                  items: { type: object }
+                  items:
+                    type: object
                 warnings:
                   type: array
-                  items: { type: object }
-        auditLogId: { type: string }
-
-    RbiCaseCreateRequest:
+                  items:
+                    type: object
+        auditLogId:
+          type: string
+    ApiEnvelope:
       type: object
-      required: [asset_id]
-      additionalProperties: true
       properties:
-        asset_id: { type: string, format: uuid }
-        inspection_event_id: { type: string, format: uuid }
-        calculation_run_id: { type: string, format: uuid }
-        system: { type: string }
-        component: { type: string }
-        damage_mechanism: { type: string }
-        probability_driver: { type: string }
-        consequence_driver: { type: string }
-        risk_category: { type: string }
-        recommended_interval: { type: string }
-        inspection_plan_reference: { type: string }
-        evidence_links:
-          type: array
-          items: { type: object }
-        input_placeholders:
+        data:
           type: object
-          properties:
-            consequence_of_failure: { type: string }
-            probability_of_failure: { type: string }
-            damage_mechanism: { type: string }
-            inspection_effectiveness: { type: string }
-            fluid_service: { type: string }
-            inventory: { type: string }
-            operating_severity: { type: string }
-            mitigation_controls: { type: string }
-    EngineeringReviewCreateRequest:
-      type: object
-      required: [entity_type, entity_id]
-      properties:
-        entity_type:
+          additionalProperties: true
+        auditLogId:
           type: string
-          enum: [asset, calculation_run, ndt_measurement, ffs_case, rbi_case, finding]
-        entity_id: { type: string, format: uuid }
-        review_type: { type: string }
-        review_status:
+          nullable: true
+        requestId:
           type: string
-          enum: [draft, submitted_for_review, returned_for_revision, reviewed, submitted_for_approval, approved, rejected, locked]
-        checklist: { type: object }
-        review_comment: { type: string }
-    ApprovalRecordCreateRequest:
+          nullable: true
+        mock:
+          type: boolean
+          default: false
+    StandardResponse:
       type: object
-      required: [entity_type, entity_id]
       properties:
-        review_id: { type: string, format: uuid }
-        entity_type: { type: string }
-        entity_id: { type: string, format: uuid }
-        calculation_run_id: { type: string, format: uuid }
-        approval_type: { type: string, enum: [final_result, override] }
-        checklist: { type: object }
-        approval_comment: { type: string }
-
-    ReportGenerateRequest:
+        data:
+          type: object
+          additionalProperties: true
+        auditLogId:
+          type: string
+          nullable: true
+    AuthLoginRequest:
       type: object
-      required: [calculation_run_id]
+      required:
+      - email
+      - password
       properties:
-        calculation_run_id: { type: string, format: uuid }
-        report_title: { type: string }
-        output_formats:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    AuthRefreshRequest:
+      type: object
+      required:
+      - refreshToken
+      properties:
+        refreshToken:
+          type: string
+    AuthLogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+        logoutAllSessions:
+          type: boolean
+          default: false
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        roles:
           type: array
           items:
             type: string
-            enum: [docx, pdf]
-      description: Generates a draft report only. Draft remains not approved until report.approve workflow is completed.
-    GeneratedReport:
+        permissions:
+          type: array
+          items:
+            type: string
+    AuthTokenResponse:
       type: object
       properties:
-        report_id: { type: string, format: uuid }
-        report_code: { type: string }
-        report_status:
-          type: string
-          enum: [draft, generated, under_review, approved, issued, superseded, rejected]
-        report_version: { type: integer }
-        calculation_run_id: { type: string, format: uuid }
-        input_snapshot_hash: { type: string }
-        traceability: { type: object }
-        docx_object_path: { type: string }
-        pdf_object_path: { type: string }
-    ErrorEnvelope:
-      type: object
-      properties:
-        error:
+        data:
           type: object
-          required: [code, message]
           properties:
-            code: { type: string }
-            message: { type: string }
-            details:
-              type: array
-              items: { type: object }
-
-
-# Sprint 7 governance hardening notes
-# Sprint 8.5 evidence linkage hardening: generic evidence_links rejects cross-asset links with CROSS_ASSET_EVIDENCE_LINK_BLOCKED.
-# NDT approval cannot use linked evidence from another asset.
-# FFS case creation rejects cross-asset evidence links with error code CROSS_ASSET_EVIDENCE_LINK_BLOCKED.
-# Demo header authentication is local-development only; production deployments require verified JWT/session identity and DB-backed RBAC.
-
-# Sprint 8 RBI interface governance notes
-# RBI cases are qualitative/semi-quantitative placeholders unless approved quantitative Formula Registry rules are provided.
-# No proprietary API RP 581 quantitative rules are embedded in this implementation.
-
-# Sprint 9 engineering review and approval workflow governance notes
-# Engineers may review calculation/data records; senior_engineer/admin approval is required for final approval, overrides, rejection, and locking.
-# Override approval requires affected field/result, original value, override value, reason, evidence, approver, and audit timestamp. AI agents cannot approve, reject, override, or lock engineering decisions.
-
-
-# Sprint 10 report generation governance notes
-# /reports/generate creates DOCX/PDF draft outputs from locked or review-ready calculation runs.
-# Reports cite formula_id, formula_version, code_basis, code_edition, calculation_run_id, and input snapshot hash.
-# Draft reports are explicitly marked DRAFT until approved; issued reports are locked and require a new version for changes.
-# No API/API-ASME formula expression is embedded or invented in generated report content.
+            user:
+              $ref: '#/components/schemas/AuthUser'
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            tokenType:
+              type: string
+              example: Bearer
+            expiresIn:
+              type: integer
+            refreshExpiresAt:
+              type: string
+              format: date-time
+    ExtractionJobCreateRequest:
+      type: object
+      required:
+      - asset_id
+      - schema_name
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+          nullable: true
+        source_evidence_file_id:
+          type: string
+          format: uuid
+          nullable: true
+        schema_name:
+          type: string
+        schema_version:
+          type: string
+        prompt_version:
+          type: string
+        extraction_purpose:
+          type: string
+        staging_only_flag:
+          type: boolean
+          default: true
+          description: Must remain true; AI output is non-final.
+    ExtractionJob:
+      type: object
+      properties:
+        extraction_job_id:
+          type: string
+          format: uuid
+        extraction_job_code:
+          type: string
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+          nullable: true
+        source_evidence_file_id:
+          type: string
+          format: uuid
+          nullable: true
+        schema_name:
+          type: string
+        schema_version:
+          type: string
+        status:
+          type: string
+          enum:
+          - pending
+          - running
+          - completed
+          - failed
+          - requires_manual_review
+          - closed
+        staging_only_flag:
+          type: boolean
+        failure_code:
+          type: string
+          nullable: true
+        failure_message:
+          type: string
+          nullable: true
+    ExtractionFieldInput:
+      type: object
+      required:
+      - field_path
+      - field_name
+      - source_reference
+      - confidence_score
+      properties:
+        field_path:
+          type: string
+        field_name:
+          type: string
+        extracted_value:
+          type: string
+          nullable: true
+        normalized_value:
+          type: string
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        source_reference:
+          type: object
+          additionalProperties: true
+        confidence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        target_entity_type:
+          type: string
+          nullable: true
+        target_entity_id:
+          type: string
+          format: uuid
+          nullable: true
+        target_table:
+          type: string
+          nullable: true
+        target_column:
+          type: string
+          nullable: true
+        validation_flags:
+          type: array
+          items:
+            type: string
+        field_status:
+          type: string
+          enum:
+          - ai_extracted
+          - needs_review
+          - invalid
+          - rejected_by_validation
+    ExtractionFieldsCreateRequest:
+      type: object
+      required:
+      - fields
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtractionFieldInput'
+    DataQualityFlag:
+      type: object
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+          enum:
+          - warning
+          - high
+          - critical
+          - blocking
+        status:
+          type: string
+          enum:
+          - failed
+          - warning
+          - blocked
+          - resolved
+        message:
+          type: string
+        blocking:
+          type: boolean
+    ExtractionField:
+      type: object
+      properties:
+        extraction_field_id:
+          type: string
+          format: uuid
+        extraction_job_id:
+          type: string
+          format: uuid
+        field_path:
+          type: string
+        field_name:
+          type: string
+        extracted_value:
+          type: string
+          nullable: true
+        normalized_value:
+          type: string
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        confidence_score:
+          type: number
+          nullable: true
+        field_status:
+          type: string
+          enum:
+          - ai_extracted
+          - needs_review
+          - invalid
+          - rejected_by_validation
+          - approved_by_engineer
+          - corrected_by_engineer
+          - rejected_by_engineer
+        review_required:
+          type: boolean
+        validation_flags:
+          type: array
+          items:
+            type: string
+        reviewer_id:
+          type: string
+          format: uuid
+          nullable: true
+    ManualOverride:
+      type: object
+      properties:
+        override_id:
+          type: string
+          format: uuid
+        staging_record_id:
+          type: string
+          format: uuid
+          nullable: true
+        extraction_field_id:
+          type: string
+          format: uuid
+          nullable: true
+        original_value:
+          type: string
+          nullable: true
+        corrected_value:
+          type: string
+        correction_reason:
+          type: string
+        reviewer_id:
+          type: string
+          format: uuid
+        evidence_reference:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    ExtractionFieldReviewRequest:
+      type: object
+      required:
+      - decision
+      properties:
+        decision:
+          type: string
+          enum:
+          - approve
+          - correct
+          - reject
+        comment:
+          type: string
+        rejection_reason:
+          type: string
+        corrected_value:
+          type: string
+        correction_reason:
+          type: string
+        evidence_reference:
+          type: object
+          additionalProperties: true
+    StagingRecord:
+      type: object
+      properties:
+        staging_record_id:
+          type: string
+          format: uuid
+        extraction_job_id:
+          type: string
+          format: uuid
+        extraction_field_id:
+          type: string
+          format: uuid
+          nullable: true
+        target_table:
+          type: string
+        target_column:
+          type: string
+          nullable: true
+        proposed_value:
+          type: string
+          nullable: true
+        review_status:
+          type: string
+          enum:
+          - pending_review
+          - approved_for_promotion
+          - rejected
+          - corrected
+          - promoted
+          - returned_for_evidence
+        final_table_mutation:
+          type: boolean
+          default: false
+    StagingPromotionRequest:
+      type: object
+      required:
+      - comment
+      properties:
+        comment:
+          type: string
+        evidence_link_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    EvidenceSignedUrlResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            evidence_file_id:
+              type: string
+              format: uuid
+            signed_url:
+              type: string
+              format: uri
+            expires_at:
+              type: string
+              format: date-time
+            access_status:
+              type: string
+        auditLogId:
+          type: string
+    EvidenceDeleteRequest:
+      type: object
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+    EvidenceDeleteApprovalRequest:
+      type: object
+      required:
+      - decision
+      - approval_comment
+      properties:
+        decision:
+          type: string
+          enum:
+          - approve
+          - reject
+        approval_comment:
+          type: string
+    ApprovalActionRequest:
+      type: object
+      required:
+      - approval_comment
+      properties:
+        approval_comment:
+          type: string
+        reason:
+          type: string
+        checklist:
+          type: object
+          additionalProperties: true
+    RejectionActionRequest:
+      type: object
+      required:
+      - rejection_reason
+      properties:
+        rejection_reason:
+          type: string
+        comment:
+          type: string
+    ReportIssueRequest:
+      type: object
+      required:
+      - issue_comment
+      properties:
+        issue_comment:
+          type: string
+        gate_confirmation:
+          type: object
+          additionalProperties: true
+    AuditEventEnvelope:
+      type: object
+      properties:
+        auditLogId:
+          type: string
+        x-audit-event-generated:
+          type: string

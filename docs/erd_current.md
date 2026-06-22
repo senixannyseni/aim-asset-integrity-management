@@ -137,3 +137,16 @@ Additional Phase 1.3 relationships and controls:
 - `evidence_links` is the normalized linkage table for AI staging promotion evidence; evidence is not duplicated into final engineering records.
 - `evidence_files` has signed URL access/audit metadata and malware scan placeholder status.
 - Approval/report issue routes write to `audit_logs` and enforce RBAC, comments/reasons, and segregation-of-duty checks.
+
+## Phase 1.4 OpenAPI and Contract Alignment Addendum
+
+Phase 1.4 does not add new database tables or relationships. It reconciles the OpenAPI contract with the implemented route surface and the migrations already present through `0014_phase1_3_ai_evidence_approval_governance.sql`.
+
+Contract metadata now explicitly maps implemented API paths to the existing ERD relationship groups:
+
+- Auth/JWT endpoints map to `users`, `roles`, `permissions`, `user_roles`, `role_permissions`, `auth_refresh_sessions`, and `audit_logs`.
+- AI extraction endpoints map to `extraction_jobs`, `extraction_fields`, `staging_records`, `manual_overrides`, `data_quality_checks`, `evidence_links`, and `audit_logs`.
+- Evidence signed URL and delete governance endpoints map to `evidence_files`, `evidence_links`, and `audit_logs`.
+- Approval and report issue endpoints map to `engineering_reviews`, `approval_records`, `reports`, `report_versions`, `review_gates`, `evidence_links`, and `audit_logs`.
+
+The ERD remains unchanged for Phase 1.4. The alignment ensures OpenAPI carries the same source-of-truth boundary, staging-only AI extraction rule, human review rule, evidence linkage rule, and audit event rule that are already represented in the data dictionary and migrations.

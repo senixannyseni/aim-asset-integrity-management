@@ -794,3 +794,23 @@ Phase 1.3 adds backend governance behavior and evidence metadata hardening align
 - `evidence_files` now includes malware scan placeholder/access governance columns: `malware_scan_status`, `access_status`, `accessed_at`, `delete_requested_by`, `delete_requested_at`, `delete_approved_by`, and `delete_approved_at`.
 - Evidence download access is represented by signed URL issuance through AIM APIs and audited via `audit_logs`; object storage remains private.
 - Linked evidence cannot be approved for deletion; evidence lineage remains retained for auditability.
+
+## Phase 1.4 OpenAPI and Contract Alignment Addendum
+
+Phase 1.4 reconciles the implemented backend route surface with `04_API/openapi.yaml` without adding new engineering workflows or calculation formulas.
+
+### Contract Alignment Scope
+
+- OpenAPI now uses explicit implemented `/api/v1/...` paths with `http://localhost:4000` as the local API root.
+- Auth endpoints are documented for DB-backed JWT/session skeleton behavior: `/api/v1/auth/login`, `/api/v1/auth/logout`, `/api/v1/auth/refresh`, and `/api/v1/auth/me`.
+- AI extraction/staging endpoints are documented as staging-only, human-review-gated, and evidence-gated where applicable.
+- Evidence signed URL and deletion governance endpoints are documented with RBAC, audit, and linked-evidence deletion blocking.
+- Approval and report issue endpoints are documented with required comments/reasons, human review metadata, evidence gate metadata, and audit event metadata.
+
+### OpenAPI Metadata Rules
+
+Each protected operation must include `x-permission-required`. Each approve/reject/correct/promote/issue operation must include `x-audit-event-generated`. AI extraction/staging operations must include `x-ai-output-staging-only`. Promotion and report issue operations must include `x-human-review-required` and `x-evidence-link-required`.
+
+### Boundary Preservation
+
+This phase does not add API 579/API 581 quantitative logic, CMMS integration, 3D processing, frontend UI, or formula expansion. AIM remains the system of record, n8n remains orchestration-only through AIM APIs, and AI output remains non-final staging data until human engineering review.
