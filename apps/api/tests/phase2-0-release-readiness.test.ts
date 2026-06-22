@@ -276,8 +276,37 @@ describe('Phase 2.0 release readiness pack', () => {
     ]);
   });
 
+<<<<<<< HEAD
   it('does not add an unapproved UAT SQL seed in Phase 2.0', () => {
     expect(fs.existsSync(repoPath('db/seeds/0002_uat_sample_data.sql'))).toBe(false);
+=======
+  it('keeps optional UAT SQL seed controlled when added by Phase 2.1', () => {
+    const seedPath = 'db/seeds/0002_uat_sample_data.sql';
+
+    if (!fs.existsSync(repoPath(seedPath))) {
+      expect(fs.existsSync(repoPath(seedPath))).toBe(false);
+      return;
+    }
+
+    const seed = readRepoFile(seedPath);
+
+    console.log(seed.slice(0, 800));
+
+    expectContainsAll(seed, [
+      'UAT/sample only',
+      'Synthetic data only',
+      'Not for production',
+      'No real client data',
+      'No credentials',
+      'No production object storage URI',
+      'No real evidence files'
+    ]);
+
+    expect(seed.toLowerCase()).not.toContain('password=');
+    expect(seed.toLowerCase()).not.toContain('secret=');
+    expect(seed.toLowerCase()).not.toContain('access_key=');
+    expect(seed.toLowerCase()).not.toContain('secret_key=');
+>>>>>>> phase2-1-controlled-uat-dataset-execution
   });
 
   it('keeps out-of-scope topics as boundary/future/out-of-scope statements rather than implementation claims', () => {
