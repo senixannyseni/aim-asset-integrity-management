@@ -94,6 +94,7 @@ export const PERMISSIONS = [
   'report.review',
   'report.approve',
   'report.issue',
+  'work_order.read',
   'work_order.create',
   'work_order.update',
   'work_order.close',
@@ -130,7 +131,8 @@ const readOnlyPermissions: Permission[] = [
   'validation.read',
   'engineering_review.read',
   'approval_record.read',
-  'report.read'
+  'report.read',
+  'work_order.read'
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -164,6 +166,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'ndt.import',
     'validation.read',
     'validation.run',
+    'work_order.read',
     'work_order.create',
     'work_order.update'
   ],
@@ -213,6 +216,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'report.read',
     'report.generate',
     'report.review',
+    'work_order.read',
     'work_order.create',
     'work_order.update'
   ],
@@ -284,6 +288,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'report.review',
     'report.approve',
     'report.issue',
+    'work_order.read',
     'work_order.create',
     'work_order.update',
     'work_order.close',
@@ -395,6 +400,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'report.review',
     'report.approve',
     'report.issue',
+    'work_order.read',
     'work_order.create',
     'work_order.update',
     'work_order.close',
@@ -425,6 +431,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'report.review',
     'report.approve',
     'report.issue',
+    'work_order.read',
     'work_order.create',
     'work_order.update',
     'work_order.close',
@@ -434,6 +441,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   management: [
     ...readOnlyPermissions,
     'dashboard.view',
+    'work_order.read',
     'work_order.update'
   ],
   it_admin: [

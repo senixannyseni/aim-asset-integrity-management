@@ -16,6 +16,7 @@ import { ffsRouter } from './routes/ffs.js';
 import { rbiRouter } from './routes/rbi.js';
 import { engineeringReviewsRouter } from './routes/engineering-reviews.js';
 import { reportsRouter } from './routes/reports.js';
+import { workOrdersRouter } from './routes/work-orders.js';
 import { aiExtractionRouter } from "./routes/ai-extraction.js";
 import { authRouter } from "./routes/auth.js";
 
@@ -53,6 +54,7 @@ export function createApp() {
   app.use('/api/v1', rbiRouter);
   app.use('/api/v1', engineeringReviewsRouter);
   app.use('/api/v1', reportsRouter);
+  app.use('/api/v1', workOrdersRouter);
   app.use('/api/v1', aiExtractionRouter);
   app.use('/api/v1', authRouter);
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {

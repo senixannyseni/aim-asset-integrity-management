@@ -1,0 +1,16 @@
+{
+  "issue_comment": "I confirm required data, evidence, calculation review, calculation approval, integrity decision approval, report approval, and workflow error gates have passed. Issue as controlled AIM report.",
+  "required_gate_types": [
+    "required_data_complete",
+    "evidence_linked",
+    "calculation_completed",
+    "calculation_reviewed",
+    "calculation_approved",
+    "integrity_decision_created",
+    "integrity_decision_approved",
+    "report_approved",
+    "unresolved_critical_warnings_absent",
+    "workflow_errors_resolved",
+    "approver_comment_present"
+  ]
+}

@@ -26,7 +26,8 @@ describe('Migration reproducibility baseline', () => {
       '0012_auth_rbac_skeleton.sql',
       '0013_source_truth_schema_closure.sql',
       '0014_phase1_3_ai_evidence_approval_governance.sql',
-      '0015_phase1_5_calculation_governance_hardening.sql'
+      '0015_phase1_5_calculation_governance_hardening.sql',
+      '0016_phase1_6_report_issue_work_order_gates.sql'
     ]);
   });
 
@@ -126,6 +127,18 @@ describe('Migration reproducibility baseline', () => {
     expect(migration).toContain('Engineering review required before final use.');
     expect(migration).toContain('calculation.final_use_blocked');
     expect(migration).toContain('No API 579/API 581 quantitative implementation');
+  });
+
+
+  it('tracks Phase 1.6 report issue gates and internal work order fallback without external CMMS', () => {
+    const migration = fs.readFileSync(path.join(migrationsDir, '0016_phase1_6_report_issue_work_order_gates.sql'), 'utf8');
+    expect(migration).toContain('Report Issue Gates + Internal Work Order Fallback');
+    expect(migration).toContain('issue_gate_checklist_json');
+    expect(migration).toContain('required data, evidence, calculation, review, integrity decision, report approval');
+    expect(migration).toContain('internal_work_orders');
+    expect(migration).toContain('external_cmms_reference remains nullable for future integration reference');
+    expect(migration).toContain('no external SAP/Maximo/CMMS integration');
+    expect(migration).toContain('no API 579/API 581 quantitative implementation');
   });
 
 });

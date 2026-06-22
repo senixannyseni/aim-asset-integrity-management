@@ -382,6 +382,217 @@ function buildReportDocument(context: Awaited<ReturnType<typeof loadReportContex
   };
 }
 
+
+type ReportGate = {
+  gate_type: string;
+  gate_status: 'pass' | 'fail';
+  blocking: boolean;
+  message: string;
+  metadata?: Record<string, unknown>;
+};
+
+type ReportGateContext = {
+  report: DbRow;
+  calculation: DbRow | undefined;
+  integrityDecision: DbRow | undefined;
+  approvedIntegrityDecision: DbRow | undefined;
+  evidenceCount: number;
+  openCriticalErrorCount: number;
+  blockingReviewGateCount: number;
+};
+
+function isNonHumanReportActor(req: Request): boolean {
+  const roles = req.user?.roles as readonly string[] | undefined;
+  const email = req.user?.email ?? '';
+  return Boolean(
+    roles?.includes('ai_agent') ||
+    roles?.includes('n8n_service') ||
+    email.includes('n8n') ||
+    email.includes('ai-agent')
+  );
+}
+
+function gate(gateType: string, pass: boolean, message: string, metadata: Record<string, unknown> = {}): ReportGate {
+  return {
+    gate_type: gateType,
+    gate_status: pass ? 'pass' : 'fail',
+    blocking: true,
+    message,
+    metadata
+  };
+}
+
+async function loadReportGateContext(client: PoolClient, report: DbRow): Promise<ReportGateContext> {
+  const reportId = asString(report.id);
+  const calculationRunId = asString(report.calculation_run_id);
+  const assetId = asString(report.asset_id);
+
+  const [calculationResult, integrityResult, approvedIntegrityResult, evidenceResult, criticalErrorResult, blockingGateResult] = await Promise.all([
+    calculationRunId
+      ? client.query<DbRow>('select * from calculation_runs where id = $1', [calculationRunId])
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    calculationRunId
+      ? client.query<DbRow>('select * from integrity_decisions where calculation_run_id = $1 order by created_at desc limit 1', [calculationRunId])
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    calculationRunId
+      ? client.query<DbRow>(
+          `select * from integrity_decisions
+           where calculation_run_id = $1 and decision_status = 'approved'
+           order by approved_at desc nulls last, created_at desc
+           limit 1`,
+          [calculationRunId]
+        )
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    calculationRunId || reportId
+      ? client.query<{ count: string }>(
+          `select count(*)::text as count
+           from evidence_links
+           where (linked_entity_type = 'report' and linked_entity_id = $1::uuid)
+              or (linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)
+              or (linked_entity_type = 'calculation_input' and linked_entity_id in (
+                select id from calculation_inputs where calculation_run_id = $2::uuid
+              ))
+              or (linked_entity_type = 'integrity_decision' and linked_entity_id in (
+                select id from integrity_decisions where calculation_run_id = $2::uuid
+              ))`,
+          [reportId ?? null, calculationRunId ?? null]
+        )
+      : Promise.resolve({ rows: [{ count: '0' }], rowCount: 1 }),
+    client.query<{ count: string }>(
+      `select count(*)::text as count
+       from error_logs
+       where status not in ('resolved','closed')
+         and severity in ('high','critical')
+         and (
+           (related_entity_type = 'report' and related_entity_id = $1::uuid)
+           or (related_entity_type = 'calculation_run' and related_entity_id = $2::uuid)
+           or (related_entity_type = 'asset' and related_entity_id = $3::uuid)
+         )`,
+      [reportId ?? null, calculationRunId ?? null, assetId ?? null]
+    ),
+    client.query<{ count: string }>(
+      `select count(*)::text as count
+       from review_gates
+       where blocking = true
+         and gate_status not in ('pass','waived')
+         and (
+           (entity_type = 'report' and entity_id = $1::uuid)
+           or (entity_type = 'calculation_run' and entity_id = $2::uuid)
+           or (entity_type = 'integrity_decision' and entity_id in (
+             select id from integrity_decisions where calculation_run_id = $2::uuid
+           ))
+         )`,
+      [reportId ?? null, calculationRunId ?? null]
+    )
+  ]);
+
+  return {
+    report,
+    calculation: calculationResult.rows[0],
+    integrityDecision: integrityResult.rows[0],
+    approvedIntegrityDecision: approvedIntegrityResult.rows[0],
+    evidenceCount: Number(evidenceResult.rows[0]?.count ?? 0),
+    openCriticalErrorCount: Number(criticalErrorResult.rows[0]?.count ?? 0),
+    blockingReviewGateCount: Number(blockingGateResult.rows[0]?.count ?? 0)
+  };
+}
+
+function buildReportGateChecklist(context: ReportGateContext, issueCommentPresent: boolean): ReportGate[] {
+  const report = context.report;
+  const calculation = context.calculation;
+  const decision = context.integrityDecision;
+  const approvedDecision = context.approvedIntegrityDecision;
+  const warnings = jsonArray(report.validation_warnings_json).map((warning) => summarize(warning).toLowerCase());
+  const criticalWarning = warnings.some((warning) => warning.includes('critical') || warning.includes('blocked') || warning.includes('missing evidence'));
+  const calculationStatus = [calculation?.run_status, calculation?.status, calculation?.final_use_status].map((value) => asString(value));
+  const calculationReviewStatus = asString(calculation?.review_status);
+  const calculationApprovalStatus = asString(calculation?.approval_status);
+
+  return [
+    gate('required_data_complete', Boolean(report.content_hash && report.sections_json && report.traceability_json), 'Report content, sections, traceability, and content hash must exist.'),
+    gate('evidence_linked', context.evidenceCount > 0, 'Report/calculation/integrity decision must have linked evidence.', { evidence_count: context.evidenceCount }),
+    gate('calculation_completed', Boolean(calculation && calculationStatus.some((status) => ['completed','ready_for_review','reviewed','submitted_for_approval','approved','locked','requires_engineering_review'].includes(status ?? ''))), 'Calculation run must exist and be completed or controlled for review.'),
+    gate('calculation_reviewed', Boolean(calculation && ['reviewed','approved','locked'].includes(calculationReviewStatus ?? '')), 'Calculation must be reviewed before report issue.', { review_status: calculationReviewStatus }),
+    gate('calculation_approved', Boolean(calculation && ['approved','locked'].includes(calculationApprovalStatus ?? '')), 'Calculation must be approved before report issue.', { approval_status: calculationApprovalStatus }),
+    gate('integrity_decision_created', Boolean(decision), 'Integrity decision must exist before report issue.'),
+    gate('integrity_decision_approved', Boolean(approvedDecision), 'Integrity decision must be approved before report issue.', { decision_status: approvedDecision?.decision_status ?? decision?.decision_status ?? null }),
+    gate('report_approved', report.report_status === 'approved', 'Report must be approved before issue.', { report_status: report.report_status }),
+    gate('unresolved_critical_warnings_absent', !criticalWarning && context.blockingReviewGateCount === 0, 'No unresolved critical warnings or blocking review gates may remain.', { blocking_review_gate_count: context.blockingReviewGateCount }),
+    gate('workflow_errors_resolved', context.openCriticalErrorCount === 0, 'Open high/critical workflow or module errors must be resolved.', { open_critical_error_count: context.openCriticalErrorCount }),
+    gate('approver_comment_present', issueCommentPresent, 'Issuer comment is required for audit trail. Error code: REPORT_ISSUE_COMMENT_REQUIRED.')
+  ];
+}
+
+async function persistReportGateChecklist(client: PoolClient, req: Request, reportId: string, gates: ReportGate[]): Promise<void> {
+  for (const item of gates) {
+    await client.query(
+      `insert into review_gates(
+        entity_type,
+        entity_id,
+        gate_domain,
+        gate_type,
+        gate_status,
+        blocking,
+        evidence_link_required,
+        checked_by,
+        checked_at,
+        metadata_json,
+        updated_at
+      ) values ('report', $1, 'report_issue', $2, $3, $4, $5, $6, now(), $7::jsonb, now())
+      on conflict (entity_type, entity_id, gate_domain, gate_type) do update set
+        gate_status = excluded.gate_status,
+        blocking = excluded.blocking,
+        evidence_link_required = excluded.evidence_link_required,
+        checked_by = excluded.checked_by,
+        checked_at = excluded.checked_at,
+        metadata_json = excluded.metadata_json,
+        updated_at = now()`,
+      [
+        reportId,
+        item.gate_type,
+        item.gate_status,
+        item.blocking,
+        item.gate_type === 'evidence_linked',
+        actorUserId(req),
+        JSON.stringify({ message: item.message, ...(item.metadata ?? {}) })
+      ]
+    );
+  }
+}
+
+async function writeReportIssueBlockedError(client: PoolClient, req: Request, reportId: string, failedGates: ReportGate[]): Promise<string | undefined> {
+  const result = await client.query<{ id: string }>(
+    `insert into error_logs(
+      error_code,
+      error_message,
+      severity,
+      source_module,
+      source_system,
+      related_entity_type,
+      related_entity_id,
+      request_id,
+      payload_json,
+      status,
+      created_by
+    ) values ($1, $2, $3, $4, $5, $6, $7::uuid, $8, $9::jsonb, $10, $11)
+    returning id`,
+    [
+      'REPORT_ISSUE_GATE_BLOCKED',
+      'Report issue was blocked by required governance gates.',
+      'high',
+      'report_issue_gate',
+      'aim',
+      'report',
+      reportId,
+      req.header('x-request-id') ?? null,
+      JSON.stringify({ failed_gates: failedGates }),
+      'open',
+      actorUserId(req)
+    ]
+  );
+  return result.rows[0]?.id;
+}
+
 reportsRouter.get('/reports', requirePermission('report.read'), async (_req, res, next) => {
   try {
     const result = await pool.query<DbRow>('select * from reports order by created_at desc limit 100');
@@ -620,17 +831,13 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
     validationError(res, 'body', 'JSON object body is required.');
     return;
   }
-  if (!hasRequiredReportComment(req)) {
-    validationError(res, 'issue_comment', 'Report issue requires issue_comment or comment for audit trail.', 'REPORT_ISSUE_COMMENT_REQUIRED');
-    return;
-  }
   const reportId = req.params.reportId;
   if (!reportId) {
     res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'reportId is required.' } });
     return;
   }
-  if (!isSeniorReportActor(req) || isAiAgent(req)) {
-    res.status(403).json({ error: { code: 'SENIOR_ENGINEER_REPORT_ISSUE_REQUIRED', message: 'Report issue requires senior_engineer or admin. AI agents cannot issue reports.' } });
+  if (!isSeniorReportActor(req) || isNonHumanReportActor(req)) {
+    res.status(403).json({ error: { code: 'HUMAN_APPROVER_REPORT_ISSUE_REQUIRED', message: 'Report issue requires an authorized human approver. AI agents and n8n/service users cannot issue reports.' } });
     return;
   }
   const client = await pool.connect();
@@ -643,28 +850,37 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
       res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
       return;
     }
-    if (before.report_status !== 'approved') {
-      const auditLogId = await writeAudit(client, req, 'REPORT_ISSUE_BLOCKED', 'report', reportId, mapReport(before), mapReport(before), {
-        reason: 'report_approval_required',
-        current_status: before.report_status
-      });
-      await client.query('commit');
-      res.status(409).json({ error: { code: 'REPORT_APPROVAL_REQUIRED', message: 'Report must be approved before issue.', auditLogId } });
+    if (isReportSelfApprovalAttempt(req, before)) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'SEGREGATION_OF_DUTY_BLOCKED', message: 'The user who generated a report cannot issue the same report as sole issuer.' } });
       return;
     }
-    const failedGates = await client.query(
-      `select gate_type, gate_status from review_gates
-       where entity_type = 'report' and entity_id = $1 and blocking = true and gate_status not in ('pass','waived')
-       limit 1`,
-      [reportId]
-    );
-    if ((failedGates.rowCount ?? 0) > 0) {
+
+    const gateContext = await loadReportGateContext(client, before);
+    const reportGates = buildReportGateChecklist(gateContext, hasRequiredReportComment(req));
+    await persistReportGateChecklist(client, req, reportId, reportGates);
+    const failedGates = reportGates.filter((item) => item.blocking && item.gate_status !== 'pass');
+
+    if (failedGates.length > 0) {
+      const errorLogId = await writeReportIssueBlockedError(client, req, reportId, failedGates);
       const auditLogId = await writeAudit(client, req, 'REPORT_ISSUE_BLOCKED', 'report', reportId, mapReport(before), mapReport(before), {
-        reason: 'blocking_review_gate_failed',
-        gate: failedGates.rows[0]
+        reason: 'required_report_issue_gates_not_satisfied',
+        failed_gates: failedGates,
+        error_log_id: errorLogId,
+        human_approver_required: true,
+        n8n_cannot_issue_report: true,
+        ai_cannot_issue_report: true
       });
       await client.query('commit');
-      res.status(409).json({ error: { code: 'REPORT_GATES_NOT_SATISFIED', message: 'Blocking report gates must pass before issue.', auditLogId } });
+      res.status(409).json({
+        error: {
+          code: 'REPORT_GATES_NOT_SATISFIED',
+          message: 'Report issue is blocked until required data, evidence, calculation, review, integrity decision, report approval, workflow-error, and approver-comment gates pass.',
+          auditLogId,
+          errorLogId,
+          gates: failedGates
+        }
+      });
       return;
     }
     const result = await client.query<DbRow>(
@@ -674,7 +890,10 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
     const updated = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'REPORT_ISSUED', 'report', reportId, mapReport(before), mapReport(updated ?? {}), {
       issue_comment: asString(req.body.issue_comment ?? req.body.comment),
-      report_gate_check: true
+      report_gate_check: true,
+      gate_checklist: reportGates,
+      human_approver_required: true,
+      internal_work_order_fallback_only: true
     });
     await client.query('commit');
     res.json({ data: mapReport(updated ?? {}), auditLogId });

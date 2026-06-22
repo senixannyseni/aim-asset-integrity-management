@@ -66,6 +66,7 @@ insert into permissions(permission_code, description) values
   ('report.review', 'Review reports'),
   ('report.approve', 'Approve reports'),
   ('report.issue', 'Issue reports'),
+  ('work_order.read', 'Read internal work orders'),
   ('work_order.create', 'Create internal work orders'),
   ('work_order.update', 'Update internal work orders'),
   ('work_order.close', 'Close internal work orders'),
@@ -165,7 +166,7 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in (
-  'asset.read','inspection.read','inspection.create','inspection.update','evidence.read','evidence.upload','evidence.link','ndt.read','ndt.create','ndt.update','work_order.create','work_order.update'
+  'asset.read','inspection.read','inspection.create','inspection.update','evidence.read','evidence.upload','evidence.link','ndt.read','ndt.create','ndt.update','work_order.read','work_order.create','work_order.update'
 )
 where r.role_code = 'inspector'
 on conflict do nothing;
@@ -177,7 +178,7 @@ join permissions p on p.permission_code in (
   'asset.read','asset.update','inspection.read','inspection.update','inspection.review','evidence.read','evidence.link','evidence.update_metadata',
   'ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','formula.read',
   'calculation.run','calculation.read','calculation.review','calculation.revise','ffs.trigger','ffs.review','rbi.interface.read','rbi.interface.create',
-  'integrity_decision.create','integrity_decision.review','report.read','report.generate','report.review','work_order.create','work_order.update'
+  'integrity_decision.create','integrity_decision.review','report.read','report.generate','report.review','work_order.read','work_order.create','work_order.update'
 )
 where r.role_code = 'engineer'
 on conflict do nothing;
@@ -190,7 +191,7 @@ join permissions p on p.permission_code in (
   'ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','formula.read','formula.create','formula.update',
   'calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.trigger','ffs.review','ffs.request_assessment',
   'rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve',
-  'report.generate','report.review','report.approve','work_order.create','work_order.update','work_order.close','audit.read'
+  'report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','audit.read'
 )
 where r.role_code = 'senior_engineer'
 on conflict do nothing;
@@ -267,6 +268,7 @@ insert into permissions(permission_code, description) values
   ('report.review', 'Report Review'),
   ('report.approve', 'Report Approve'),
   ('report.issue', 'Report Issue'),
+  ('work_order.read', 'Work Order Read'),
   ('work_order.create', 'Work Order Create'),
   ('work_order.update', 'Work Order Update'),
   ('work_order.close', 'Work Order Close'),
@@ -289,21 +291,21 @@ on conflict do nothing;
 insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
-join permissions p on p.permission_code in ('asset.read','inspection.read','inspection.create','inspection.update','evidence.read','evidence.upload','evidence.link','ndt.read','ndt.create','ndt.update','ndt.import','validation.read','validation.run','work_order.create','work_order.update')
+join permissions p on p.permission_code in ('asset.read','inspection.read','inspection.create','inspection.update','evidence.read','evidence.upload','evidence.link','ndt.read','ndt.create','ndt.update','ndt.import','validation.read','validation.run','work_order.read','work_order.create','work_order.update')
 where r.role_code = 'inspector'
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
-join permissions p on p.permission_code in ('asset.read','asset.update','inspection.read','inspection.update','inspection.review','evidence.read','evidence.link','evidence.update_metadata','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.import','formula.read','calculation.run','calculation.read','calculation.review','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','rbi.interface.read','rbi.interface.create','integrity_decision.create','integrity_decision.review','report.read','report.generate','report.review','work_order.create','work_order.update')
+join permissions p on p.permission_code in ('asset.read','asset.update','inspection.read','inspection.update','inspection.review','evidence.read','evidence.link','evidence.update_metadata','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.import','formula.read','calculation.run','calculation.read','calculation.review','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','rbi.interface.read','rbi.interface.create','integrity_decision.create','integrity_decision.review','report.read','report.generate','report.review','work_order.read','work_order.create','work_order.update')
 where r.role_code = 'engineer'
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
-join permissions p on p.permission_code in ('asset.read','asset.update','asset.delete','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','ndt.import','formula.read','formula.create','formula.update','formula.approve','formula.retire','formula.test','calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','ffs.request_assessment','ffs.approve','ffs.close','rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve','report.read','report.generate','report.review','report.approve','work_order.create','work_order.update','work_order.close','validation.read','validation.run','workflow_event.create','error_log.create','error_log.read','audit.read')
+join permissions p on p.permission_code in ('asset.read','asset.update','asset.delete','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','ndt.import','formula.read','formula.create','formula.update','formula.approve','formula.retire','formula.test','calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','ffs.request_assessment','ffs.approve','ffs.close','rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve','report.read','report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','validation.read','validation.run','workflow_event.create','error_log.create','error_log.read','audit.read')
 where r.role_code = 'senior_engineer'
 on conflict do nothing;
 

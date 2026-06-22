@@ -1,0 +1,12 @@
+{
+  "source_entity_type": "integrity_decision",
+  "source_entity_id": "aaaaaaaa-1111-4111-8111-000000000016",
+  "title": "Repair shell course 1 thinning area",
+  "description": "Internal AIM fallback work order created from approved integrity decision. No external CMMS call is made.",
+  "recommended_action": "Plan engineer-reviewed repair or replacement action based on approved integrity decision.",
+  "priority": "high",
+  "due_date": "2026-07-31",
+  "assigned_role": "lead_engineer",
+  "preliminary_internal_mode": false,
+  "closure_evidence_required": true
+}

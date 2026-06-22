@@ -842,3 +842,61 @@ Migration `0015_phase1_5_calculation_governance_hardening.sql` extends `calculat
 ### Required Calculation Audit Events
 
 Phase 1.5 adds or documents these audit events: `calculation.run_requested`, `calculation.completed`, `calculation.failed`, `calculation.warning_raised`, `calculation.reviewed`, `calculation.approved`, `calculation.rejected`, and `calculation.final_use_blocked`.
+
+## Phase 1.6 Addendum — Report Issue Gates and Internal Work Order Fallback
+
+Phase 1.6 hardens the report issue and internal work order fallback boundary.
+
+### Report Issue Gate Fields
+
+`reports` is extended with issue gate fields:
+
+- `issue_gate_status`: pending, passed, blocked, or issued.
+- `issue_gate_checklist_json`: gate checklist snapshot evaluated by AIM backend.
+- `issue_blocked_reason`: reason for blocked issue attempt where applicable.
+- `last_issue_gate_checked_at` and `last_issue_gate_checked_by`: auditability fields for gate evaluation.
+
+Required Phase 1.6 report issue gates:
+
+- `required_data_complete`
+- `evidence_linked`
+- `calculation_completed`
+- `calculation_reviewed`
+- `calculation_approved`
+- `integrity_decision_created`
+- `integrity_decision_approved`
+- `report_approved`
+- `unresolved_critical_warnings_absent`
+- `workflow_errors_resolved`
+- `approver_comment_present`
+
+A blocked issue attempt must create a gate/audit/error signal. AI agents and n8n/service users cannot issue reports.
+
+### Internal Work Order Fallback Fields
+
+`internal_work_orders` remains the MVP fallback before any external CMMS integration. Phase 1.6 adds or hardens:
+
+- `inspection_event_id`
+- `integrity_decision_id`
+- `report_id`
+- `action_source`
+- `assigned_role`
+- `preliminary_internal_flag`
+- `gate_status`
+- `gate_checklist_json`
+- `closure_evidence_required`
+- `closure_evidence_link_id`
+- `action_source_note`
+
+`external_cmms_reference` and `external_cmms_status` remain nullable future placeholders only. Phase 1.6 does not implement SAP, Maximo, or any external CMMS integration.
+
+### Required Audit Events
+
+- `REPORT_ISSUE_BLOCKED`
+- `REPORT_ISSUED`
+- `INTERNAL_WORK_ORDER_CREATION_BLOCKED`
+- `INTERNAL_WORK_ORDER_CREATED`
+- `INTERNAL_WORK_ORDER_UPDATED`
+- `INTERNAL_WORK_ORDER_CLOSE_BLOCKED`
+- `INTERNAL_WORK_ORDER_CLOSED`
+

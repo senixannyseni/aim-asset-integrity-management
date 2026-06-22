@@ -169,3 +169,27 @@ erDiagram
 New calculation run fields represented by this relationship layer are `formula_version_snapshot_json`, `output_snapshot_json`, `output_snapshot_hash`, `final_use_status`, `final_use_disclaimer`, and `final_use_blockers_json`.
 
 The ERD remains bounded to deterministic MVP formula fixtures and approved Formula Registry/version metadata. Calculation final use is blocked until evidence, review, approval, and warning gates pass. The mandatory disclaimer remains: `Engineering review required before final use.`
+
+## Phase 1.6 Addendum — Report Issue Gates and Internal Work Order Fallback
+
+No external CMMS system is introduced in Phase 1.6. AIM remains the system of record.
+
+### Updated logical relationships
+
+- `reports` stores issue gate status and gate checklist snapshots.
+- `review_gates` stores report issue gate evaluations using `gate_domain = 'report_issue'`.
+- `internal_work_orders` links to `assets`, optional `inspection_events`, optional `integrity_decisions`, and optional `reports`.
+- `internal_work_orders.gate_checklist_json` records whether the work order source was an approved integrity decision, issued report action, or explicit preliminary internal control.
+- `evidence_links` may link closure evidence to `internal_work_order` records.
+- `audit_logs` records all report issue, blocked issue, work order creation, update, blocked close, and close events.
+- `error_logs` records report issue gate blockage where applicable.
+
+### Phase 1.6 boundary
+
+- Report issue is human-only and gate-checked.
+- AI cannot issue reports.
+- n8n/service users cannot issue reports directly.
+- Internal work orders are AIM fallback records only.
+- `external_cmms_reference` remains nullable and is not populated by Phase 1.6 routes.
+- No API 579/API 581/CMMS/3D implementation is introduced.
+

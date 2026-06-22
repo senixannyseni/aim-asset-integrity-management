@@ -1302,9 +1302,9 @@ paths:
               $ref: '#/components/schemas/ApprovalActionRequest'
   /api/v1/reports/{reportId}/issue:
     post:
-      summary: Issue approved report and lock the issued record
+      summary: Issue approved report after mandatory Phase 1.6 governance gate checklist
       x-permission-required: report.issue
-      x-audit-event-generated: REPORT_ISSUED or REPORT_ISSUE_BLOCKED
+      x-audit-event-generated: REPORT_ISSUED or REPORT_ISSUE_BLOCKED plus report_issue_gate error/audit signal when blocked
       parameters:
       - in: path
         name: reportId
@@ -1316,15 +1316,14 @@ paths:
         '200':
           description: Report issued and locked
         '409':
-          description: Report must be approved before issue
+          description: Report issue blocked by required data/evidence/calculation/review/integrity/approval/workflow-error/comment gates
       tags:
       - Reports
       security:
       - bearerAuth: []
       x-human-review-required: true
       x-evidence-link-required: true
-      x-source-of-truth-boundary: AIM is the system of record. Report issue is blocked unless data, calculation, integrity decision, evidence,
-        and approval gates pass.
+      x-source-of-truth-boundary: AIM is the system of record. Report issue is human-only, audit logged, and blocked unless data, evidence, calculation completion, calculation review, calculation approval, integrity decision approval, report approval, unresolved critical warning, workflow error, and approver comment gates pass. AI and n8n/service users cannot issue reports.
       requestBody:
         required: true
         content:
@@ -1777,6 +1776,101 @@ paths:
       x-source-of-truth-boundary: AIM is the system of record. Linked evidence lineage is retained and cannot be bypassed.
       x-evidence-link-required: true
       x-human-review-required: true
+  /api/v1/work-orders:
+    get:
+      tags:
+      - Work Orders
+      summary: List internal AIM work orders
+      description: List internal work orders. This is the MVP fallback and does not read external SAP/Maximo/CMMS.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.read
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. Internal work orders are stored in AIM PostgreSQL; no external CMMS call is made.
+      responses:
+        '200':
+          description: Internal work order list
+    post:
+      tags:
+      - Work Orders
+      summary: Create internal AIM work order fallback from approved integrity decision or issued report action
+      description: Create an internal AIM work order only after integrity/report gates pass. Work order creation from unapproved integrity decision is blocked unless preliminary_internal_mode is explicitly true and internally controlled. external_cmms_reference remains null/omitted.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.create
+      x-audit-event-generated: INTERNAL_WORK_ORDER_CREATED or INTERNAL_WORK_ORDER_CREATION_BLOCKED
+      x-human-review-required: true
+      x-evidence-link-required: true
+      x-source-of-truth-boundary: AIM internal work order fallback only. No SAP/Maximo/CMMS integration is implemented in Phase 1.6.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalWorkOrderCreateRequest'
+      responses:
+        '201':
+          description: Internal work order created
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+  /api/v1/work-orders/{workOrderId}:
+    patch:
+      tags:
+      - Work Orders
+      summary: Update internal AIM work order fallback record
+      description: Update internal work order status/assignment/action details. external_cmms_reference must remain null/omitted because external CMMS integration is out of scope.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.update
+      x-audit-event-generated: INTERNAL_WORK_ORDER_UPDATED
+      x-source-of-truth-boundary: AIM internal work order fallback only. No external CMMS write occurs.
+      parameters:
+      - in: path
+        name: workOrderId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalWorkOrderUpdateRequest'
+      responses:
+        '200':
+          description: Internal work order updated
+  /api/v1/work-orders/{workOrderId}/close:
+    post:
+      tags:
+      - Work Orders
+      summary: Close internal AIM work order with completion note and required closure evidence
+      description: Close an internal work order. completion_note is required. If closure_evidence_required is true, closure_evidence_link_id or existing closure evidence must be present. The action is audit logged and remains internal AIM fallback only.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.close
+      x-audit-event-generated: INTERNAL_WORK_ORDER_CLOSED or INTERNAL_WORK_ORDER_CLOSE_BLOCKED
+      x-human-review-required: true
+      x-evidence-link-required: conditional
+      x-source-of-truth-boundary: AIM internal work order fallback only. No SAP/Maximo/CMMS close action is implemented.
+      parameters:
+      - in: path
+        name: workOrderId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalWorkOrderCloseRequest'
+      responses:
+        '200':
+          description: Internal work order closed
+        '409':
+          $ref: '#/components/responses/GateBlocked'
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -2760,9 +2854,183 @@ components:
       properties:
         issue_comment:
           type: string
+          description: Required human issuer comment. Missing comment fails the approver_comment_present report issue gate.
         gate_confirmation:
           type: object
           additionalProperties: true
+          description: Optional UI-provided gate confirmation. Backend gate evaluation remains authoritative.
+        required_gate_types:
+          type: array
+          items:
+            type: string
+          example:
+          - required_data_complete
+          - evidence_linked
+          - calculation_completed
+          - calculation_reviewed
+          - calculation_approved
+          - integrity_decision_created
+          - integrity_decision_approved
+          - report_approved
+          - unresolved_critical_warnings_absent
+          - workflow_errors_resolved
+          - approver_comment_present
+    ReportGateChecklistItem:
+      type: object
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - required_data_complete
+          - evidence_linked
+          - calculation_completed
+          - calculation_reviewed
+          - calculation_approved
+          - integrity_decision_created
+          - integrity_decision_approved
+          - report_approved
+          - unresolved_critical_warnings_absent
+          - workflow_errors_resolved
+          - approver_comment_present
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+    InternalWorkOrder:
+      type: object
+      properties:
+        work_order_id:
+          type: string
+          format: uuid
+        work_order_code:
+          type: string
+        source_entity_type:
+          type: string
+          enum:
+          - integrity_decision
+          - report
+        source_entity_id:
+          type: string
+          format: uuid
+        action_source:
+          type: string
+          enum:
+          - approved_integrity_decision
+          - issued_report_action
+          - preliminary_internal_control
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+          nullable: true
+        integrity_decision_id:
+          type: string
+          format: uuid
+          nullable: true
+        report_id:
+          type: string
+          format: uuid
+          nullable: true
+        priority:
+          type: string
+        status:
+          type: string
+        external_cmms_reference:
+          type: string
+          nullable: true
+          description: Must remain null/omitted in Phase 1.6. External CMMS integration is not implemented.
+        gate_checklist:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportGateChecklistItem'
+    InternalWorkOrderCreateRequest:
+      type: object
+      required:
+      - source_entity_type
+      - source_entity_id
+      - title
+      properties:
+        source_entity_type:
+          type: string
+          enum:
+          - integrity_decision
+          - report
+        source_entity_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        recommended_action:
+          type: string
+        priority:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - critical
+        due_date:
+          type: string
+          format: date
+        assigned_to:
+          type: string
+          format: uuid
+        assigned_role:
+          type: string
+        preliminary_internal_mode:
+          type: boolean
+          description: Explicitly allows internally controlled preliminary work order from unapproved decision; does not bypass final report/integrity gates.
+        closure_evidence_required:
+          type: boolean
+        external_cmms_reference:
+          nullable: true
+          description: Must be omitted/null. External CMMS integration is out of scope.
+    InternalWorkOrderUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        recommended_action:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        assigned_to:
+          type: string
+          format: uuid
+        assigned_role:
+          type: string
+        due_date:
+          type: string
+          format: date
+        external_cmms_reference:
+          nullable: true
+          description: Must be omitted/null. External CMMS integration is out of scope.
+    InternalWorkOrderCloseRequest:
+      type: object
+      required:
+      - completion_note
+      properties:
+        completion_note:
+          type: string
+        closure_summary:
+          type: string
+        closure_evidence_link_id:
+          type: string
+          format: uuid
+          description: Required when closure_evidence_required is true.
     AuditEventEnvelope:
       type: object
       properties:
