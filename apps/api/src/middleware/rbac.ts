@@ -11,9 +11,9 @@ export type ApiErrorResponse = {
 
 export function requirePermission(permission: Permission) {
   return function rbacMiddleware(req: Request, res: Response<ApiErrorResponse>, next: NextFunction): void {
-    const roles = req.user?.roles ?? [];
+    const user = req.user;
 
-    if (roles.length === 0) {
+    if (!user) {
       res.status(401).json({
         error: {
           code: 'UNAUTHENTICATED',
@@ -23,16 +23,16 @@ export function requirePermission(permission: Permission) {
       return;
     }
 
-    if (!hasPermission(roles, permission)) {
-      res.status(403).json({
-        error: {
-          code: 'FORBIDDEN',
-          message: `Permission required: ${permission}`
-        }
-      });
+    if (user.permissions.includes(permission) || hasPermission(user.roles, permission)) {
+      next();
       return;
     }
 
-    next();
+    res.status(403).json({
+      error: {
+        code: 'FORBIDDEN',
+        message: `Permission required: ${permission}`
+      }
+    });
   };
 }

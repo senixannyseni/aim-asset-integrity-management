@@ -4,6 +4,12 @@ export type EvidenceLinkEntityType =
   | 'ndt_measurement'
   | 'calculation_run'
   | 'finding'
+  | 'extraction_job'
+  | 'extraction_field'
+  | 'staging_record'
+  | 'integrity_decision'
+  | 'internal_work_order'
+  | 'report'
   | 'ffs_case'
   | 'rbi_case';
 
@@ -32,6 +38,12 @@ export const LINK_ENTITY_TYPES: EvidenceLinkEntityType[] = [
   'ndt_measurement',
   'calculation_run',
   'finding',
+  'extraction_job',
+  'extraction_field',
+  'staging_record',
+  'integrity_decision',
+  'internal_work_order',
+  'report',
   'ffs_case',
   'rbi_case'
 ];
@@ -67,6 +79,33 @@ export function isSupportedEvidenceFileType(value: unknown): boolean {
   return Boolean(fileType && (SUPPORTED_EVIDENCE_FILE_TYPES as readonly string[]).includes(fileType));
 }
 
+export const EXPECTED_MIME_PREFIX_BY_FILE_TYPE: Record<string, string[]> = {
+  PDF: ['application/pdf'],
+  XLSX: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  CSV: ['text/csv', 'application/csv', 'application/vnd.ms-excel'],
+  JPG: ['image/jpeg'],
+  JPEG: ['image/jpeg'],
+  PNG: ['image/png'],
+  DWG: ['application/acad', 'application/x-acad', 'image/vnd.dwg', 'application/octet-stream'],
+  DXF: ['image/vnd.dxf', 'application/dxf', 'application/octet-stream'],
+  STL: ['model/stl', 'application/sla', 'application/vnd.ms-pki.stl', 'application/octet-stream'],
+  ZIP: ['application/zip', 'application/x-zip-compressed']
+};
+
+export function expectedMimeTypesFor(fileType: string): string[] {
+  return EXPECTED_MIME_PREFIX_BY_FILE_TYPE[fileType.toUpperCase()] ?? ['application/octet-stream'];
+}
+
+export function isExpectedMimeForFileType(fileType: string, mimeType: string): boolean {
+  const normalizedMime = mimeType.toLowerCase();
+  return expectedMimeTypesFor(fileType).some((expected) => normalizedMime === expected.toLowerCase());
+}
+
+export function isSha256(value: unknown): boolean {
+  const raw = asString(value);
+  return Boolean(raw && /^[a-f0-9]{64}$/i.test(raw));
+}
+
 export function buildEvidenceCode(year = new Date().getUTCFullYear(), runningNumber = 1): string {
   return `EVD-${year}-${String(runningNumber).padStart(6, '0')}`;
 }
@@ -94,8 +133,24 @@ export function validateEvidenceUploadPayload(body: Record<string, unknown>): Va
     }
   }
 
+  const fileType = normalizeFileType(body.file_type);
+  const mimeType = asString(body.mime_type);
+  const fileSizeBytes = asInteger(body.file_size_bytes);
+
   if (asString(body.file_type) && !isSupportedEvidenceFileType(body.file_type)) {
     issues.push({ field: 'file_type', message: 'Unsupported evidence file type.', severity: 'error' });
+  }
+
+  if (fileType && mimeType && !isExpectedMimeForFileType(fileType, mimeType)) {
+    issues.push({ field: 'mime_type', message: 'MIME type does not match supported file type expectation.', severity: 'error' });
+  }
+
+  if (fileSizeBytes === undefined || fileSizeBytes < 0) {
+    issues.push({ field: 'file_size_bytes', message: 'file_size_bytes is required and must be a non-negative integer.', severity: 'error' });
+  }
+
+  if (asString(body.checksum) && !isSha256(body.checksum)) {
+    issues.push({ field: 'checksum', message: 'checksum must be a SHA-256 hex string.', severity: 'error' });
   }
 
   if (asString(body.inspection_date) && !asDateString(body.inspection_date)) {

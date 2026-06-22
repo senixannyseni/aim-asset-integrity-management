@@ -750,3 +750,47 @@ No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantita
 | locked_flag | True for issued/locked records; changes require a new report version. |
 
 Governance: reports are DRAFT until approved and issued reports are immutable. No API/API-ASME formula expression is embedded or invented in report content.
+
+## Phase 1.2 Source-of-Truth Schema Closure Addendum
+
+Migration `0013_source_truth_schema_closure.sql` adds schema-readiness tables required by the AIM+n8n source-of-truth package. The migration is intentionally limited to database foundations and does not implement AI extraction business workflow, report issue workflow, API 579/API 581, CMMS integration, 3D processing, or proprietary API/API-ASME formula logic.
+
+### Added AI Extraction and Staging Tables
+
+- `extraction_jobs` — AI extraction job metadata. `staging_only_flag` is constrained to `true` so AI output remains non-final.
+- `extraction_fields` — field-level AI extraction output with source reference, confidence, status, validation flags, and reviewer fields.
+- `staging_records` — proposed values awaiting human review/promotion. Supports `pending_review`, `approved_for_promotion`, `rejected`, `corrected`, `promoted`, and `returned_for_evidence` statuses.
+- `manual_overrides` — reviewer corrections preserving original value, corrected value, reason, reviewer, timestamp, and evidence reference metadata.
+- `data_quality_checks` — validation flags and blocking/non-blocking quality checks for extraction/staging records.
+
+### Added Engineering Governance Tables
+
+- `integrity_decisions` — human-authored integrity decision records linked to assets, inspections, and calculation runs.
+- `review_gates` — generic gate tracking for evidence, calculation, integrity decision, report issue, approval, staging promotion, and work order readiness.
+- `internal_work_orders` — MVP internal work order fallback prior to external CMMS integration.
+
+### Added Reporting, Workflow, Notification, and Settings Tables
+
+- `report_versions` and `report_exports` — report version and export artifact tracking.
+- `workflow_tasks` — workflow task queue/status records surfaced through AIM.
+- `notification_logs` — notification delivery log records.
+- `system_settings` — governed runtime settings such as AIM system-of-record, n8n boundary, AI staging-only flag, and calculation review disclaimer.
+
+### Added Formula/Validation Tables
+
+- `formula_versions` — explicit formula version metadata linked to `formula_registry` for deterministic, approved, auditable calculations.
+- `calculation_validation_cases` — validation workbook/test-case metadata for deterministic calculation regression and gate tests.
+
+Evidence lineage remains normalized through `evidence_links`; the new records store only direct source/reference metadata needed for review and traceability.
+
+## Phase 1.3 Governance Batch Addendum
+
+Phase 1.3 adds backend governance behavior and evidence metadata hardening aligned with the AIM+n8n source of truth:
+
+- AI extraction values are accepted only into `extraction_jobs`, `extraction_fields`, and `staging_records`.
+- `extraction_fields.field_status` remains machine-initialized until human review; only human review actions can set `approved_by_engineer`, `corrected_by_engineer`, or `rejected_by_engineer`.
+- `manual_overrides` stores correction reason, original value, corrected value, reviewer, timestamp, and evidence reference.
+- `staging_records` promotion is blocked unless engineer review is complete, blocking data quality checks are resolved, and evidence is linked through `evidence_links`.
+- `evidence_files` now includes malware scan placeholder/access governance columns: `malware_scan_status`, `access_status`, `accessed_at`, `delete_requested_by`, `delete_requested_at`, `delete_approved_by`, and `delete_approved_at`.
+- Evidence download access is represented by signed URL issuance through AIM APIs and audited via `audit_logs`; object storage remains private.
+- Linked evidence cannot be approved for deletion; evidence lineage remains retained for auditability.

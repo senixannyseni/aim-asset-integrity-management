@@ -49,11 +49,20 @@ function actorRoles(req: Request): string[] {
 
 function isSeniorReportActor(req: Request): boolean {
   const roles = req.user?.roles ?? [];
-  return roles.includes('admin') || roles.includes('senior_engineer');
+  return roles.includes('admin') || roles.includes('senior_engineer') || roles.includes('lead_engineer') || roles.includes('approver');
 }
 
 function isAiAgent(req: Request): boolean {
   return (req.user?.roles ?? []).includes('ai_agent');
+}
+
+function hasRequiredReportComment(req: Request): boolean {
+  return Boolean(isPlainObject(req.body) && asString(req.body.approval_comment ?? req.body.issue_comment ?? req.body.comment ?? req.body.reason));
+}
+
+function isReportSelfApprovalAttempt(req: Request, report: DbRow): boolean {
+  const actor = actorUserId(req);
+  return Boolean(actor && report.generated_by === actor);
 }
 
 async function writeAudit(
@@ -550,6 +559,14 @@ reportsRouter.post('/reports/generate', requirePermission('report.generate'), as
 });
 
 reportsRouter.post('/reports/:reportId/approve', requirePermission('report.approve'), async (req, res, next) => {
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+  if (!hasRequiredReportComment(req)) {
+    validationError(res, 'approval_comment', 'Report approval requires approval_comment or comment for audit trail.', 'REPORT_APPROVAL_COMMENT_REQUIRED');
+    return;
+  }
   const reportId = req.params.reportId;
   if (!reportId) {
     res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'reportId is required.' } });
@@ -574,12 +591,20 @@ reportsRouter.post('/reports/:reportId/approve', requirePermission('report.appro
       res.status(409).json({ error: { code: 'LOCKED_REPORT_IMMUTABLE', message: 'Issued reports are immutable. Create a new report version.' } });
       return;
     }
+    if (isReportSelfApprovalAttempt(req, before)) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'SEGREGATION_OF_DUTY_BLOCKED', message: 'The user who generated a report cannot approve the same report.' } });
+      return;
+    }
     const result = await client.query<DbRow>(
       `update reports set report_status = 'approved', approved_by = $2, approved_at = now(), updated_at = now() where id = $1 returning *`,
       [reportId, actorUserId(req)]
     );
     const updated = result.rows[0];
-    const auditLogId = await writeAudit(client, req, 'REPORT_APPROVED', 'report', reportId, mapReport(before), mapReport(updated ?? {}));
+    const auditLogId = await writeAudit(client, req, 'REPORT_APPROVED', 'report', reportId, mapReport(before), mapReport(updated ?? {}), {
+      approval_comment: asString(req.body.approval_comment ?? req.body.comment),
+      segregation_of_duty_checked: true
+    });
     await client.query('commit');
     res.json({ data: mapReport(updated ?? {}), auditLogId });
   } catch (error) {
@@ -591,6 +616,14 @@ reportsRouter.post('/reports/:reportId/approve', requirePermission('report.appro
 });
 
 reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue'), async (req, res, next) => {
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+  if (!hasRequiredReportComment(req)) {
+    validationError(res, 'issue_comment', 'Report issue requires issue_comment or comment for audit trail.', 'REPORT_ISSUE_COMMENT_REQUIRED');
+    return;
+  }
   const reportId = req.params.reportId;
   if (!reportId) {
     res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'reportId is required.' } });
@@ -611,8 +644,27 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
       return;
     }
     if (before.report_status !== 'approved') {
-      await client.query('rollback');
-      res.status(409).json({ error: { code: 'REPORT_APPROVAL_REQUIRED', message: 'Report must be approved before issue.' } });
+      const auditLogId = await writeAudit(client, req, 'REPORT_ISSUE_BLOCKED', 'report', reportId, mapReport(before), mapReport(before), {
+        reason: 'report_approval_required',
+        current_status: before.report_status
+      });
+      await client.query('commit');
+      res.status(409).json({ error: { code: 'REPORT_APPROVAL_REQUIRED', message: 'Report must be approved before issue.', auditLogId } });
+      return;
+    }
+    const failedGates = await client.query(
+      `select gate_type, gate_status from review_gates
+       where entity_type = 'report' and entity_id = $1 and blocking = true and gate_status not in ('pass','waived')
+       limit 1`,
+      [reportId]
+    );
+    if ((failedGates.rowCount ?? 0) > 0) {
+      const auditLogId = await writeAudit(client, req, 'REPORT_ISSUE_BLOCKED', 'report', reportId, mapReport(before), mapReport(before), {
+        reason: 'blocking_review_gate_failed',
+        gate: failedGates.rows[0]
+      });
+      await client.query('commit');
+      res.status(409).json({ error: { code: 'REPORT_GATES_NOT_SATISFIED', message: 'Blocking report gates must pass before issue.', auditLogId } });
       return;
     }
     const result = await client.query<DbRow>(
@@ -620,7 +672,10 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
       [reportId, actorUserId(req)]
     );
     const updated = result.rows[0];
-    const auditLogId = await writeAudit(client, req, 'REPORT_ISSUED', 'report', reportId, mapReport(before), mapReport(updated ?? {}));
+    const auditLogId = await writeAudit(client, req, 'REPORT_ISSUED', 'report', reportId, mapReport(before), mapReport(updated ?? {}), {
+      issue_comment: asString(req.body.issue_comment ?? req.body.comment),
+      report_gate_check: true
+    });
     await client.query('commit');
     res.json({ data: mapReport(updated ?? {}), auditLogId });
   } catch (error) {

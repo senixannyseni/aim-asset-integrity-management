@@ -4,6 +4,10 @@ insert into roles(role_code, role_name, description) values
   ('inspector', 'Inspector', 'Performs inspection and NDT data entry.'),
   ('engineer', 'Engineer', 'Reviews engineering data and runs draft calculations.'),
   ('senior_engineer', 'Senior Engineer', 'Approves engineering calculations and decisions.'),
+  ('lead_engineer', 'Lead Engineer', 'Leads engineering review, staging promotion, and controlled engineering approvals.'),
+  ('approver', 'Approver', 'Approves controlled reports, integrity decisions, and formal issue actions.'),
+  ('management', 'Management', 'Read-only management dashboard and reporting access.'),
+  ('it_admin', 'IT Admin', 'Manages technical configuration, workflow monitoring, and system operations.'),
   ('qa_qc', 'QA/QC', 'Quality review and formula governance role.'),
   ('client_viewer', 'Client Viewer', 'Read-only client-facing access.'),
   ('ai_agent', 'AI Agent', 'System role for AI extraction/staging only.')
@@ -69,6 +73,31 @@ insert into permissions(permission_code, description) values
   ('audit.read', 'Read audit logs'),
   ('admin.manage', 'Manage users, roles, and settings')
 on conflict (permission_code) do update set description = excluded.description;
+
+insert into permissions(permission_code, description) values
+  ('auth.login', 'Authenticate user login'),
+  ('auth.logout', 'Invalidate user session or refresh token'),
+  ('auth.refresh', 'Refresh authenticated session token'),
+  ('dashboard.view', 'View AIM dashboard and KPI summaries'),
+
+  ('user.read', 'Read AIM users'),
+  ('user.manage', 'Create, update, disable, or manage AIM users'),
+  ('role.read', 'Read AIM roles'),
+  ('role.manage', 'Create, update, or manage AIM roles'),
+  ('permission.read', 'Read AIM permissions'),
+  ('permission.manage', 'Grant, revoke, or manage AIM permissions'),
+
+  ('staging.review', 'Review AI extraction staging records'),
+  ('staging.promote', 'Promote engineer-reviewed staging records'),
+  ('manual_override.create', 'Create manual correction records with reason and evidence reference'),
+  ('data_quality_check.read', 'Read AI extraction and staging data quality checks'),
+
+  ('evidence.download_url', 'Create short-lived signed evidence download URLs'),
+
+  ('system_settings.read', 'Read AIM system settings'),
+  ('system_settings.update', 'Update AIM system settings')
+on conflict (permission_code) do update set
+  description = excluded.description;
 
 insert into users(email, full_name, password_hash, status) values
   ('admin@aim.local', 'AIM Admin', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active'),

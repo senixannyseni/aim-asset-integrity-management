@@ -2,7 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import pinoHttpModule from 'pino-http';
 import { config } from './config/env.js';
-import { demoRequestContext } from './middleware/request-context.js';
+import { authenticateRequest } from './middleware/request-context.js';
 import { assetsRouter } from './routes/assets.js';
 import { healthRouter } from './routes/health.js';
 import { operationsRouter } from './routes/operations.js';
@@ -16,6 +16,8 @@ import { ffsRouter } from './routes/ffs.js';
 import { rbiRouter } from './routes/rbi.js';
 import { engineeringReviewsRouter } from './routes/engineering-reviews.js';
 import { reportsRouter } from './routes/reports.js';
+import { aiExtractionRouter } from "./routes/ai-extraction.js";
+import { authRouter } from "./routes/auth.js";
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
@@ -36,7 +38,7 @@ export function createApp() {
   });
   app.use(express.json({ limit: '2mb' }));
   app.use(pinoHttp());
-  app.use(demoRequestContext);
+  app.use(authenticateRequest);
 
   app.use(healthRouter);
   app.use('/api/v1', assetsRouter);
@@ -51,7 +53,8 @@ export function createApp() {
   app.use('/api/v1', rbiRouter);
   app.use('/api/v1', engineeringReviewsRouter);
   app.use('/api/v1', reportsRouter);
-
+  app.use('/api/v1', aiExtractionRouter);
+  app.use('/api/v1', authRouter);
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === 'number'
       ? Number((error as { statusCode: number }).statusCode)

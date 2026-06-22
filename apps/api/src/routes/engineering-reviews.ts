@@ -70,7 +70,7 @@ function actorRoles(req: Request): string[] {
 
 function isSeniorApprovalActor(req: Request): boolean {
   const roles = req.user?.roles ?? [];
-  return roles.includes('admin') || roles.includes('senior_engineer');
+  return roles.includes('admin') || roles.includes('senior_engineer') || roles.includes('lead_engineer') || roles.includes('approver');
 }
 
 function isAiAgent(req: Request): boolean {
@@ -582,12 +582,25 @@ function requireSeniorApprovalActor(req: Request, res: ApiResponse): boolean {
   return true;
 }
 
+function hasRequiredApprovalComment(req: Request): boolean {
+  return Boolean(isPlainObject(req.body) && asString(req.body.approval_comment ?? req.body.comment ?? req.body.reason));
+}
+
+function isSelfApprovalAttempt(req: Request, approval: DbRow): boolean {
+  const actor = actorUserId(req);
+  return Boolean(actor && (approval.reviewer_user_id === actor || approval.created_by === actor));
+}
+
 engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePermission('approval_record.approve'), async (req, res, next) => {
   if (!isPlainObject(req.body)) {
     validationError(res, 'body', 'JSON object body is required.');
     return;
   }
   if (!requireSeniorApprovalActor(req, res)) return;
+  if (!hasRequiredApprovalComment(req)) {
+    validationError(res, 'approval_comment', 'Approval requires approval_comment or comment for audit trail.', 'APPROVAL_COMMENT_REQUIRED');
+    return;
+  }
 
   const override = isPlainObject(req.body.override) || asString(req.body.affected_field ?? req.body.affectedField)
     ? normalizeOverridePayload(req.body)
@@ -621,6 +634,11 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
     if (before.locked_flag === true || before.approval_status === 'locked') {
       await client.query('rollback');
       res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked approval records cannot be edited. Create a new revision.' } });
+      return;
+    }
+    if (isSelfApprovalAttempt(req, before)) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'SEGREGATION_OF_DUTY_BLOCKED', message: 'The user who created/submitted an approval record cannot approve the same record.' } });
       return;
     }
   
@@ -699,8 +717,16 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
     });
     return;
   }
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
   if (!isSeniorApprovalActor(req) || isAiAgent(req)) {
     res.status(403).json({ error: { code: 'SENIOR_ENGINEER_REJECTION_REQUIRED', message: 'Rejecting final engineering approval requires senior_engineer or admin. AI agents cannot reject.' } });
+    return;
+  }
+  if (!hasRequiredApprovalComment(req)) {
+    validationError(res, 'reason', 'Rejection requires reason or comment for audit trail.', 'REJECTION_REASON_REQUIRED');
     return;
   }
   const client = await pool.connect();
@@ -715,6 +741,11 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
     if (before.locked_flag === true || before.approval_status === 'locked') {
       await client.query('rollback');
       res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked approval records cannot be edited. Create a new revision.' } });
+      return;
+    }
+    if (isSelfApprovalAttempt(req, before)) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'SEGREGATION_OF_DUTY_BLOCKED', message: 'The user who created/submitted an approval record cannot reject the same record.' } });
       return;
     }
     const result = await client.query<DbRow>(

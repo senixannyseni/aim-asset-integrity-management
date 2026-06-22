@@ -91,3 +91,49 @@ Relationships:
 - `reports.calculation_run_id` → `calculation_runs.id`
 - `reports.template_id` → `report_templates.id`
 - Reports cite Formula Registry metadata through the linked calculation run.
+
+## Phase 1.2 Source-of-Truth Schema Closure Addendum
+
+Migration `0013_source_truth_schema_closure.sql` extends the logical ERD with the following relationship groups:
+
+```mermaid
+erDiagram
+  ASSETS ||--o{ EXTRACTION_JOBS : scopes
+  INSPECTION_EVENTS ||--o{ EXTRACTION_JOBS : scopes
+  EVIDENCE_FILES ||--o{ EXTRACTION_JOBS : source
+  EXTRACTION_JOBS ||--o{ EXTRACTION_FIELDS : produces
+  EXTRACTION_JOBS ||--o{ STAGING_RECORDS : creates
+  EXTRACTION_FIELDS ||--o{ STAGING_RECORDS : proposes
+  STAGING_RECORDS ||--o{ MANUAL_OVERRIDES : corrected_by
+  EXTRACTION_FIELDS ||--o{ DATA_QUALITY_CHECKS : flagged_by
+  STAGING_RECORDS ||--o{ DATA_QUALITY_CHECKS : flagged_by
+  ASSETS ||--o{ INTEGRITY_DECISIONS : has
+  INSPECTION_EVENTS ||--o{ INTEGRITY_DECISIONS : supports
+  CALCULATION_RUNS ||--o{ INTEGRITY_DECISIONS : supports
+  FORMULA_REGISTRY ||--o{ FORMULA_VERSIONS : versions
+  FORMULA_VERSIONS ||--o{ CALCULATION_VALIDATION_CASES : validated_by
+  FORMULA_VERSIONS ||--o{ CALCULATION_RUNS : used_by
+  REPORTS ||--o{ REPORT_VERSIONS : versions
+  REPORTS ||--o{ REPORT_EXPORTS : exports
+  REPORT_VERSIONS ||--o{ REPORT_EXPORTS : exports
+  WORKFLOW_EVENTS ||--o{ WORKFLOW_TASKS : creates
+  WORKFLOW_TASKS ||--o{ NOTIFICATION_LOGS : notifies
+  ASSETS ||--o{ INTERNAL_WORK_ORDERS : has
+  USERS ||--o{ MANUAL_OVERRIDES : reviews
+  USERS ||--o{ REVIEW_GATES : checks
+```
+
+This addendum is schema readiness only. It preserves AIM as the system of record, n8n as orchestration-only, AI extraction as staging-only, and formula execution as deterministic/versioned/auditable through approved AIM metadata.
+
+## Phase 1.3 Governance Batch Addendum
+
+Additional Phase 1.3 relationships and controls:
+
+- `extraction_jobs` 1--many `extraction_fields`.
+- `extraction_jobs` 1--many `staging_records`.
+- `extraction_fields` 1--many/optional `staging_records`.
+- `staging_records` and `extraction_fields` may link to `manual_overrides` for human corrections.
+- `data_quality_checks` may reference extraction job, extraction field, or staging record.
+- `evidence_links` is the normalized linkage table for AI staging promotion evidence; evidence is not duplicated into final engineering records.
+- `evidence_files` has signed URL access/audit metadata and malware scan placeholder status.
+- Approval/report issue routes write to `audit_logs` and enforce RBAC, comments/reasons, and segregation-of-duty checks.
