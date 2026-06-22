@@ -278,7 +278,7 @@ values (
   'shell',
   'general_thickness_governance',
   'universal_deterministic',
-  'controlled_fixture',
+  'controlled_placeholder',
   'NO_STANDARD_FORMULA_TEXT_UAT_FIXTURE_ONLY',
   '{"inputs":["previous_thickness_mm","current_thickness_mm","years_between_inspections","minimum_required_thickness_mm"]}'::jsonb,
   '{"outputs":["corrosion_rate_mm_y","remaining_life_years","status","warnings"]}'::jsonb,
@@ -330,15 +330,50 @@ on conflict (formula_code, version) do update set
   updated_at = now();
 
 insert into calculation_validation_cases(
-  id, formula_version_id, test_case_id, case_name, case_type, input_json, expected_output_json,
+  id, formula_version_id, test_case_id, source_fixture, case_type, input_json, expected_output_json,
   expected_status, evidence_requirement_status, review_status, created_by, reviewed_by, reviewed_at
 )
 values
-  ('32000000-0000-4000-8000-000000000001', '31000000-0000-4000-8000-000000000001', 'UAT-CALC-NORMAL-001', 'Normal corrosion rate UAT fixture', 'normal', '{"previous_thickness_mm":7.8,"current_thickness_mm":7.2,"years_between_inspections":3,"minimum_required_thickness_mm":6.0}'::jsonb, '{"expected_warning":"none","disclaimer":"Engineering review required before final use."}'::jsonb, 'ok', 'complete', 'approved', '21000000-0000-4000-8000-000000000004', '21000000-0000-4000-8000-000000000004', now()),
-  ('32000000-0000-4000-8000-000000000002', '31000000-0000-4000-8000-000000000001', 'UAT-CALC-MISSING-EVIDENCE-001', 'Missing evidence blocks final use UAT fixture', 'evidence_gate', '{"evidence_link":"missing"}'::jsonb, '{"expected_blocker":"MISSING_EVIDENCE"}'::jsonb, 'blocked', 'missing', 'pending_review', '21000000-0000-4000-8000-000000000004', null, null)
+  (
+    '32000000-0000-4000-8000-000000000001',
+    '31000000-0000-4000-8000-000000000001',
+    'UAT-CALC-NORMAL-001',
+    'uat_controlled_sample_seed',
+    'mvp_calculation',
+    '{"case_label":"Normal corrosion rate UAT fixture","previous_thickness_mm":7.8,"current_thickness_mm":7.2,"years_between_inspections":3,"minimum_required_thickness_mm":6.0}'::jsonb,
+    '{"expected_warning":"none","disclaimer":"Engineering review required before final use."}'::jsonb,
+    'ok',
+    'complete',
+    'approved',
+    '21000000-0000-4000-8000-000000000004',
+    '21000000-0000-4000-8000-000000000004',
+    now()
+  ),
+  (
+    '32000000-0000-4000-8000-000000000002',
+    '31000000-0000-4000-8000-000000000001',
+    'UAT-CALC-MISSING-EVIDENCE-001',
+    'uat_controlled_sample_seed',
+    'evidence_gate',
+    '{"case_label":"Missing evidence blocks final use UAT fixture","evidence_link":"missing"}'::jsonb,
+    '{"expected_blocker":"MISSING_EVIDENCE"}'::jsonb,
+    'blocked',
+    'missing',
+    'pending_review',
+    '21000000-0000-4000-8000-000000000004',
+    null,
+    null
+  )
 on conflict (test_case_id) do update set
+  source_fixture = excluded.source_fixture,
+  case_type = excluded.case_type,
+  input_json = excluded.input_json,
+  expected_output_json = excluded.expected_output_json,
   expected_status = excluded.expected_status,
   evidence_requirement_status = excluded.evidence_requirement_status,
+  review_status = excluded.review_status,
+  reviewed_by = excluded.reviewed_by,
+  reviewed_at = excluded.reviewed_at,
   updated_at = now();
 
 insert into calculation_runs(
