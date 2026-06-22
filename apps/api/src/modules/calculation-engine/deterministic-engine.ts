@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 import { validateEngineeringContext, type ValidationContext, type ValidationEngineResult } from '../engineering-validation/validation-engine.js';
 
+export const ENGINEERING_REVIEW_DISCLAIMER = 'Engineering review required before final use.';
+
 export type CalculationSeverity = 'info' | 'warning' | 'blocking';
+export type FinalUseStatus = 'blocked' | 'requires_engineering_review';
 
 export type CalculationWarning = {
   code: string;
@@ -23,6 +26,7 @@ export type NormalizedMeasurement = {
   measured_thickness_mm: number;
   reading_date: string;
   method: string | null;
+  measured_thickness_unit: string | null;
   evidence_file_id: string | null;
   is_critical: boolean;
 };
@@ -75,6 +79,10 @@ export type DeterministicCalculationResult = {
   corrosion_rates: CorrosionRateResult[];
   remaining_life: RemainingLifeResult[];
   warnings: CalculationWarning[];
+  final_use_status: FinalUseStatus;
+  final_use_blockers: string[];
+  final_use_disclaimer: typeof ENGINEERING_REVIEW_DISCLAIMER;
+  output_snapshot_hash: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -172,6 +180,7 @@ function normalizedMeasurementFrom(record: Record<string, unknown>, index: numbe
     measured_thickness_mm: thickness,
     reading_date: readingDate,
     method: asString(valueAt(record, ['method'])) ?? null,
+    measured_thickness_unit: asString(valueAt(record, ['measured_thickness_unit', 'thickness_unit'])) ?? 'mm',
     evidence_file_id: asString(valueAt(record, ['evidence_file_id'])) ?? null,
     is_critical: asBoolean(valueAt(record, ['is_critical'])) ?? true
   };
@@ -320,6 +329,16 @@ function buildWarnings(
         suggested_action: 'Attach an evidence_file_id or evidence_links record before review or approval.'
       });
     }
+
+    if (isNonMillimeterUnit(measurement.measured_thickness_unit)) {
+      warnings.push({
+        code: 'UNIT_REVIEW_REQUIRED',
+        severity: 'blocking',
+        field_name: measurement.measurement_id,
+        message: 'Thickness input was supplied in a non-mm unit. Normalization is recorded for draft calculation only and final use is blocked until Engineer review confirms the unit basis.',
+        suggested_action: 'Confirm source unit, deterministic conversion basis, and evidence before calculation approval or final use.'
+      });
+    }
   }
 
   for (const life of remainingLife) {
@@ -378,6 +397,47 @@ function buildWarnings(
   return warnings;
 }
 
+
+function isNonMillimeterUnit(unit: string | null): boolean {
+  if (!unit) return false;
+  const normalized = unit.toLowerCase();
+  return !['mm', 'millimeter', 'millimeters'].includes(normalized);
+}
+
+function validationIssueBlockerCode(issue: ValidationEngineResult['issues'][number]): string {
+  if (issue.group === 'evidence') return 'MISSING_EVIDENCE';
+  if (issue.group === 'formula') return 'APPROVED_FORMULA_REQUIRED';
+  if (issue.group === 'ndt' && issue.field_name.toLowerCase().includes('unit')) return 'UNIT_REVIEW_REQUIRED';
+  return `VALIDATION_${issue.group.toUpperCase()}_BLOCKED`;
+}
+
+function finalUseBlockers(validationStatus: 'passed' | 'blocked', warnings: CalculationWarning[], validationResult?: ValidationEngineResult): string[] {
+  const blockers: string[] = [];
+  if (validationStatus === 'blocked') blockers.push('VALIDATION_BLOCKED');
+  for (const issue of validationResult?.issues ?? []) {
+    if (issue.severity === 'blocking') blockers.push(validationIssueBlockerCode(issue));
+  }
+  for (const warning of warnings) {
+    if (warning.severity === 'blocking') blockers.push(warning.code);
+  }
+  return Array.from(new Set(blockers)).sort();
+}
+
+function outputSnapshotHash(value: {
+  validation_status: 'passed' | 'blocked';
+  output_summary: DeterministicCalculationResult['output_summary'];
+  corrosion_rates: CorrosionRateResult[];
+  remaining_life: RemainingLifeResult[];
+  warnings: CalculationWarning[];
+  final_use_status: FinalUseStatus;
+  final_use_blockers: string[];
+}): string {
+  return hashInputSnapshot({
+    ...value,
+    final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER
+  });
+}
+
 function nextInspectionInterval(remainingLife: RemainingLifeResult[]): number | null {
   const finiteLives = remainingLife
     .map((item) => item.remaining_life_years)
@@ -402,25 +462,39 @@ export function runDeterministicCalculation(context: DeterministicCalculationReq
   const inputSnapshotHash = hashInputSnapshot(context);
 
   if (!validationResult.ok) {
+    const outputSummary = {
+      calculation_scope: normalizedScope,
+      measurement_count: 0,
+      corrosion_rate_count: 0,
+      remaining_life_count: 0,
+      warning_count: 0,
+      ffs_trigger_candidate: false,
+      rbi_trigger_candidate: false,
+      next_inspection_interval_years: null
+    };
+    const blockers = finalUseBlockers('blocked', [], validationResult);
     return {
       deterministic_engine_version: 'AIM-DETERMINISTIC-CALC-V1',
       input_snapshot_hash: inputSnapshotHash,
       validation_result: validationResult,
       validation_status: 'blocked',
       normalized_inputs: { ndt_measurements: [] },
-      output_summary: {
-        calculation_scope: normalizedScope,
-        measurement_count: 0,
-        corrosion_rate_count: 0,
-        remaining_life_count: 0,
-        warning_count: 0,
-        ffs_trigger_candidate: false,
-        rbi_trigger_candidate: false,
-        next_inspection_interval_years: null
-      },
+      output_summary: outputSummary,
       corrosion_rates: [],
       remaining_life: [],
-      warnings: []
+      warnings: [],
+      final_use_status: 'blocked',
+      final_use_blockers: blockers,
+      final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER,
+      output_snapshot_hash: outputSnapshotHash({
+        validation_status: 'blocked',
+        output_summary: outputSummary,
+        corrosion_rates: [],
+        remaining_life: [],
+        warnings: [],
+        final_use_status: 'blocked',
+        final_use_blockers: blockers
+      })
     };
   }
 
@@ -431,24 +505,39 @@ export function runDeterministicCalculation(context: DeterministicCalculationReq
   const remainingLife = calculateRemainingLife(context, rates);
   const warnings = buildWarnings(measurements, rates, remainingLife, context);
   const nextInspection = nextInspectionInterval(remainingLife);
+  const outputSummary = {
+    calculation_scope: normalizedScope,
+    measurement_count: measurements.length,
+    corrosion_rate_count: rates.length,
+    remaining_life_count: remainingLife.length,
+    warning_count: warnings.length,
+    ffs_trigger_candidate: warnings.some((warning) => warning.code === 'FFS_TRIGGER_CANDIDATE'),
+    rbi_trigger_candidate: warnings.some((warning) => warning.code === 'RBI_TRIGGER_CANDIDATE'),
+    next_inspection_interval_years: nextInspection
+  };
+  const blockers = finalUseBlockers('passed', warnings);
+  const finalUseStatus: FinalUseStatus = blockers.length > 0 ? 'blocked' : 'requires_engineering_review';
   return {
     deterministic_engine_version: 'AIM-DETERMINISTIC-CALC-V1',
     input_snapshot_hash: inputSnapshotHash,
     validation_result: validationResult,
     validation_status: 'passed',
     normalized_inputs: { ndt_measurements: measurements },
-    output_summary: {
-      calculation_scope: normalizedScope,
-      measurement_count: measurements.length,
-      corrosion_rate_count: rates.length,
-      remaining_life_count: remainingLife.length,
-      warning_count: warnings.length,
-      ffs_trigger_candidate: warnings.some((warning) => warning.code === 'FFS_TRIGGER_CANDIDATE'),
-      rbi_trigger_candidate: warnings.some((warning) => warning.code === 'RBI_TRIGGER_CANDIDATE'),
-      next_inspection_interval_years: nextInspection
-    },
+    output_summary: outputSummary,
     corrosion_rates: rates,
     remaining_life: remainingLife,
-    warnings
+    warnings,
+    final_use_status: finalUseStatus,
+    final_use_blockers: blockers,
+    final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER,
+    output_snapshot_hash: outputSnapshotHash({
+      validation_status: 'passed',
+      output_summary: outputSummary,
+      corrosion_rates: rates,
+      remaining_life: remainingLife,
+      warnings,
+      final_use_status: finalUseStatus,
+      final_use_blockers: blockers
+    })
   };
 }

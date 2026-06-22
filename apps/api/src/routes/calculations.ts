@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
-import { asNumber, asString, hashInputSnapshot, runDeterministicCalculation, type DeterministicCalculationRequest, type DeterministicCalculationResult } from '../modules/calculation-engine/deterministic-engine.js';
+import { ENGINEERING_REVIEW_DISCLAIMER, asNumber, asString, hashInputSnapshot, runDeterministicCalculation, type DeterministicCalculationRequest, type DeterministicCalculationResult } from '../modules/calculation-engine/deterministic-engine.js';
 import type { ValidationContext } from '../modules/engineering-validation/validation-engine.js';
 
 export const calculationsRouter = Router();
@@ -118,6 +118,25 @@ function mapFormula(row: DbRow): Record<string, unknown> {
   };
 }
 
+function mapFormulaVersion(row: DbRow): Record<string, unknown> {
+  return {
+    formula_version_id: row.formula_version_id,
+    formula_registry_id: row.formula_version_registry_id ?? row.id,
+    formula_code: row.formula_version_code ?? row.formula_id ?? row.formula_code,
+    formula_name: row.formula_version_name ?? row.formula_name,
+    version: row.formula_version_number ?? row.version,
+    formula_status: row.formula_version_status,
+    deterministic_flag: row.formula_version_deterministic_flag,
+    formula_expression_source: row.formula_version_expression_source ?? row.formula_expression_source,
+    input_schema: row.formula_version_input_schema,
+    output_schema: row.formula_version_output_schema,
+    unit_rules: row.formula_version_unit_rules,
+    validation_rules: row.formula_version_validation_rules,
+    approved_by: row.formula_version_approved_by,
+    approved_at: row.formula_version_approved_at
+  };
+}
+
 function mapRun(row: DbRow): Record<string, unknown> {
   return {
     calculation_run_id: row.id,
@@ -129,9 +148,16 @@ function mapRun(row: DbRow): Record<string, unknown> {
     run_status: row.run_status ?? row.status,
     status: row.status,
     formula_set_version: row.formula_set_version,
+    formula_version_id: row.formula_version_id,
+    formula_version_snapshot: row.formula_version_snapshot_json,
     input_snapshot_hash: row.input_snapshot_hash,
+    output_snapshot_hash: row.output_snapshot_hash,
     validation_status: row.validation_status,
     output_summary: row.output_summary,
+    output_snapshot: row.output_snapshot_json,
+    final_use_status: row.final_use_status,
+    final_use_disclaimer: row.final_use_disclaimer,
+    final_use_blockers: row.final_use_blockers_json,
     review_status: row.review_status,
     approval_status: row.approval_status,
     locked_flag: row.locked_flag,
@@ -200,21 +226,34 @@ async function loadAssetContext(client: Queryable, assetId: string, base: Determ
   };
 }
 
-async function getApprovedFormula(client: Queryable, formulaId: string, version?: string): Promise<DbRow | undefined> {
-  const values: unknown[] = [formulaId];
-  let versionClause = '';
-  if (version) {
-    values.push(version);
-    versionClause = `and version = $${values.length}`;
-  }
+async function getApprovedFormulaVersion(client: Queryable, formulaId: string, version: string): Promise<DbRow | undefined> {
   const result = await client.query<DbRow>(
-    `select * from formula_registry
-     where formula_id = $1
-       ${versionClause}
-       and status in ('approved','locked')
-     order by approval_date desc nulls last, created_at desc
+    `select
+       fr.*,
+       fv.id as formula_version_id,
+       fv.formula_registry_id as formula_version_registry_id,
+       fv.formula_code as formula_version_code,
+       fv.formula_name as formula_version_name,
+       fv.version as formula_version_number,
+       fv.formula_status as formula_version_status,
+       fv.deterministic_flag as formula_version_deterministic_flag,
+       fv.formula_expression_source as formula_version_expression_source,
+       fv.input_schema as formula_version_input_schema,
+       fv.output_schema as formula_version_output_schema,
+       fv.unit_rules as formula_version_unit_rules,
+       fv.validation_rules as formula_version_validation_rules,
+       fv.approved_by as formula_version_approved_by,
+       fv.approved_at as formula_version_approved_at
+     from formula_versions fv
+     join formula_registry fr on fr.id = fv.formula_registry_id
+     where fv.formula_code = $1
+       and fv.version = $2
+       and fv.formula_status in ('approved','locked')
+       and fv.deterministic_flag = true
+       and coalesce(fr.status, 'draft') in ('approved','approved_active','locked')
+     order by fv.approved_at desc nulls last, fv.created_at desc
      limit 1`,
-    values
+    [formulaId, version]
   );
   return result.rows[0];
 }
@@ -255,19 +294,19 @@ function outputRows(calculation: DeterministicCalculationResult): Array<{ name: 
     name: `corrosion_rate.${rate.group_key}`,
     value: rate.corrosion_rate_mm_per_year,
     unit: 'mm/year',
-    json: rate as unknown as Record<string, unknown>
+    json: { ...(rate as unknown as Record<string, unknown>), final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER }
   }));
   const remainingRows = calculation.remaining_life.map((life) => ({
     name: `remaining_life.${life.group_key}`,
     value: life.remaining_life_years,
     unit: 'years',
-    json: life as unknown as Record<string, unknown>
+    json: { ...(life as unknown as Record<string, unknown>), final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER }
   }));
   const warningRows = calculation.warnings.map((warning) => ({
     name: `warning.${warning.code}`,
     value: null,
     unit: null,
-    json: warning as unknown as Record<string, unknown>,
+    json: { ...(warning as unknown as Record<string, unknown>), final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER },
     warningCode: warning.code,
     warningMessage: warning.message
   }));
@@ -350,18 +389,35 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
     return;
   }
 
-  const formulaId = asString(req.body.formula_id) ?? 'AIM-UNIVERSAL-THICKNESS-CORROSION-ENGINE';
+  const formulaId = asString(req.body.formula_id);
   const formulaVersion = asString(req.body.formula_version);
+  if (!formulaId) {
+    validationError(
+      res,
+      'formula_id',
+      'formula_id is required. Silent/default formula selection is not allowed. Error code: EXPLICIT_FORMULA_VERSION_REQUIRED.'
+    );
+    return;
+  }
+  if (!formulaVersion) {
+    validationError(
+      res,
+      'formula_version',
+      'formula_version is required. Calculation runs must select an approved formula version explicitly. Error code: EXPLICIT_FORMULA_VERSION_REQUIRED.'
+    );
+    return;
+  }
+
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const formula = await getApprovedFormula(client, formulaId, formulaVersion);
+    const formula = await getApprovedFormulaVersion(client, formulaId, formulaVersion);
     if (!formula) {
       await client.query('rollback');
       res.status(400).json({
         error: {
-          code: 'APPROVED_FORMULA_REQUIRED',
-          message: 'Calculation requires an approved or locked Formula Registry record. Draft and deprecated formulas cannot be used.'
+          code: 'APPROVED_FORMULA_VERSION_REQUIRED',
+          message: 'Calculation requires an explicit approved or locked formula_versions record. Missing, draft, under_review, retired, rejected, and silent/default formulas cannot be used.'
         }
       });
       return;
@@ -398,19 +454,32 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
       thresholds: isPlainObject(req.body.thresholds) ? req.body.thresholds : undefined,
       formula_registry: [mapFormula(formula)]
     });
+    const formulaVersionSnapshot = mapFormulaVersion(formula);
     const inputSnapshot = {
       asset_id: assetId,
       formula: mapFormula(formula),
+      formula_version: formulaVersionSnapshot,
       context,
       request: req.body
     };
     const inputSnapshotHash = hashInputSnapshot(inputSnapshot);
     const calculationBase = runDeterministicCalculation({ ...context, formula_registry: [mapFormula(formula)] });
     const calculation: DeterministicCalculationResult = { ...calculationBase, input_snapshot_hash: inputSnapshotHash };
+    const outputSnapshot = {
+      deterministic_engine_version: calculation.deterministic_engine_version,
+      output_summary: calculation.output_summary,
+      corrosion_rates: calculation.corrosion_rates,
+      remaining_life: calculation.remaining_life,
+      warnings: calculation.warnings,
+      final_use_status: calculation.final_use_status,
+      final_use_blockers: calculation.final_use_blockers,
+      final_use_disclaimer: calculation.final_use_disclaimer,
+      output_snapshot_hash: calculation.output_snapshot_hash
+    };
     const validationStatus = calculation.validation_status;
     const runStatus = validationStatus === 'blocked' ? 'blocked' : 'completed';
     const status = validationStatus === 'blocked' ? 'validation_failed' : 'ready_for_review';
-    const formulaSetVersion = `${String(formula.formula_id ?? formula.formula_code)}@${String(formula.version)}`;
+    const formulaSetVersion = `${String(formulaVersionSnapshot.formula_code)}@${String(formulaVersionSnapshot.version)}`;
     const runVersion = await nextRunVersion(client, assetId, String(formula.id));
     const runCode = `CALC-${Date.now()}-${runVersion}`;
 
@@ -419,6 +488,7 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
         asset_id,
         inspection_event_id,
         formula_registry_id,
+        formula_version_id,
         run_version,
         status,
         run_id,
@@ -433,18 +503,26 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
         unit_normalized_input_json,
         validation_result_json,
         warnings_json,
+        formula_version_snapshot_json,
+        output_snapshot_json,
+        final_use_status,
+        final_use_disclaimer,
+        final_use_blockers_json,
+        output_snapshot_hash,
         initiated_by,
         created_by,
         locked_flag
       ) values (
         $1, $2, $3, $4, $5,
-        $6, $7, $8, $9, $10, $11::jsonb, 'not_reviewed', 'not_requested',
-        $12::jsonb, $13::jsonb, $14::jsonb, $15::jsonb, $16, $16, false
+        $6, $7, $8, $9, $10, $11, $12::jsonb, 'not_reviewed', 'not_requested',
+        $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb,
+        $19, $20, $21::jsonb, $22, $23, $23, false
       ) returning *`,
       [
         assetId,
         asString(req.body.inspection_event_id) ?? null,
         formula.id,
+        formula.formula_version_id,
         runVersion,
         status,
         runCode,
@@ -457,6 +535,12 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
         JSON.stringify(calculation.normalized_inputs),
         JSON.stringify(calculation.validation_result),
         JSON.stringify(calculation.warnings),
+        JSON.stringify(formulaVersionSnapshot),
+        JSON.stringify(outputSnapshot),
+        calculation.final_use_status,
+        ENGINEERING_REVIEW_DISCLAIMER,
+        JSON.stringify(calculation.final_use_blockers),
+        calculation.output_snapshot_hash,
         actorUserId(req)
       ]
     );
@@ -492,22 +576,46 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
       );
     }
 
-    const auditLogId = await writeAudit(client, req, 'CALCULATION_RUN_CREATED', 'calculation_run', runId, null, {
+    const auditLogId = await writeAudit(client, req, 'calculation.run_requested', 'calculation_run', runId, null, {
       run: mapRun(run ?? {}),
-      calculation
+      formula_version: formulaVersionSnapshot,
+      input_snapshot_hash: inputSnapshotHash
     }, {
       formula_set_version: formulaSetVersion,
-      input_snapshot_hash: inputSnapshotHash,
+      explicit_formula_version_required: true,
+      no_silent_formula_default: true,
       deterministic_engine_version: calculation.deterministic_engine_version,
       no_api_formula_hardcoded: true
     });
+    await writeAudit(client, req, validationStatus === 'blocked' ? 'calculation.failed' : 'calculation.completed', 'calculation_run', runId, null, {
+      run: mapRun(run ?? {}),
+      calculation
+    }, {
+      output_snapshot_hash: calculation.output_snapshot_hash,
+      final_use_status: calculation.final_use_status,
+      final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER
+    });
+    if (calculation.warnings.length > 0) {
+      await writeAudit(client, req, 'calculation.warning_raised', 'calculation_run', runId, null, calculation.warnings, {
+        warning_count: calculation.warnings.length
+      });
+    }
+    if (calculation.final_use_status === 'blocked') {
+      await writeAudit(client, req, 'calculation.final_use_blocked', 'calculation_run', runId, null, calculation.final_use_blockers, {
+        blockers: calculation.final_use_blockers,
+        evidence_required: calculation.final_use_blockers.includes('MISSING_EVIDENCE'),
+        unit_review_required: calculation.final_use_blockers.includes('UNIT_REVIEW_REQUIRED')
+      });
+    }
 
     await client.query('commit');
     res.status(validationStatus === 'blocked' ? 422 : 201).json({
       data: {
         ...mapRun(run ?? {}),
         calculation,
-        formula: mapFormula(formula)
+        formula: mapFormula(formula),
+        formula_version: formulaVersionSnapshot,
+        final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER
       },
       auditLogId
     });

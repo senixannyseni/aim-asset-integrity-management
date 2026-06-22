@@ -814,3 +814,31 @@ Each protected operation must include `x-permission-required`. Each approve/reje
 ### Boundary Preservation
 
 This phase does not add API 579/API 581 quantitative logic, CMMS integration, 3D processing, frontend UI, or formula expansion. AIM remains the system of record, n8n remains orchestration-only through AIM APIs, and AI output remains non-final staging data until human engineering review.
+
+## Phase 1.5 Calculation Engine Governance Hardening Addendum
+
+Phase 1.5 hardens calculation governance without adding calculation expansion, API 579/API 581 logic, CMMS integration, 3D processing, or invented API/API-ASME formulas.
+
+### Calculation Run Governance Fields
+
+Migration `0015_phase1_5_calculation_governance_hardening.sql` extends `calculation_runs` with:
+
+- `formula_version_snapshot_json` — immutable snapshot of explicit approved formula version metadata used by the run, including formula version ID/code/name/version/status/source.
+- `output_snapshot_json` — immutable output snapshot containing output summary, corrosion/remaining-life outputs, warnings, final-use status, and disclaimer.
+- `output_snapshot_hash` — deterministic hash of the output snapshot.
+- `final_use_status` — `blocked`, `requires_engineering_review`, or `approved_for_final_use`.
+- `final_use_disclaimer` — must contain `Engineering review required before final use.`.
+- `final_use_blockers_json` — blocking reasons such as validation failure, missing evidence, unit review required, or below-required thickness.
+
+### Calculation Governance Rules
+
+- Every calculation run must explicitly provide `formula_id` and `formula_version`; silent/default formula selection is blocked.
+- Only formula versions with approved/locked status and deterministic flag may be executed.
+- Draft, under-review, retired, rejected, missing, or non-deterministic formula versions are blocked.
+- Input snapshots and output snapshots must be persisted to support deterministic repeatability and audit.
+- Missing evidence and non-mm/unit-review warnings block final use or approval until engineer review resolves the gate.
+- Calculation approval requires RBAC, human review, evidence completeness, warning resolution, comments/reasons, segregation-of-duty checks, and audit events.
+
+### Required Calculation Audit Events
+
+Phase 1.5 adds or documents these audit events: `calculation.run_requested`, `calculation.completed`, `calculation.failed`, `calculation.warning_raised`, `calculation.reviewed`, `calculation.approved`, `calculation.rejected`, and `calculation.final_use_blocked`.

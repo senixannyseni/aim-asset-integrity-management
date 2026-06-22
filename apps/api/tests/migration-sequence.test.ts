@@ -25,7 +25,8 @@ describe('Migration reproducibility baseline', () => {
       '0011_report_generation_engine.sql',
       '0012_auth_rbac_skeleton.sql',
       '0013_source_truth_schema_closure.sql',
-      '0014_phase1_3_ai_evidence_approval_governance.sql'
+      '0014_phase1_3_ai_evidence_approval_governance.sql',
+      '0015_phase1_5_calculation_governance_hardening.sql'
     ]);
   });
 
@@ -113,6 +114,18 @@ describe('Migration reproducibility baseline', () => {
     expect(migration).toContain('evidence.download_url');
     expect(migration).toContain('AI extraction output remains non-final');
     expect(migration).toContain('Evidence access uses signed URL issuance through AIM API after RBAC and audit');
+  });
+
+
+  it('tracks Phase 1.5 calculation governance hardening without adding out-of-scope formulas', () => {
+    const migration = fs.readFileSync(path.join(migrationsDir, '0015_phase1_5_calculation_governance_hardening.sql'), 'utf8');
+    expect(migration).toContain('explicit approved formula version required');
+    expect(migration).toContain('no silent formula default');
+    expect(migration).toContain('formula_version_snapshot_json');
+    expect(migration).toContain('output_snapshot_json');
+    expect(migration).toContain('Engineering review required before final use.');
+    expect(migration).toContain('calculation.final_use_blocked');
+    expect(migration).toContain('No API 579/API 581 quantitative implementation');
   });
 
 });

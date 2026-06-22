@@ -421,6 +421,12 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
       await client.query(`update calculation_runs set review_status = 'reviewed', status = 'reviewed', reviewer_id = coalesce($2, reviewer_id), reviewed_at = now() where id = $1`, [updated.calculation_run_id, actorUserId(req)]);
     }
     const auditLogId = await writeAudit(client, req, 'ENGINEERING_REVIEW_STATUS_UPDATED', 'engineering_review', String(updated?.id), mapReview(before), mapReview(updated ?? {}), { status });
+    if (updated?.calculation_run_id && status === 'reviewed') {
+      await writeAudit(client, req, 'calculation.reviewed', 'calculation_run', String(updated.calculation_run_id), null, mapReview(updated ?? {}), {
+        review_id: updated.id,
+        human_review_required: true
+      });
+    }
     await client.query('commit');
     res.json({ data: mapReview(updated ?? {}), auditLogId });
   } catch (error) {
@@ -570,6 +576,49 @@ async function loadApprovalForUpdate(client: Queryable, approvalId: string): Pro
   return result.rows[0];
 }
 
+
+type CalculationApprovalGate = {
+  pass: boolean;
+  blockers: string[];
+  run?: DbRow;
+};
+
+async function validateCalculationApprovalGate(client: Queryable, calculationRunId: unknown): Promise<CalculationApprovalGate> {
+  const id = asString(calculationRunId);
+  if (!id) return { pass: true, blockers: [] };
+
+  const run = await loadCalculationRun(client, id);
+  if (!run) return { pass: false, blockers: ['CALCULATION_RUN_NOT_FOUND'] };
+
+  const blockers: string[] = [];
+  if (run.review_status !== 'reviewed') blockers.push('CALCULATION_REVIEW_REQUIRED');
+  if (run.validation_status === 'blocked') blockers.push('CALCULATION_VALIDATION_BLOCKED');
+  if (run.final_use_status === 'blocked') blockers.push('CALCULATION_FINAL_USE_BLOCKED');
+
+  const evidenceResult = await client.query<{ missing_count: string }>(
+    `select count(*)::text as missing_count
+     from calculation_inputs
+     where calculation_run_id = $1
+       and source_entity_type = 'ndt_measurement'
+       and evidence_file_id is null`,
+    [id]
+  );
+  const missingEvidenceCount = Number(evidenceResult.rows[0]?.missing_count ?? '0');
+  if (missingEvidenceCount > 0) blockers.push('CALCULATION_INPUT_EVIDENCE_REQUIRED');
+
+  const warningResult = await client.query<{ blocking_count: string }>(
+    `select count(*)::text as blocking_count
+     from calculation_outputs
+     where calculation_run_id = $1
+       and warning_code in ('MISSING_EVIDENCE','UNIT_REVIEW_REQUIRED','BELOW_REQUIRED_THICKNESS')`,
+    [id]
+  );
+  const blockingWarningCount = Number(warningResult.rows[0]?.blocking_count ?? '0');
+  if (blockingWarningCount > 0) blockers.push('CALCULATION_BLOCKING_WARNING_REVIEW_REQUIRED');
+
+  return { pass: blockers.length === 0, blockers: Array.from(new Set(blockers)).sort(), run };
+}
+
 function requireSeniorApprovalActor(req: Request, res: ApiResponse): boolean {
   if (isAiAgent(req)) {
     res.status(403).json({ error: { code: 'AI_AGENT_CANNOT_APPROVE_OR_OVERRIDE', message: 'AI agents cannot approve, reject, lock, or override engineering decisions.' } });
@@ -641,6 +690,25 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
       res.status(409).json({ error: { code: 'SEGREGATION_OF_DUTY_BLOCKED', message: 'The user who created/submitted an approval record cannot approve the same record.' } });
       return;
     }
+    if (before.calculation_run_id) {
+      const gate = await validateCalculationApprovalGate(client, before.calculation_run_id);
+      if (!gate.pass) {
+        await client.query('rollback');
+        await writeAudit(client, req, 'calculation.final_use_blocked', 'calculation_run', String(before.calculation_run_id), null, gate, {
+          approval_id: approvalId,
+          approval_blocked: true,
+          blockers: gate.blockers
+        });
+        res.status(422).json({
+          error: {
+            code: 'CALCULATION_FINAL_USE_GATE_BLOCKED',
+            message: 'Calculation approval/final use is blocked until review, evidence, unit, and warning gates are satisfied.',
+            details: gate.blockers.map((blocker) => ({ code: blocker, severity: 'blocking' }))
+          }
+        });
+        return;
+      }
+    }
   
     const result = await client.query<DbRow>(
       `update approval_records
@@ -695,6 +763,20 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
       locked_after_approval: true,
       override_approved: Boolean(override)
     });
+    if (updated?.calculation_run_id) {
+      await client.query(
+        `update calculation_runs
+         set final_use_status = 'approved_for_final_use',
+             final_use_disclaimer = 'Engineering review required before final use.'
+         where id = $1`,
+        [updated.calculation_run_id]
+      );
+      await writeAudit(client, req, 'calculation.approved', 'calculation_run', String(updated.calculation_run_id), null, mapApproval(updated ?? {}), {
+        approval_id: updated.id,
+        final_use_status: 'approved_for_final_use',
+        final_use_disclaimer: 'Engineering review required before final use.'
+      });
+    }
     await client.query('commit');
     res.json({ data: mapApproval(updated ?? {}), auditLogId });
   } catch (error) {
@@ -767,6 +849,12 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
       await client.query(`update calculation_runs set approval_status = 'rejected', status = 'rejected', approver_id = $2 where id = $1 and locked_flag = false`, [updated.calculation_run_id, actorUserId(req)]);
     }
     const auditLogId = await writeAudit(client, req, 'APPROVAL_RECORD_REJECTED', 'approval_record', String(updated?.id), mapApproval(before), mapApproval(updated ?? {}), { ai_agent_blocked: true });
+    if (updated?.calculation_run_id) {
+      await writeAudit(client, req, 'calculation.rejected', 'calculation_run', String(updated.calculation_run_id), mapApproval(before), mapApproval(updated ?? {}), {
+        approval_id: updated.id,
+        reason_required: true
+      });
+    }
     await client.query('commit');
     res.json({ data: mapApproval(updated ?? {}), auditLogId });
   } catch (error) {

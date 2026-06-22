@@ -150,3 +150,22 @@ Contract metadata now explicitly maps implemented API paths to the existing ERD 
 - Approval and report issue endpoints map to `engineering_reviews`, `approval_records`, `reports`, `report_versions`, `review_gates`, `evidence_links`, and `audit_logs`.
 
 The ERD remains unchanged for Phase 1.4. The alignment ensures OpenAPI carries the same source-of-truth boundary, staging-only AI extraction rule, human review rule, evidence linkage rule, and audit event rule that are already represented in the data dictionary and migrations.
+
+## Phase 1.5 Calculation Governance ERD Addendum
+
+Phase 1.5 extends calculation relationships without adding out-of-scope formulas or engineering standards logic.
+
+```mermaid
+erDiagram
+  FORMULA_VERSIONS ||--o{ CALCULATION_RUNS : explicitly_selected_by
+  CALCULATION_RUNS ||--o{ CALCULATION_INPUTS : snapshots
+  CALCULATION_RUNS ||--o{ CALCULATION_OUTPUTS : produces
+  CALCULATION_RUNS ||--o{ ENGINEERING_REVIEWS : reviewed_by
+  CALCULATION_RUNS ||--o{ APPROVAL_RECORDS : approved_by
+  CALCULATION_RUNS ||--o{ AUDIT_LOGS : audited_by
+  EVIDENCE_FILES ||--o{ CALCULATION_INPUTS : supports
+```
+
+New calculation run fields represented by this relationship layer are `formula_version_snapshot_json`, `output_snapshot_json`, `output_snapshot_hash`, `final_use_status`, `final_use_disclaimer`, and `final_use_blockers_json`.
+
+The ERD remains bounded to deterministic MVP formula fixtures and approved Formula Registry/version metadata. Calculation final use is blocked until evidence, review, approval, and warning gates pass. The mandatory disclaimer remains: `Engineering review required before final use.`

@@ -2,7 +2,9 @@
 @'
 {
   "calculation_type": "universal_thickness_screening",
-  "formula_set_version": "SPRINT-6-UNIVERSAL-DETERMINISTIC-001",
+  "formula_id": "AIM-UNIVERSAL-THICKNESS-CORROSION-ENGINE",
+  "formula_version": "1.0.0",
+  "formula_set_version": "AIM-UNIVERSAL-THICKNESS-CORROSION-ENGINE@1.0.0",
   "asset_id": "replace-with-asset-uuid",
   "input_snapshot": {
     "asset": {
@@ -47,6 +49,6 @@
   "validation_context": {
     "block_on_validation_severity": "blocking"
   },
-  "notes": "Example payload only. API/API-ASME formulas are not embedded. API-dependent formulas must be resolved through Formula Registry."
+  "notes": "Example payload only. formula_id and formula_version must be explicit approved values. API/API-ASME formulas are not embedded, inferred, or invented. API-dependent formulas must be resolved through Formula Registry/version governance."
 }
 '@ | Set-Content .\04_API\api_payload_examples\run_engineering_calculation.json

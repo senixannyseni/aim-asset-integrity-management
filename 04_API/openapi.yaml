@@ -590,10 +590,13 @@ paths:
   /api/v1/engineering/calculate:
     post:
       summary: Run deterministic engineering calculation
-      description: Runs universal deterministic calculations only. API/API-ASME-dependent calculations must use approved Formula Registry metadata
-        and are not hard-coded. Calculation blocks when validation severity is blocking.
+      description: >-
+        Runs universal deterministic calculations only with an explicit approved formula version. Silent/default formula selection is blocked. API/API-ASME-dependent calculations must use approved Formula Registry metadata and are not hard-coded. Calculation outputs preserve input/output snapshots, warnings, evidence gates, and the disclaimer: Engineering review required before final use.
       x-permission-required: calculation.run
-      x-audit-event-generated: CALCULATION_RUN_CREATED
+      x-audit-event-generated: calculation.run_requested|calculation.completed|calculation.failed|calculation.warning_raised|calculation.final_use_blocked
+      x-source-of-truth-boundary: AIM is the system of record. Calculation runs are persisted only by AIM backend services with versioned formula snapshots and audit logs.
+      x-human-review-required: true
+      x-evidence-link-required: true
       requestBody:
         required: true
         content:
@@ -1136,8 +1139,10 @@ paths:
   /api/v1/approval-records/{approvalId}/approve:
     post:
       summary: Senior engineer approval or controlled override approval
+      description: For calculation approvals, final use is blocked unless formula version, input/output snapshot, human review, evidence completeness, warning resolution, and segregation-of-duty gates pass. Approval/rejection comments are required.
       x-permission-required: approval_record.approve
-      x-audit-event-generated: APPROVAL_RECORD_APPROVED or ENGINEERING_OVERRIDE_APPROVED
+      x-audit-event-generated: APPROVAL_RECORD_APPROVED or ENGINEERING_OVERRIDE_APPROVED or calculation.approved or calculation.final_use_blocked
+      x-evidence-link-required: true
       parameters:
       - in: path
         name: approvalId
@@ -1173,8 +1178,9 @@ paths:
   /api/v1/approval-records/{approvalId}/reject:
     post:
       summary: Senior engineer rejection of approval request
+      description: Rejection requires a human reason/comment and writes calculation.rejected when the target is a calculation run.
       x-permission-required: approval_record.reject
-      x-audit-event-generated: APPROVAL_RECORD_REJECTED
+      x-audit-event-generated: APPROVAL_RECORD_REJECTED or calculation.rejected
       parameters:
       - in: path
         name: approvalId
@@ -2186,6 +2192,8 @@ components:
       type: object
       required:
       - asset_id
+      - formula_id
+      - formula_version
       additionalProperties: true
       properties:
         asset_id:
@@ -2196,9 +2204,10 @@ components:
           format: uuid
         formula_id:
           type: string
-          default: AIM-UNIVERSAL-THICKNESS-CORROSION-ENGINE
+          description: Explicit approved formula code. Silent/default formula selection is not allowed.
         formula_version:
           type: string
+          description: Explicit approved formula version. Draft, under_review, retired, rejected, or missing versions are blocked.
         calculation_scope:
           type: string
           enum:
@@ -2242,10 +2251,28 @@ components:
               - blocked
             formula_set_version:
               type: string
+            formula_version_id:
+              type: string
+              format: uuid
+            formula_version_snapshot:
+              type: object
             input_snapshot_hash:
+              type: string
+            output_snapshot_hash:
               type: string
             output_summary:
               type: object
+            output_snapshot:
+              type: object
+            final_use_status:
+              type: string
+              enum:
+              - blocked
+              - requires_engineering_review
+              - approved_for_final_use
+            final_use_disclaimer:
+              type: string
+              example: Engineering review required before final use.
             calculation:
               type: object
               properties:
@@ -2263,6 +2290,22 @@ components:
                   type: array
                   items:
                     type: object
+                final_use_status:
+                  type: string
+                final_use_blockers:
+                  type: array
+                  items:
+                    type: string
+                final_use_disclaimer:
+                  type: string
+                  example: Engineering review required before final use.
+                output_snapshot_hash:
+                  type: string
+            formula_version:
+              type: object
+            final_use_disclaimer:
+              type: string
+              example: Engineering review required before final use.
         auditLogId:
           type: string
     ApiEnvelope:

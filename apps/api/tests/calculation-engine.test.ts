@@ -86,6 +86,8 @@ describe('Deterministic calculation engine', () => {
     expect(result.corrosion_rates).toHaveLength(1);
     expect(result.corrosion_rates[0]?.corrosion_rate_mm_per_year).toBeGreaterThan(0.49);
     expect(result.remaining_life[0]?.remaining_life_years).toBeGreaterThan(3.9);
+    expect(result.final_use_disclaimer).toBe('Engineering review required before final use.');
+    expect(result.final_use_status).toBe('requires_engineering_review');
   });
 
   it('preserves NDT source entity and evidence identifiers in normalized inputs', () => {
@@ -122,6 +124,7 @@ describe('Deterministic calculation engine', () => {
         measured_thickness_mm: 12,
         reading_date: '2020-01-01',
         method: 'UT',
+        measured_thickness_unit: 'mm',
         evidence_file_id: 'evd-1',
         is_critical: true
       },
@@ -137,6 +140,7 @@ describe('Deterministic calculation engine', () => {
         measured_thickness_mm: 10,
         reading_date: '2024-01-01',
         method: 'UT',
+        measured_thickness_unit: 'mm',
         evidence_file_id: 'evd-2',
         is_critical: true
       }

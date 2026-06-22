@@ -19,32 +19,23 @@ type ImplementedRoute = {
 };
 
 function implementedApiRoutes(): ImplementedRoute[] {
-  const routesDir = path.join(repoRoot, "apps/api/src/routes");
-  const excluded = new Set(["health.ts", "rbac-demo.ts"]);
-
-  return fs
-    .readdirSync(routesDir)
-    .filter((file) => file.endsWith(".ts") && !excluded.has(file))
+  const routesDir = path.join(repoRoot, 'apps/api/src/routes');
+  const excluded = new Set(['health.ts', 'rbac-demo.ts']);
+  return fs.readdirSync(routesDir)
+    .filter((file) => file.endsWith('.ts') && !excluded.has(file))
     .flatMap((file): ImplementedRoute[] => {
-      const content = fs.readFileSync(path.join(routesDir, file), "utf8");
-      const matches = Array.from(
-        content.matchAll(/\.\s*(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`]/g)
-      );
-
+      const content = fs.readFileSync(path.join(routesDir, file), 'utf8');
+      const matches = Array.from(content.matchAll(/\.\s*(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/g));
       const routes: ImplementedRoute[] = [];
 
       for (const match of matches) {
         const method = match[1];
         const routePath = match[2];
-
-        if (!method || !routePath) {
-          continue;
-        }
-
+        if (!method || !routePath) continue;
         routes.push({
           routeFile: file,
           method,
-          path: `/api/v1${routePath.replace(/:([A-Za-z0-9_]+)/g, "{$1}")}`,
+          path: `/api/v1${routePath.replace(/:([A-Za-z0-9_]+)/g, '{$1}')}`
         });
       }
 
@@ -55,12 +46,9 @@ function implementedApiRoutes(): ImplementedRoute[] {
 function openApiPathSet(openapi: string): Set<string> {
   const paths: string[] = [];
 
-  for (const match of openapi.matchAll(/^  (\/api\/v1[^:]+):\s*$/gm)) {
+  for (const match of openapi.matchAll(/^  (\/api\/v1\/[^:]+):\s*$/gm)) {
     const openapiPath = match[1];
-
-    if (openapiPath) {
-      paths.push(openapiPath);
-    }
+    if (openapiPath) paths.push(openapiPath);
   }
 
   return new Set<string>(paths);
