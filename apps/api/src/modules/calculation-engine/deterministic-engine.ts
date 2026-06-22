@@ -223,7 +223,7 @@ export function calculateCorrosionRates(measurements: NormalizedMeasurement[]): 
       const elapsedYears = yearsBetween(oldest.reading_date, latest.reading_date);
       if (elapsedYears <= 0) return undefined;
       const loss = oldest.measured_thickness_mm - latest.measured_thickness_mm;
-      const rate = Math.max(0, loss / elapsedYears);
+      const rate = loss / elapsedYears;
       return {
         group_key: groupKey,
         component: latest.component,
@@ -319,7 +319,12 @@ function buildWarnings(
   const evidenceLinks = context.evidence_links ?? [];
   const warnings: CalculationWarning[] = [];
 
+  const measurementCountByGroup = new Map<string, number>();
+
   for (const measurement of measurements) {
+    const groupKey = measurementGroupKey(measurement);
+    measurementCountByGroup.set(groupKey, (measurementCountByGroup.get(groupKey) ?? 0) + 1);
+
     if (!evidenceLinkExistsForMeasurement(measurement, evidenceLinks)) {
       warnings.push({
         code: 'MISSING_EVIDENCE',
@@ -337,6 +342,18 @@ function buildWarnings(
         field_name: measurement.measurement_id,
         message: 'Thickness input was supplied in a non-mm unit. Normalization is recorded for draft calculation only and final use is blocked until Engineer review confirms the unit basis.',
         suggested_action: 'Confirm source unit, deterministic conversion basis, and evidence before calculation approval or final use.'
+      });
+    }
+  }
+
+  for (const [groupKey, count] of measurementCountByGroup.entries()) {
+    if (count < 2) {
+      warnings.push({
+        code: 'INCOMPLETE_INPUT',
+        severity: 'blocking',
+        field_name: groupKey,
+        message: 'Previous thickness is missing; calculation cannot be finalized.',
+        suggested_action: 'Provide at least two dated thickness readings from traceable evidence before calculation approval or final use.'
       });
     }
   }
@@ -363,7 +380,23 @@ function buildWarnings(
   }
 
   for (const rate of rates) {
-    if (rate.corrosion_rate_mm_per_year > highCorrosionRateThreshold) {
+    if (rate.corrosion_rate_mm_per_year < 0) {
+      warnings.push({
+        code: 'NEGATIVE_CORROSION_RATE',
+        severity: 'warning',
+        field_name: rate.group_key,
+        message: 'Negative corrosion rate; verify inspection dates, thickness values, and source evidence.',
+        suggested_action: 'Route to data review before relying on remaining-life output.'
+      });
+    } else if (rate.corrosion_rate_mm_per_year === 0) {
+      warnings.push({
+        code: 'ZERO_CORROSION_RATE_REVIEW',
+        severity: 'warning',
+        field_name: rate.group_key,
+        message: 'Zero corrosion rate; remaining life is not finite under the MVP formula.',
+        suggested_action: 'Confirm repeated readings and source evidence before final use.'
+      });
+    } else if (rate.corrosion_rate_mm_per_year > highCorrosionRateThreshold) {
       warnings.push({
         code: 'HIGH_CORROSION_RATE',
         severity: 'warning',

@@ -1,4 +1,4 @@
-# AIM Tank Integrity ERD — Implemented Schema Through Sprint 8
+# AIM Tank Integrity ERD — Implemented Schema Through Phase 1.7 Closure
 
 ```mermaid
 erDiagram
@@ -193,3 +193,28 @@ No external CMMS system is introduced in Phase 1.6. AIM remains the system of re
 - `external_cmms_reference` remains nullable and is not populated by Phase 1.6 routes.
 - No API 579/API 581/CMMS/3D implementation is introduced.
 
+
+
+## Phase 1.7 Addendum — Final Source-of-Truth Reconciliation
+
+Phase 1.7 does not add a new database module. It records final reconciliation coverage for the Phase 1 Governance Closure scope.
+
+The following source-of-truth entities are represented by migrations `0012` through `0016`, the data dictionary, and this ERD/addendum trail:
+
+- `extraction_jobs`
+- `extraction_fields`
+- `staging_records`
+- `manual_overrides`
+- `data_quality_checks`
+- `integrity_decisions`
+- `review_gates`
+- `internal_work_orders`
+- `report_versions`
+- `report_exports`
+- `workflow_tasks`
+- `notification_logs`
+- `system_settings`
+- `calculation_validation_cases`
+- `formula_versions`
+
+Phase 1.7 also confirms the boundary relationships remain unchanged: AI extraction is staging-only; calculation execution is deterministic, versioned, audited, and evidence-gated; report issue is human-only and gate-checked; internal work orders are AIM fallback records only; and no external SAP/Maximo/CMMS, full API 579, full API 581, 3D processing, frontend UI, or invented API/ASME formulas are introduced.
