@@ -256,6 +256,27 @@ workOrdersRouter.get('/work-orders', requirePermission('work_order.read'), async
   }
 });
 
+
+workOrdersRouter.get('/work-orders/:workOrderId', requirePermission('work_order.read'), async (req, res, next) => {
+  const workOrderId = req.params.workOrderId;
+  if (!isUuid(workOrderId)) {
+    validationError(res, 'workOrderId', 'workOrderId must be a valid UUID.');
+    return;
+  }
+
+  try {
+    const result = await pool.query<DbRow>('select * from internal_work_orders where id = $1', [workOrderId]);
+    const workOrder = result.rows[0];
+    if (!workOrder) {
+      res.status(404).json({ error: { code: 'WORK_ORDER_NOT_FOUND', message: 'Internal work order not found.' } });
+      return;
+    }
+    res.json({ data: mapWorkOrder(workOrder) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 workOrdersRouter.post('/work-orders', requirePermission('work_order.create'), async (req, res, next) => {
   if (!isPlainObject(req.body)) {
     validationError(res, 'body', 'JSON object body is required.');

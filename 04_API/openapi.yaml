@@ -705,6 +705,7 @@ paths:
       summary: Create FFS cases from calculation warnings
       description: Creates FFS trigger cases from deterministic calculation warning outputs. Trigger only; no fitness declaration.
       x-permission-required: ffs.trigger
+      x-calculation-run-lookup: uuid-or-run-id
       x-audit-event-generated: FFS_CASES_TRIGGERED_FROM_CALCULATION
       requestBody:
         required: true
@@ -897,6 +898,7 @@ paths:
       description: Creates an RBI interface case from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated
         anomaly, or engineering review. Trigger only; no quantitative API RP 581 calculation.
       x-permission-required: rbi.interface.create
+      x-calculation-run-lookup: uuid-or-run-id
       x-audit-event-generated: RBI_CASE_CREATED_FROM_CALCULATION
       requestBody:
         required: true
@@ -1246,6 +1248,32 @@ paths:
       - bearerAuth: []
       x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are read from PostgreSQL through AIM API only.
   /api/v1/integrity-decisions:
+    get:
+      summary: List integrity decisions
+      description: List human-authored integrity decisions with direct evidence-link counts for RC2 gate visibility.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.review
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are listed from PostgreSQL through AIM API only.
+      parameters:
+      - in: query
+        name: asset_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: calculation_run_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: decision_status
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Integrity decision list
     post:
       summary: Create integrity decision
       description: Create a human-authored integrity decision after approved calculation. AI agents cannot create final integrity decisions.
@@ -1943,6 +1971,28 @@ paths:
         '409':
           $ref: '#/components/responses/GateBlocked'
   /api/v1/work-orders/{workOrderId}:
+    get:
+      tags:
+      - Work Orders
+      summary: Get internal AIM work order detail
+      description: Read an internal AIM work order fallback record and its gate checklist. No external CMMS call is made.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.read
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM internal work order fallback only. No external CMMS write occurs.
+      parameters:
+      - in: path
+        name: workOrderId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Internal work order detail
+        '404':
+          description: Internal work order not found
     patch:
       tags:
       - Work Orders

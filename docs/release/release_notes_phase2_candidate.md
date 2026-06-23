@@ -134,3 +134,15 @@ Release hardening after UAT adds:
 - Documentation reconciliation for `AUTH_JWT_SECRET`, `$token = $login.data.accessToken`, integrity decision audit event names, and external CMMS out-of-scope status.
 
 External SAP/Maximo/CMMS integration remains out of MVP scope. Internal AIM work order fallback remains the MVP action path.
+
+## RC2 Runtime and Frontend UAT Closure Addendum
+
+This RC2 addendum adds runtime/front-end closure for UAT Cycle 2:
+
+- FFS/RBI calculation-run lookup is UUID/text-aware to prevent PostgreSQL UUID/text operator errors.
+- Frontend API client uses JWT bearer tokens by default and sends demo headers only when `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true`.
+- New `/login`, `/integrity-decisions`, and `/work-orders` frontend workflows support governed UAT execution.
+- Report UI exposes per-entity evidence gate actions for `report`, `calculation_run`, and `integrity_decision`.
+- UAT Cycle 2 documents cover runtime regression, frontend walkthrough, and signoff checklist.
+
+Source-of-truth boundaries remain unchanged: AI must not approve or finalize engineering outputs; n8n remains orchestration-only; External CMMS integration remains out of MVP scope; internal AIM work order fallback remains active.

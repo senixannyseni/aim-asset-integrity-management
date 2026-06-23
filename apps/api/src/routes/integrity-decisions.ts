@@ -160,6 +160,60 @@ async function persistIntegrityDecisionApprovalGate(
   );
 }
 
+
+integrityDecisionsRouter.get('/integrity-decisions', requirePermission('integrity_decision.review'), async (req, res, next) => {
+  try {
+    const values: unknown[] = [];
+    const filters = ['1 = 1'];
+    const assetId = asString(req.query.asset_id);
+    const calculationRunId = asString(req.query.calculation_run_id);
+    const decisionStatus = asString(req.query.decision_status);
+
+    if (assetId) {
+      if (!isUuid(assetId)) {
+        validationError(res, 'asset_id', 'asset_id must be a valid UUID.');
+        return;
+      }
+      values.push(assetId);
+      filters.push(`asset_id = $${values.length}`);
+    }
+
+    if (calculationRunId) {
+      if (!isUuid(calculationRunId)) {
+        validationError(res, 'calculation_run_id', 'calculation_run_id must be a valid UUID.');
+        return;
+      }
+      values.push(calculationRunId);
+      filters.push(`calculation_run_id = $${values.length}`);
+    }
+
+    if (decisionStatus) {
+      values.push(decisionStatus);
+      filters.push(`decision_status = $${values.length}`);
+    }
+
+    const result = await pool.query<DbRow>(
+      `select id.*,
+              coalesce(ev.evidence_count, 0)::int as evidence_count
+       from integrity_decisions id
+       left join lateral (
+         select count(*)::int as evidence_count
+         from evidence_links el
+         where el.linked_entity_type = 'integrity_decision'
+           and el.linked_entity_id = id.id
+       ) ev on true
+       where ${filters.join(' and ')}
+       order by id.created_at desc
+       limit 100`,
+      values
+    );
+
+    res.json({ data: result.rows.map((row) => ({ ...mapDecision(row), evidence_count: row.evidence_count })) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 integrityDecisionsRouter.get('/integrity-decisions/:decisionId', requirePermission('integrity_decision.review'), async (req, res, next) => {
   const decisionId = req.params.decisionId;
   if (!isUuid(decisionId)) {
