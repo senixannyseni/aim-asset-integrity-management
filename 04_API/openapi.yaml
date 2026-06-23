@@ -1222,6 +1222,126 @@ paths:
       - bearerAuth: []
       x-audit-event-generated: none
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/integrity-decisions/{decisionId}:
+    get:
+      summary: Get integrity decision detail
+      description: Read a human-authored integrity decision. AIM remains the system of record.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.review
+      x-audit-event-generated: none
+      parameters:
+      - in: path
+        name: decisionId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Integrity decision detail
+        '404':
+          description: Integrity decision not found
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are read from PostgreSQL through AIM API only.
+  /api/v1/integrity-decisions:
+    post:
+      summary: Create integrity decision
+      description: Create a human-authored integrity decision after approved calculation. AI agents cannot create final integrity decisions.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.create
+      x-audit-event-generated: INTEGRITY_DECISION_CREATED
+      x-human-review-required: true
+      x-evidence-link-required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - asset_id
+              - calculation_run_id
+              - decision_summary
+              properties:
+                asset_id:
+                  type: string
+                  format: uuid
+                inspection_event_id:
+                  type: string
+                  format: uuid
+                calculation_run_id:
+                  type: string
+                  format: uuid
+                integrity_status:
+                  type: string
+                  enum:
+                  - acceptable
+                  - watch
+                  - action_required
+                  - blocked
+                  - insufficient_data
+                decision_summary:
+                  type: string
+                required_action:
+                  type: string
+                operating_limitation:
+                  type: string
+                due_date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Integrity decision created
+        '403':
+          description: AI agent or unauthorized role blocked
+        '409':
+          description: Calculation is not approved or asset mismatch
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. AI cannot create, approve, or finalize integrity decisions.
+  /api/v1/integrity-decisions/{decisionId}/approve:
+    post:
+      summary: Approve integrity decision
+      description: Senior human approval for integrity decision. AI agents and workflow/service users cannot approve final integrity decisions.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.approve
+      x-audit-event-generated: INTEGRITY_DECISION_APPROVED
+      x-human-review-required: true
+      x-evidence-link-required: true
+      parameters:
+      - in: path
+        name: decisionId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - approval_comment
+              properties:
+                approval_comment:
+                  type: string
+      responses:
+        '200':
+          description: Integrity decision approved
+        '403':
+          description: Senior human approval required; AI agent cannot approve
+        '404':
+          description: Integrity decision not found
+        '409':
+          description: Integrity decision already approved
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only, RBAC-controlled, and audit logged.
   /api/v1/reports:
     get:
       summary: List generated tank integrity reports
@@ -3038,3 +3158,4 @@ components:
           type: string
         x-audit-event-generated:
           type: string
+

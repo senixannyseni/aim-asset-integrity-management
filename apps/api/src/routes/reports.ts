@@ -463,6 +463,7 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
        from error_logs
        where status not in ('resolved','closed')
          and severity in ('high','critical')
+         and coalesce(error_code, '') <> 'REPORT_ISSUE_GATE_BLOCKED'
          and (
            (related_entity_type = 'report' and related_entity_id = $1::uuid)
            or (related_entity_type = 'calculation_run' and related_entity_id = $2::uuid)
@@ -475,6 +476,7 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
        from review_gates
        where blocking = true
          and gate_status not in ('pass','waived')
+         and not (entity_type = 'report' and entity_id = $1::uuid and gate_domain = 'report_issue')
          and (
            (entity_type = 'report' and entity_id = $1::uuid)
            or (entity_type = 'calculation_run' and entity_id = $2::uuid)
@@ -904,3 +906,4 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
     client.release();
   }
 });
+

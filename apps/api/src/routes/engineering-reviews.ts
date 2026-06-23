@@ -36,7 +36,7 @@ function asString(value: unknown): string | undefined {
 }
 
 function isUuid(value: string | undefined | null): value is string {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function uuidOrNull(value: unknown): string | null {
@@ -749,6 +749,8 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
          set approval_status = 'approved',
              review_status = 'reviewed',
              status = 'locked',
+             final_use_status = 'approved_for_final_use',
+             final_use_disclaimer = 'Engineering review required before final use.',
              approver_id = $2,
              approved_at = now(),
              locked_at = now(),
@@ -764,13 +766,6 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
       override_approved: Boolean(override)
     });
     if (updated?.calculation_run_id) {
-      await client.query(
-        `update calculation_runs
-         set final_use_status = 'approved_for_final_use',
-             final_use_disclaimer = 'Engineering review required before final use.'
-         where id = $1`,
-        [updated.calculation_run_id]
-      );
       await writeAudit(client, req, 'calculation.approved', 'calculation_run', String(updated.calculation_run_id), null, mapApproval(updated ?? {}), {
         approval_id: updated.id,
         final_use_status: 'approved_for_final_use',
@@ -864,3 +859,6 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
     client.release();
   }
 });
+
+
+
