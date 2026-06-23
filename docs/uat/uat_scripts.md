@@ -522,10 +522,10 @@ Each UAT case below follows this format:
 | Role | Engineer |
 | Preconditions | Reviewed calculation output and evidence exist. |
 | Test Data | Decision `DEC-UAT-001`. |
-| Steps | 1. Create draft decision referencing calculation and evidence. |
+| Steps | 1. Create draft decision referencing calculation. 2. Link evidence directly to the created integrity decision before approval. |
 | API Endpoint / UI Reference | `POST /api/v1/integrity-decisions`; future `/integrity-decisions`. |
 | Expected Result | Draft decision is created and not final until authorized approval. |
-| Expected Audit Event | `integrity_decision.created` or `integrity_decision.drafted`. |
+| Expected Audit Event | `INTEGRITY_DECISION_CREATED`. |
 | Expected Workflow/Error Event | Optional approval requested event only. |
 | Pass/Fail |  |
 | Evidence/Screenshot |  |
@@ -538,12 +538,12 @@ Each UAT case below follows this format:
 | UAT Case ID | UAT-DEC-002 |
 | Source Requirement | AI/n8n cannot approve; comments required; SoD applies. |
 | Role | Lead Engineer or Approver |
-| Preconditions | Draft decision exists. |
+| Preconditions | Draft decision exists and has direct linked evidence. |
 | Test Data | Decision `DEC-UAT-001`. |
-| Steps | 1. Attempt approval as ai_agent/n8n_service. 2. Attempt self-approval where SoD applies. 3. Attempt human approval without comment. 4. Approve with comment. |
+| Steps | 1. Attempt approval as ai_agent/n8n_service. 2. Attempt approval without direct evidence link. 3. Attempt human approval without comment. 4. Link direct evidence and approve with comment. |
 | API Endpoint / UI Reference | Integrity decision approval endpoint. |
-| Expected Result | Service/self/no-comment attempts are blocked; authorized human approval with comment succeeds. |
-| Expected Audit Event | `integrity_decision.approved` or blocked/rejected audit signals. |
+| Expected Result | Service/no-evidence/no-comment attempts are blocked; authorized human approval with direct evidence and comment succeeds. |
+| Expected Audit Event | `INTEGRITY_DECISION_APPROVED` or `INTEGRITY_DECISION_APPROVAL_BLOCKED`. |
 | Expected Workflow/Error Event | Error log for blocked policy violation where applicable. |
 | Pass/Fail |  |
 | Evidence/Screenshot |  |

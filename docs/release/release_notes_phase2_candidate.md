@@ -119,3 +119,18 @@ Phase 2.3 — Controlled UAT Execution and Release Candidate Sign-Off
 
 Phase 2.3 should execute the dry run and smoke evidence checklist, close blocker/critical/governance defects, complete sign-offs, and decide go/no-go. It should not add new product scope unless a defect fix is explicitly approved.
 
+
+## UAT Cycle 1 Release-Hardening Addendum
+
+Controlled UAT Cycle 1 completed with result `PASS_WITH_LOCAL_FIXES` on branch `phase2-3-uat-signoff`.
+
+Release hardening after UAT adds:
+
+- Direct evidence-link enforcement before integrity decision approval.
+- Per-entity evidence gates before report issue for the report, calculation run, and approved integrity decision.
+- Resolution of prior `REPORT_ISSUE_GATE_BLOCKED` error logs after successful report issue.
+- Controlled 400 validation for invalid NDT `extraction_source` values.
+- Safe calculation read handling for UUID calculation IDs versus text run codes.
+- Documentation reconciliation for `AUTH_JWT_SECRET`, `$token = $login.data.accessToken`, integrity decision audit event names, and external CMMS out-of-scope status.
+
+External SAP/Maximo/CMMS integration remains out of MVP scope. Internal AIM work order fallback remains the MVP action path.

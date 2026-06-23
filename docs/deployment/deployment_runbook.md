@@ -48,7 +48,7 @@ Do not place real secret values in documentation or committed files.
 | Variable | Required | Example Placeholder | Purpose |
 |---|---:|---|---|
 | `DATABASE_URL` | Yes | `postgres://aim_app:change-me@127.0.0.1:5433/aim_dev` | PostgreSQL connection. |
-| `JWT_SECRET` | Yes | `replace-with-local-dev-secret` | Access token signing secret. |
+| `AUTH_JWT_SECRET` | Yes | `replace-with-local-dev-secret-at-least-32-chars` | Access token signing secret. |
 | `REFRESH_TOKEN_SECRET` | Conditional | `replace-with-local-refresh-secret` | Refresh/session token signing secret if used. |
 | `NODE_ENV` | Yes | `local`, `test`, `development`, `production` | Runtime mode. |
 | `API_PORT` | Yes | `3001` | API service port. |
@@ -107,7 +107,7 @@ $login = Invoke-RestMethod `
   -ContentType "application/json" `
   -Body '{"email":"engineer@example.com","password":"password123"}'
 
-$token = $login.data.tokens.accessToken
+$token = $login.data.accessToken
 ```
 
 `/auth/me` smoke test:
@@ -231,7 +231,7 @@ Actions:
 Actions:
 1. Confirm user exists and is active.
 2. Confirm password hash/seed credential.
-3. Confirm `JWT_SECRET` is configured.
+3. Confirm `AUTH_JWT_SECRET` is configured.
 4. Confirm disabled/locked status is not blocking user.
 5. Check audit/error logs for safe reason only.
 

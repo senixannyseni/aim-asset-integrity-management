@@ -61,8 +61,8 @@ Evidence folder: D:\AIM_UAT_Evidence\cycle_1\2026-06-23\
 
 | Item | Priority | Note |
 |---|---|---|
-| Invalid NDT extraction_source should return controlled 400 instead of internal server error | Medium | Governance bypass was not observed. |
-| Calculation read endpoint UUID/text query should be hardened if still reproducible | Medium | Calculation execution and approval gates were not bypassed. |
+| Invalid NDT extraction_source should return controlled 400 instead of internal server error | Medium | Fixed in release hardening; invalid values are validated before DB insert/update. |
+| Calculation read endpoint UUID/text query should be hardened if still reproducible | Medium | Fixed in release hardening; UUID and run_id lookups are separated. |
 
 ## Governance Conclusion
 
@@ -71,8 +71,20 @@ UAT Cycle 1 confirms that the MVP preserves the core AIM governance rules:
 - AI output remains staging-only before human review.
 - AI cannot approve engineering data, calculation results, integrity decisions, reports, or work orders.
 - Final engineering actions require human role-based approval.
-- Evidence linkage is enforced before final issue.
+- Direct evidence linkage is enforced before integrity decision approval and per-entity report issue.
 - Deterministic calculation output is versioned, reviewed, approved, and locked.
 - Reports cannot be issued before calculation, integrity decision, report approval, evidence, workflow-error, and approver-comment gates pass.
 - External CMMS integration remains out of MVP scope.
 - Internal AIM work order fallback is operational.
+
+
+## Release Hardening Follow-up
+
+After Cycle 1, the release-hardening pass added:
+
+- Direct evidence-link enforcement before integrity decision approval.
+- Per-entity report issue evidence gates for report, calculation run, and approved integrity decision.
+- Automatic resolution of prior `REPORT_ISSUE_GATE_BLOCKED` logs after successful issue.
+- Controlled validation for invalid NDT `extraction_source`.
+- Safe calculation read handling for UUID `id` versus text `run_id`.
+- Documentation alignment for `$token = $login.data.accessToken` and `AUTH_JWT_SECRET`.

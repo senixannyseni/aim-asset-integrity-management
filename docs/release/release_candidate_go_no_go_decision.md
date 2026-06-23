@@ -1,14 +1,14 @@
 # Phase 2.3 Release Candidate Go / No-Go Decision Template
 
-**Status:** Template / pending decision  
-**Decision rule:** No release decision is made by this document until actual UAT evidence and sign-off are supplied.
+**Status:** Controlled UAT Cycle 1 passed with local fixes; release-hardening in progress  
+**Decision rule:** Production go-live remains conditional on release-hardening review, security approval, and final sign-off. UAT Cycle 1 evidence is available in `D:\AIM_UAT_Evidence\cycle_1\2026-06-23\`.
 
 ## 1. Release Candidate Identification
 
 | Field | Value |
 |---|---|
 | Release candidate identifier | `<RC-ID>` |
-| Source branch / tag / commit | `<branch / tag / commit>` |
+| Source branch / tag / commit | `phase2-3-uat-signoff` / `2959bdf` plus release-hardening follow-up |
 | Decision date | `<date>` |
 | Decision owner | `<name / role>` |
 | UAT cycle | UAT-CYCLE-1 |
@@ -30,10 +30,10 @@
 
 | Check | Status | Evidence reference |
 |---|---|---|
-| UAT Cycle 1 executed | Pending |  |
-| UAT execution summary completed | Pending |  |
+| UAT Cycle 1 executed | PASS_WITH_LOCAL_FIXES | docs/uat/uat_cycle_1_actual_execution_summary.md |
+| UAT execution summary completed | PASS | docs/uat/uat_cycle_1_actual_execution_summary.md |
 | UAT evidence package assembled | Pending |  |
-| Defect log reviewed | Pending |  |
+| Defect log reviewed | PASS_WITH_LOCAL_FIXES | UAT-C1-DEF-003 through UAT-C1-DEF-008 fixed or tracked |
 | Sign-off register completed | Pending |  |
 
 ## 4. Migration Readiness Summary
@@ -68,13 +68,13 @@
 
 | Check | Status | Evidence reference |
 |---|---|---|
-| AI output remains staging-only | Pending |  |
-| Engineer review gate verified | Pending |  |
-| Evidence linkage gate verified | Pending |  |
+| AI output remains staging-only | PASS | UAT Cycle 1 |
+| Engineer review gate verified | PASS | UAT Cycle 1 |
+| Evidence linkage gate verified | PASS_WITH_HARDENING | Direct integrity decision evidence and per-entity report evidence gates added |
 | Calculation approved formula version verified | Pending |  |
-| Report issue gates verified | Pending |  |
-| Internal work order fallback verified | Pending |  |
-| Audit log coverage verified | Pending |  |
+| Report issue gates verified | PASS_WITH_HARDENING | Report issue blocked until final gates passed |
+| Internal work order fallback verified | PASS | UAT Cycle 1 |
+| Audit log coverage verified | PASS | UAT Cycle 1 |
 | n8n direct PostgreSQL write access absent | Pending |  |
 
 ## 8. Known Limitations
