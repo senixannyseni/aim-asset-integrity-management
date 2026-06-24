@@ -600,7 +600,7 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
       `select * from calculation_outputs
        where calculation_run_id = $1
          and warning_code is not null
-       order by input_name asc`,
+       order by warning_code asc, id asc`,
       [run.id]
     );
     const warningCodes = warningCodesFromRows(outputResult.rows);
@@ -797,3 +797,4 @@ rbiRouter.post('/rbi/cases/:caseId/approve', requirePermission('rbi.interface.ap
     client.release();
   }
 });
+
