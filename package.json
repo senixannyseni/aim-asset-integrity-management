@@ -15,7 +15,8 @@
     "test:ci": "pnpm -r test:ci",
     "db:migrate": "pnpm --filter @aim/api db:migrate",
     "db:seed": "pnpm --filter @aim/api db:seed",
-    "db:reset": "pnpm --filter @aim/api db:reset"
+    "db:reset": "pnpm --filter @aim/api db:reset",
+    "repo:hygiene": "node scripts/repo-hygiene.mjs"
   },
   "devDependencies": {
     "typescript": "^5.5.4"

@@ -1,17 +1,17 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Phase 2.3 Controlled UAT Cycle 1 Complete — PASS_WITH_LOCAL_FIXES**
+Sprint status: **RC2 merged/tagged; Sprint 2.6 / RC3-A hardening in progress — repository hygiene, config alignment, root route, and demo route gating**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through Controlled UAT Cycle 1: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC2 controlled UAT closure and RC3-A hardening preparation: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
 - AIM is the system of record.
 - PostgreSQL stores final structured engineering data, metadata, validation snapshots, audit logs, workflow events, and error logs.
-- Object storage stores original evidence files; this MVP stores object-storage-compatible evidence metadata/path.
+- Object storage stores original evidence files; RC3-A aligns configuration for future RC3-B object-storage implementation, while the current MVP still stores object-storage-compatible evidence metadata/path.
 - n8n is orchestration only and must call AIM backend APIs.
 - n8n must not write directly to PostgreSQL.
-- AI extraction output must go to extraction/staging tables only and must remain non-final until human review/promotion.
+- AI extraction output must go to extraction/staging tables only and must remain non-final until human review and controlled promotion.
 - AI must not approve engineering data, calculations, integrity decisions, formulas, issued reports, or work orders.
 - A universal deterministic calculation engine is implemented for AIM-owned calculations only.
 - API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas and quantitative API RP 581 rules remain controlled placeholders unless entered by authorized engineers from licensed standards or approved fixtures.
@@ -133,6 +133,8 @@ Seed scripts are idempotent and can be re-run safely.
 
 ## Frontend Routes
 
+- `/` landing page
+- `/login`
 - `/assets`
 - `/assets/[assetId]`
 - `/evidence`
@@ -176,7 +178,7 @@ x-aim-demo-roles: admin
 x-aim-demo-email: admin@aim.local
 ```
 
-Production authentication/JWT/session hardening must replace demo headers before UAT or release.
+Demo RBAC headers are local/development/test only and are gated by `AUTH_ALLOW_LOCAL_DEMO=true`. They are not mounted or CORS-allowed in production-like environments. Use JWT login at `POST /api/v1/auth/login` and authenticated user lookup at `GET /api/v1/auth/me` for UAT/prod-like validation.
 
 ## Useful Commands
 
@@ -314,3 +316,17 @@ The RC2 branch adds product-facing UAT closure items:
 - FFS/RBI calculation-run lookup is UUID/text-aware and must not expose PostgreSQL UUID/text operator errors.
 
 AIM remains the system of record. AI must not approve final engineering actions. n8n remains orchestration-only and must not write final engineering data directly to PostgreSQL.
+
+
+## Sprint 2.6 / RC3-A Hardening
+
+RC3-A focuses on repository hygiene, configuration alignment, frontend root-route handling, and production-safe demo route gating. Correct runtime endpoints for RC2/RC3 are:
+
+- API health: `GET /health` and `GET /health/db`.
+- JWT login: `POST /api/v1/auth/login`.
+- Authenticated user: `GET /api/v1/auth/me`.
+- RBAC demo routes: local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; unavailable in production-like environments.
+
+The controlled deployment/hypercare evidence generated against `127.0.0.1:5433/aim_tank_integrity` is a confirmed local deployment database. Treat it as controlled production-like evidence unless that database is explicitly the production target. Final real-production closure remains human-gated and pending hypercare completion.
+
+RC3-A does not implement evidence object-storage upload/download, report artifact object storage, or AI staging-to-final promotion. Those remain assigned to later RC3 work packages.

@@ -34,7 +34,7 @@
 | Database backed up before migration/release rehearsal. | DevOps | backup file/log. |  |
 | Migrations run. | DevOps | `pnpm db:migrate` output. |  |
 | Seeds run if applicable. | DevOps | `pnpm db:seed` output. |  |
-| API healthy. | Developer / DevOps | `/api/v1/health` response. |  |
+| API healthy. | Developer / DevOps | `/health` response. |  |
 | OpenAPI route coverage test passed. | Developer | Phase 1.4/1.7 test output. |  |
 | Object storage reachable. | IT Admin | signed URL/evidence smoke test. |  |
 | Signed URL smoke test passed. | IT Admin | UAT-EVID-003 result. |  |
@@ -109,3 +109,8 @@ The release must be **No-Go** if any of the following is true:
 - Audit logs are missing for controlled actions.
 - Full API 579/API 581, external CMMS integration, 3D processing, frontend UI implementation, or invented API/ASME formulas were accidentally introduced.
 - Critical UAT defects remain unresolved without formal risk acceptance.
+
+
+## RC3-A alignment note
+
+RC2 is merged/tagged and RC3 hardening is in progress. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments. Evidence object-storage upload/download and report artifact object-storage storage are planned for later RC3 packages and are not implemented by RC3-A. Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.

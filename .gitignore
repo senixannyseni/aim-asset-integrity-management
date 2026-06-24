@@ -7,3 +7,9 @@ coverage/
 .DS_Store
 *.log
 storage/
+*.tsbuildinfo
+*.dump
+*.backup
+D:/AIM_UAT_Evidence/
+deployment_rehearsal/
+production_deployment/

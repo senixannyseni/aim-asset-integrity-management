@@ -1,10 +1,10 @@
 # AIM Tank Integrity Security Baseline
 
-Status: Sprint 7 governance and security hardening baseline.
+Status: RC3-A security baseline update. RC2 is merged/tagged; RC3-A hardening covers repository hygiene, environment alignment, root route handling, and production-safe RBAC demo route gating.
 
-## Current local-development authentication
+## Current authentication model
 
-Demo header authentication is local-development only.
+DB-backed JWT/RBAC is implemented for UAT/prod-like validation. Correct endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. Demo header authentication is local-development only.
 
 The current sprint implementation accepts temporary headers such as:
 
@@ -12,17 +12,18 @@ The current sprint implementation accepts temporary headers such as:
 - `x-aim-demo-user-id`
 - `x-aim-demo-email`
 
-These headers are a local development shim for rapid sprint validation. They must not be used for UAT, production-like testing, or production deployments.
+These headers are a local development shim for rapid sprint validation. They must not be used for UAT, production-like testing, or production deployments. RC3-A gates demo routes and demo CORS headers so they are mounted only in local/development/test when `AUTH_ALLOW_LOCAL_DEMO=true`.
 
-## Required future authentication model
+## Required production authentication model
 
-Before UAT/release candidate, AIM must replace demo headers with verified authentication and authorization:
+AIM now uses JWT/session-style authentication issued by the AIM auth service for the MVP. Production hardening must continue to enforce:
 
-- JWT/session-based authentication issued by a trusted identity provider or AIM auth service.
-- Server-side user identity validation.
-- DB-backed role and permission resolution using `users`, `roles`, `permissions`, `user_roles`, and `role_permissions`.
-- Tenant/org scoping if multi-tenant deployment is enabled.
-- Explicit audit logging for authentication-sensitive approval actions.
+- strong `AUTH_JWT_SECRET` in production-like environments;
+- `AUTH_TOKEN_ISSUER` alignment across sign/verify paths;
+- server-side user identity validation;
+- DB-backed role and permission resolution using `users`, `roles`, `permissions`, `user_roles`, and `role_permissions`;
+- tenant/org scoping if multi-tenant deployment is enabled;
+- explicit audit logging for authentication-sensitive approval actions.
 
 ## AI governance
 
@@ -69,7 +70,7 @@ FFS and RBI routes must preserve same-asset evidence validation and maintain cal
 
 ## OpenAPI route scope
 
-Health and RBAC demo endpoints are local-development/internal readiness routes. They are intentionally excluded from the production engineering workflow OpenAPI contract and are documented through the `x-internal-routes-excluded` extension.
+Health endpoints are `GET /health` and `GET /health/db`. RBAC demo endpoints are local-development/internal readiness routes and are unavailable in production-like environments. They are intentionally excluded from the production engineering workflow OpenAPI contract and are documented through the `x-internal-routes-excluded` extension.
 
 
 ## Sprint 9 Engineering Review and Approval Workflow
@@ -97,3 +98,10 @@ Integrity decision approval requires direct evidence linkage. Report issue requi
 Frontend API calls must use JWT bearer tokens by default. The supported login token path is `data.accessToken` from `/api/v1/auth/login`. The frontend demo headers `x-aim-demo-roles` and `x-aim-demo-email` are disabled unless `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true` is explicitly set for local development.
 
 UAT/prod-like validation must not rely on demo headers. AI agents, n8n/service users, and other non-human actors must not approve or finalize engineering data, calculations, integrity decisions, issued reports, or work orders. n8n remains orchestration-only and must not write final engineering data directly to PostgreSQL.
+
+
+## RC3-A environment and route hardening
+
+The environment contract uses `AUTH_TOKEN_ISSUER`, `AUTH_ACCESS_TOKEN_TTL_SECONDS`, `AUTH_REFRESH_TOKEN_TTL_SECONDS`, `AUTH_ALLOW_LOCAL_DEMO`, `AUTH_LOCAL_DEMO_PASSWORD`, and `AUTH_REQUIRE_STRONG_SECRET_IN_PRODUCTION`. Obsolete documentation-only names such as `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, and `AUTH_SESSION_COOKIE_NAME` must not be used unless code is explicitly updated to support them.
+
+Object storage configuration is aligned for RC3-B with `OBJECT_STORAGE_ACCESS_KEY_ID`, `OBJECT_STORAGE_SECRET_ACCESS_KEY`, `EVIDENCE_MAX_FILE_SIZE_BYTES`, `EVIDENCE_ALLOWED_MIME_TYPES`, and `EVIDENCE_ALLOWED_EXTENSIONS`. RC3-A does not implement binary evidence upload/download; it prepares and validates the configuration boundary.
