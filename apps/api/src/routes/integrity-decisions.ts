@@ -138,7 +138,7 @@ async function persistIntegrityDecisionApprovalGate(
       checked_at,
       metadata_json,
       updated_at
-    ) values ('integrity_decision', $1, 'integrity_decision_approval', 'evidence_linked', $2, true, true, $3, now(), $4::jsonb, now())
+    ) values ('integrity_decision', $1, 'integrity_decision', 'evidence_linked', $2, true, true, $3, now(), $4::jsonb, now())
     on conflict (entity_type, entity_id, gate_domain, gate_type) do update set
       gate_status = excluded.gate_status,
       blocking = excluded.blocking,
@@ -465,3 +465,5 @@ integrityDecisionsRouter.post('/integrity-decisions/:decisionId/approve', requir
     client.release();
   }
 });
+
+
