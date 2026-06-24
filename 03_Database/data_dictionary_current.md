@@ -20,7 +20,7 @@ Completed implementation state covered by this dictionary:
 
 - AIM/PostgreSQL is the system of record for structured engineering data, metadata, workflow events, error logs, validation snapshots, formula registry metadata, and audit logs.
 - n8n may call AIM backend APIs only. n8n must not write directly to PostgreSQL.
-- AI extraction runtime is not implemented in this baseline. Future AI output must go to extraction/staging tables only and must not write final engineering tables directly.
+- AI extraction/staging workflow exists within AIM API governance boundaries. AI output must go to extraction/staging tables only and must not write final engineering tables directly.
 - AI must not approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
 - No API/API-ASME formula expression is hard-coded or invented in this schema. Formula Registry stores controlled metadata and placeholders only unless an authorized engineer enters licensed/approved source content.
 - Universal deterministic engineering calculations are implemented for AIM-owned screening logic only. Report issue, work-order integration, AI extraction runtime, API/API-ASME formula execution, and full FFS calculations and quantitative API RP 581 calculations remain outside the implemented baseline.
@@ -287,7 +287,7 @@ Evidence governance notes:
 | method | text | yes |  |  | NDT method, e.g. UT thickness. |
 | confidence | numeric(5,4) | yes | 0 to 1 | ratio | Data confidence. |
 | evidence_file_id | uuid | optional | FK evidence_files.id |  | Direct evidence reference. Critical approval requires direct evidence or evidence_links. |
-| extraction_source | text | yes | manual, bulk_import, ai_staging, vendor_import |  | Source of NDT record. AI staging is a source label only; AI runtime is not implemented. |
+| extraction_source | text | yes | manual, bulk_import, ai_staging, vendor_import |  | Source of NDT record. Allowed values are validated before insert/update; `ai_staging` identifies records promoted from reviewed AI staging output. |
 | reviewer_status | text | yes | needs_review, reviewed, rejected, approved |  | Review/approval state. |
 | validation_status | text | yes | not_validated, valid, warning, blocked |  | Validation state. |
 | validation_message | text | optional |  |  | Human-readable validation message. |
@@ -588,25 +588,25 @@ These tables exist in the clean-clone schema and are either supporting reference
 | rbi_cases | Sprint 8 implemented | API RP 580/581 RBI interface workflow. Qualitative/semi-quantitative placeholder only; no proprietary quantitative API RP 581 rules are implemented. |
 | rbi_trigger_rules | Sprint 8 implemented | Configured trigger rules for high corrosion rate, short remaining life, repeated anomalies, and engineering review. |
 
-## Future / Not Implemented Tables
+## Historical Sprint 8 Future / Not Implemented Tables
 
-These remain planned and are not implemented in the Sprint 8 baseline:
+This historical section reflects the Sprint 8 baseline. Later Phase 1/2 work implements extraction/staging, report generation/issue gates, and internal AIM work-order fallback while preserving the same governance rules:
 
 | Table / Area | Status | Rule |
 |---|---|---|
-| extraction_jobs, extraction_fields, staging_records | Planned | AI output must go to staging only. |
-| manual_overrides, data_quality_checks | Planned | Reviewer corrections require reason and audit trail. |
+| extraction_jobs, extraction_fields, staging_records | Implemented after Sprint 8 | AI output must go to staging only. |
+| manual_overrides, data_quality_checks | Implemented after Sprint 8 | Reviewer corrections require reason and audit trail. |
 | cml_points, thickness_readings | Planned | Detailed CML/TML master and reading decomposition beyond current `ndt_measurements`. |
-| reports, report_templates, report_versions | Planned | Reports cannot be issued without data, calculation, review, evidence, and approval gates. |
-| internal_work_orders | Planned | MVP must include internal work-order fallback before external CMMS integration. |
+| reports, report_templates, report_versions | Implemented after Sprint 8 | Reports cannot be issued without data, calculation, review, evidence, integrity decision, report approval, and issue gates. |
+| internal_work_orders | Implemented after Sprint 8 | MVP includes internal work-order fallback before external CMMS integration. |
 
 ## Current Non-Negotiable Data Rules
 
 1. AIM is the system of record.
 2. n8n must call AIM APIs and must not write directly to PostgreSQL.
-3. AI extraction is not implemented; future AI output must remain staging-only.
-4. AI cannot approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
-5. Evidence linkage is mandatory for NDT approval gates; Sprint 6 calculation inputs preserve available NDT/evidence traceability; Sprint 7 FFS cases and Sprint 8 RBI cases preserve supporting measurement/evidence snapshots and future calculation approval gates must enforce this linkage before final approval.
+3. AI extraction/staging workflow is implemented; AI output must remain staging-only until human review/promotion.
+4. AI cannot approve engineering data, NDT records, formulas, calculations, integrity decisions, reports, or work orders.
+5. Evidence linkage is mandatory for NDT approval gates, calculation inputs/runs, integrity decision approval, report issue gates, and work-order closure where configured.
 6. Formula Registry governs metadata/versioning and the Sprint 6 universal deterministic engine registration; no API/API-ASME formula expression is invented or embedded.
 7. Draft/deprecated formulas must not be used for production calculation, and Sprint 6 deterministic execution is limited to approved/locked `universal_deterministic` formulas. Sprint 7 FFS and Sprint 8 RBI trigger workflows do not execute API/API-ASME formulas.
 8. Missing critical engineering data produces deterministic validation warnings or blocking results according to validation scope.
@@ -753,7 +753,7 @@ Governance: reports are DRAFT until approved and issued reports are immutable. N
 
 ## Phase 1.2 Source-of-Truth Schema Closure Addendum
 
-Migration `0013_source_truth_schema_closure.sql` adds schema-readiness tables required by the AIM+n8n source-of-truth package. The migration is intentionally limited to database foundations and does not implement AI extraction business workflow, report issue workflow, API 579/API 581, CMMS integration, 3D processing, or proprietary API/API-ASME formula logic.
+Migration `0013_source_truth_schema_closure.sql` adds schema-readiness tables required by the AIM+n8n source-of-truth package. Later Phase 1 migrations implement AI extraction/staging, report generation/issue gates, and internal AIM work order fallback. The MVP still does not implement full API 579/API 581, external CMMS integration, 3D processing, or proprietary API/API-ASME formula logic.
 
 ### Added AI Extraction and Staging Tables
 
@@ -859,7 +859,7 @@ Phase 1.6 hardens the report issue and internal work order fallback boundary.
 Required Phase 1.6 report issue gates:
 
 - `required_data_complete`
-- `evidence_linked`
+- `evidence_linked` — release hardening requires direct evidence links to report, calculation_run, and approved integrity_decision before final issue.
 - `calculation_completed`
 - `calculation_reviewed`
 - `calculation_approved`
@@ -900,3 +900,22 @@ A blocked issue attempt must create a gate/audit/error signal. AI agents and n8n
 - `INTERNAL_WORK_ORDER_CLOSE_BLOCKED`
 - `INTERNAL_WORK_ORDER_CLOSED`
 
+
+
+## UAT Cycle 1 Release Hardening Addendum
+
+Controlled UAT Cycle 1 result is `PASS_WITH_LOCAL_FIXES`. Release hardening reconciles the following data semantics:
+
+- `approval_records.created_at` exists as an immutable creation timestamp from migration `0017_uat_fix_approval_records_created_at.sql`.
+- `approval_records.approved_at` is nullable after migration `0018_uat_fix_approval_record_approved_at_semantics.sql` and is populated only when `approval_status = 'approved'`.
+- Integrity decision approval requires direct evidence linkage through `evidence_links` with `linked_entity_type = 'integrity_decision'`.
+- Report issue evidence gate is per-entity: direct evidence must be linked to the `report`, `calculation_run`, and approved `integrity_decision`.
+- Prior `REPORT_ISSUE_GATE_BLOCKED` logs remain auditable but are resolved after a later successful report issue.
+- Internal AIM work order fallback is implemented; `external_cmms_reference` remains a rejected/out-of-scope MVP field, not an integration.
+
+## RC2 Runtime / Frontend Closure Notes
+
+- `integrity_decisions` is now exposed through AIM API list/detail/create/approve routes. Approval requires direct evidence linkage through `evidence_links.linked_entity_type = 'integrity_decision'` and `linked_entity_id = integrity_decisions.id`.
+- Report issue gates require direct evidence links to `report`, `calculation_run`, and approved `integrity_decision`. Aggregate evidence count alone is insufficient.
+- `approval_records.created_at` is present from UAT Cycle 1 hardening. `approval_records.approved_at` is nullable and must only be populated when an approval is actually approved.
+- Internal work orders remain AIM-local fallback records. External CMMS references remain null/omitted for MVP.

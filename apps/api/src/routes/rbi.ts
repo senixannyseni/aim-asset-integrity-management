@@ -148,6 +148,14 @@ function normalizeEvidenceLinks(raw: unknown): RbiEvidenceLinkInput[] {
   });
 }
 
+
+async function loadCalculationRunByIdentifier(client: PoolClient, identifier: string): Promise<DbRow | undefined> {
+  const result = isUuid(identifier)
+    ? await client.query<DbRow>('select * from calculation_runs where id = $1::uuid limit 1', [identifier])
+    : await client.query<DbRow>('select * from calculation_runs where run_id = $1 limit 1', [identifier]);
+  return result.rows[0];
+}
+
 async function resolveUserId(client: Queryable, req: Request): Promise<string | null> {
   const explicit = actorUserId(req);
   if (explicit) return explicit;
@@ -569,8 +577,7 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const runResult = await client.query<DbRow>('select * from calculation_runs where id = $1 or run_id = $1 limit 1', [calculationRunId]);
-    const run = runResult.rows[0];
+    const run = await loadCalculationRunByIdentifier(client, calculationRunId);
     if (!run) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'CALCULATION_RUN_NOT_FOUND', message: 'Calculation run not found.' } });
@@ -593,7 +600,7 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
       `select * from calculation_outputs
        where calculation_run_id = $1
          and warning_code is not null
-       order by input_name asc`,
+       order by warning_code asc, id asc`,
       [run.id]
     );
     const warningCodes = warningCodesFromRows(outputResult.rows);
@@ -790,3 +797,4 @@ rbiRouter.post('/rbi/cases/:caseId/approve', requirePermission('rbi.interface.ap
     client.release();
   }
 });
+

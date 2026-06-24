@@ -397,6 +397,10 @@ type ReportGateContext = {
   integrityDecision: DbRow | undefined;
   approvedIntegrityDecision: DbRow | undefined;
   evidenceCount: number;
+  reportEvidenceCount: number;
+  calculationRunEvidenceCount: number;
+  calculationInputEvidenceCount: number;
+  integrityDecisionEvidenceCount: number;
   openCriticalErrorCount: number;
   blockingReviewGateCount: number;
 };
@@ -444,25 +448,44 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
         )
       : Promise.resolve({ rows: [], rowCount: 0 }),
     calculationRunId || reportId
-      ? client.query<{ count: string }>(
-          `select count(*)::text as count
-           from evidence_links
-           where (linked_entity_type = 'report' and linked_entity_id = $1::uuid)
-              or (linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)
-              or (linked_entity_type = 'calculation_input' and linked_entity_id in (
-                select id from calculation_inputs where calculation_run_id = $2::uuid
-              ))
-              or (linked_entity_type = 'integrity_decision' and linked_entity_id in (
-                select id from integrity_decisions where calculation_run_id = $2::uuid
-              ))`,
+      ? client.query<{
+          report_evidence_count: string;
+          calculation_run_evidence_count: string;
+          calculation_input_evidence_count: string;
+          integrity_decision_evidence_count: string;
+          total_evidence_count: string;
+        }>(
+          `with evidence_counts as (
+             select
+               count(*) filter (where linked_entity_type = 'report' and linked_entity_id = $1::uuid)::text as report_evidence_count,
+               count(*) filter (where linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)::text as calculation_run_evidence_count,
+               count(*) filter (where linked_entity_type = 'calculation_input' and linked_entity_id in (
+                 select id from calculation_inputs where calculation_run_id = $2::uuid
+               ))::text as calculation_input_evidence_count,
+               count(*) filter (where linked_entity_type = 'integrity_decision' and linked_entity_id in (
+                 select id from integrity_decisions where calculation_run_id = $2::uuid and decision_status = 'approved'
+               ))::text as integrity_decision_evidence_count,
+               count(*)::text as total_evidence_count
+             from evidence_links
+             where (linked_entity_type = 'report' and linked_entity_id = $1::uuid)
+                or (linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)
+                or (linked_entity_type = 'calculation_input' and linked_entity_id in (
+                  select id from calculation_inputs where calculation_run_id = $2::uuid
+                ))
+                or (linked_entity_type = 'integrity_decision' and linked_entity_id in (
+                  select id from integrity_decisions where calculation_run_id = $2::uuid and decision_status = 'approved'
+                ))
+           )
+           select * from evidence_counts`,
           [reportId ?? null, calculationRunId ?? null]
         )
-      : Promise.resolve({ rows: [{ count: '0' }], rowCount: 1 }),
+      : Promise.resolve({ rows: [{ report_evidence_count: '0', calculation_run_evidence_count: '0', calculation_input_evidence_count: '0', integrity_decision_evidence_count: '0', total_evidence_count: '0' }], rowCount: 1 }),
     client.query<{ count: string }>(
       `select count(*)::text as count
        from error_logs
        where status not in ('resolved','closed')
          and severity in ('high','critical')
+         and coalesce(error_code, '') <> 'REPORT_ISSUE_GATE_BLOCKED'
          and (
            (related_entity_type = 'report' and related_entity_id = $1::uuid)
            or (related_entity_type = 'calculation_run' and related_entity_id = $2::uuid)
@@ -475,6 +498,7 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
        from review_gates
        where blocking = true
          and gate_status not in ('pass','waived')
+         and not (entity_type = 'report' and entity_id = $1::uuid and gate_domain = 'report_issue')
          and (
            (entity_type = 'report' and entity_id = $1::uuid)
            or (entity_type = 'calculation_run' and entity_id = $2::uuid)
@@ -491,7 +515,11 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
     calculation: calculationResult.rows[0],
     integrityDecision: integrityResult.rows[0],
     approvedIntegrityDecision: approvedIntegrityResult.rows[0],
-    evidenceCount: Number(evidenceResult.rows[0]?.count ?? 0),
+    evidenceCount: Number(evidenceResult.rows[0]?.total_evidence_count ?? 0),
+    reportEvidenceCount: Number(evidenceResult.rows[0]?.report_evidence_count ?? 0),
+    calculationRunEvidenceCount: Number(evidenceResult.rows[0]?.calculation_run_evidence_count ?? 0),
+    calculationInputEvidenceCount: Number(evidenceResult.rows[0]?.calculation_input_evidence_count ?? 0),
+    integrityDecisionEvidenceCount: Number(evidenceResult.rows[0]?.integrity_decision_evidence_count ?? 0),
     openCriticalErrorCount: Number(criticalErrorResult.rows[0]?.count ?? 0),
     blockingReviewGateCount: Number(blockingGateResult.rows[0]?.count ?? 0)
   };
@@ -510,7 +538,18 @@ function buildReportGateChecklist(context: ReportGateContext, issueCommentPresen
 
   return [
     gate('required_data_complete', Boolean(report.content_hash && report.sections_json && report.traceability_json), 'Report content, sections, traceability, and content hash must exist.'),
-    gate('evidence_linked', context.evidenceCount > 0, 'Report/calculation/integrity decision must have linked evidence.', { evidence_count: context.evidenceCount }),
+    gate('evidence_linked', context.reportEvidenceCount > 0 && context.calculationRunEvidenceCount > 0 && context.integrityDecisionEvidenceCount > 0, 'Report, calculation run, and approved integrity decision must each have direct linked evidence.', {
+      evidence_count: context.evidenceCount,
+      report_evidence_count: context.reportEvidenceCount,
+      calculation_run_evidence_count: context.calculationRunEvidenceCount,
+      calculation_input_evidence_count: context.calculationInputEvidenceCount,
+      integrity_decision_evidence_count: context.integrityDecisionEvidenceCount,
+      missing_required_evidence: [
+        context.reportEvidenceCount > 0 ? null : 'report',
+        context.calculationRunEvidenceCount > 0 ? null : 'calculation_run',
+        context.integrityDecisionEvidenceCount > 0 ? null : 'integrity_decision'
+      ].filter(Boolean)
+    }),
     gate('calculation_completed', Boolean(calculation && calculationStatus.some((status) => ['completed','ready_for_review','reviewed','submitted_for_approval','approved','locked','requires_engineering_review'].includes(status ?? ''))), 'Calculation run must exist and be completed or controlled for review.'),
     gate('calculation_reviewed', Boolean(calculation && ['reviewed','approved','locked'].includes(calculationReviewStatus ?? '')), 'Calculation must be reviewed before report issue.', { review_status: calculationReviewStatus }),
     gate('calculation_approved', Boolean(calculation && ['approved','locked'].includes(calculationApprovalStatus ?? '')), 'Calculation must be approved before report issue.', { approval_status: calculationApprovalStatus }),
@@ -888,10 +927,27 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
       [reportId, actorUserId(req)]
     );
     const updated = result.rows[0];
+    const resolvedGateErrors = await client.query<{ id: string }>(
+      `update error_logs
+       set status = 'resolved',
+           resolved_at = now(),
+           payload_json = coalesce(payload_json, '{}'::jsonb) || jsonb_build_object(
+             'resolved_by_report_issue', true,
+             'resolved_report_id', $1::text,
+             'resolved_at', now()
+           )
+       where error_code = 'REPORT_ISSUE_GATE_BLOCKED'
+         and related_entity_type = 'report'
+         and related_entity_id = $1::uuid
+         and status not in ('resolved','closed')
+       returning id`,
+      [reportId]
+    );
     const auditLogId = await writeAudit(client, req, 'REPORT_ISSUED', 'report', reportId, mapReport(before), mapReport(updated ?? {}), {
       issue_comment: asString(req.body.issue_comment ?? req.body.comment),
       report_gate_check: true,
       gate_checklist: reportGates,
+      resolved_report_issue_gate_blocked_error_ids: resolvedGateErrors.rows.map((row) => row.id),
       human_approver_required: true,
       internal_work_order_fallback_only: true
     });
@@ -904,3 +960,4 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
     client.release();
   }
 });
+

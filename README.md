@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **Sprint 9 Evidence Linkage and Security Boundary Hardening Complete**
+Sprint status: **Phase 2.3 Controlled UAT Cycle 1 Complete — PASS_WITH_LOCAL_FIXES**
 
-This repository implements the AIM+n8n Tank Integrity Module foundation through Sprint 9: Tank Asset Register, governance hardening, Evidence Repository, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger workflow governance, and evidence linkage/security boundary hardening. It does **not** implement API/API-ASME formula expressions, AI extraction runtime, report generation, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through Controlled UAT Cycle 1: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -11,8 +11,8 @@ This repository implements the AIM+n8n Tank Integrity Module foundation through 
 - Object storage stores original evidence files; this MVP stores object-storage-compatible evidence metadata/path.
 - n8n is orchestration only and must call AIM backend APIs.
 - n8n must not write directly to PostgreSQL.
-- AI extraction output must go to extraction/staging tables only when implemented.
-- AI must not approve engineering data, calculations, integrity decisions, formulas, or issued reports.
+- AI extraction output must go to extraction/staging tables only and must remain non-final until human review/promotion.
+- AI must not approve engineering data, calculations, integrity decisions, formulas, issued reports, or work orders.
 - A universal deterministic calculation engine is implemented for AIM-owned calculations only.
 - API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas and quantitative API RP 581 rules remain controlled placeholders unless entered by authorized engineers from licensed standards or approved fixtures.
 
@@ -195,9 +195,10 @@ pnpm dev:web
 - Universal deterministic calculation execution is implemented for AIM-owned unit conversion, corrosion-rate, remaining-life screening, comparator, warning, and placeholder interval logic.
 - No API/API-ASME formula expression is embedded or executed.
 - Evidence binary upload/signed object-storage URL flow is not production-ready.
-- AI extraction/staging runtime is not implemented.
-- Report Builder and internal work-order fallback are not implemented yet.
-- Authentication is development-grade demo-header RBAC, not production auth.
+- AI extraction/staging workflow is implemented within AIM API governance boundaries and remains staging-only until human review.
+- Report generation, report issue gates, integrity decision approval, and internal AIM work-order fallback are implemented.
+- External CMMS/SAP/Maximo integration remains out of MVP scope.
+- Authentication uses DB-backed JWT/RBAC for the MVP; local demo-header fallback remains local/test-only.
 
 
 ### Sprint 6 — Deterministic Calculation Engine
@@ -233,7 +234,7 @@ Workflow statuses: `open`, `under_review`, `data_required`, `assessment_in_progr
 
 ## Sprint 7 Governance and Security Hardening
 
-This baseline hardens Sprint 7 without implementing API/API-ASME formulas, AI extraction runtime, report generation, RBI calculation, CMMS integration, or work-order integration.
+This historical Sprint 7 section predates later Phase 1/2 work. The current MVP still does not implement API/API-ASME formulas, full RBI calculation, external CMMS integration, or 3D processing; later phases add AI extraction/staging, report generation/issue gates, and internal AIM work order fallback.
 
 Key hardening items:
 
@@ -275,7 +276,7 @@ Implemented tables/fields include engineering_reviews and approval_records exten
 
 Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
 
-No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.
+This historical Sprint 9 section predates later report/work-order features. No API/API-ASME formulas, full RBI quantitative calculation, external CMMS integration, or 3D processing are implemented. Later phases add AI extraction/staging, report generation/issue gates, integrity decisions, and internal AIM work order fallback while AIM remains the system of record and n8n remains API-only orchestration.
 
 
 ## Sprint 10 Report Generation Complete
@@ -293,3 +294,23 @@ New API endpoints:
 - POST /api/v1/reports/{reportId}/issue
 
 Boundary: no API/API-ASME formula expression is embedded or invented; reports cite Formula Registry metadata and calculation traceability only. Draft reports remain clearly marked draft until approved.
+
+
+## Controlled UAT Cycle 1 Release Hardening
+
+UAT Cycle 1 passed with local fixes on branch `phase2-3-uat-signoff`. Release hardening adds direct evidence gating before integrity decision approval, per-entity evidence gates before final report issue, controlled NDT `extraction_source` validation, safe calculation run lookup by UUID or run code, and resolution of stale report issue gate-blocked logs after successful report issue.
+
+Current hard boundaries remain: AIM is the system of record; AI output remains staging-only until human review; AI/n8n/service users cannot approve or issue final engineering outputs; n8n is orchestration-only; external CMMS remains out of MVP scope; internal AIM work orders remain the fallback.
+
+## Phase 2.5 / RC2 Runtime and Frontend UAT Closure
+
+The RC2 branch adds product-facing UAT closure items:
+
+- JWT login is available at `/login`; frontend API calls use `Authorization: Bearer <token>` from `data.accessToken`.
+- Demo headers are disabled by default and are only sent when `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true`.
+- Integrity decision workflow is available at `/integrity-decisions` and requires direct evidence before approval.
+- Report UI shows per-entity evidence actions for `report`, `calculation_run`, and `integrity_decision` before final issue.
+- Internal AIM work order fallback is available at `/work-orders`; External CMMS remains out of MVP scope.
+- FFS/RBI calculation-run lookup is UUID/text-aware and must not expose PostgreSQL UUID/text operator errors.
+
+AIM remains the system of record. AI must not approve final engineering actions. n8n remains orchestration-only and must not write final engineering data directly to PostgreSQL.

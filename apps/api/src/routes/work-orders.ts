@@ -29,7 +29,7 @@ function asBoolean(value: unknown): boolean {
 }
 
 function isUuid(value: string | undefined | null): value is string {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function actorUserId(req: Request): string | null {
@@ -251,6 +251,27 @@ workOrdersRouter.get('/work-orders', requirePermission('work_order.read'), async
   try {
     const result = await pool.query<DbRow>('select * from internal_work_orders order by created_at desc limit 100');
     res.json({ data: result.rows.map(mapWorkOrder) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+workOrdersRouter.get('/work-orders/:workOrderId', requirePermission('work_order.read'), async (req, res, next) => {
+  const workOrderId = req.params.workOrderId;
+  if (!isUuid(workOrderId)) {
+    validationError(res, 'workOrderId', 'workOrderId must be a valid UUID.');
+    return;
+  }
+
+  try {
+    const result = await pool.query<DbRow>('select * from internal_work_orders where id = $1', [workOrderId]);
+    const workOrder = result.rows[0];
+    if (!workOrder) {
+      res.status(404).json({ error: { code: 'WORK_ORDER_NOT_FOUND', message: 'Internal work order not found.' } });
+      return;
+    }
+    res.json({ data: mapWorkOrder(workOrder) });
   } catch (error) {
     next(error);
   }
@@ -503,3 +524,4 @@ workOrdersRouter.post('/work-orders/:workOrderId/close', requirePermission('work
     client.release();
   }
 });
+

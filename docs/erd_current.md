@@ -78,7 +78,7 @@ Implemented tables/fields include engineering_reviews and approval_records exten
 
 Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
 
-No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.
+No API/API-ASME formulas, full API 579/API 581 quantitative calculation, external CMMS integration, or 3D processing are implemented in this sprint. Later governance phases implement AI extraction/staging, report generation/issue gates, and internal AIM work order fallback while AIM remains the system of record and n8n remains API-only orchestration.
 
 
 ## Sprint 10 Report Generation Tables
@@ -180,7 +180,7 @@ No external CMMS system is introduced in Phase 1.6. AIM remains the system of re
 - `review_gates` stores report issue gate evaluations using `gate_domain = 'report_issue'`.
 - `internal_work_orders` links to `assets`, optional `inspection_events`, optional `integrity_decisions`, and optional `reports`.
 - `internal_work_orders.gate_checklist_json` records whether the work order source was an approved integrity decision, issued report action, or explicit preliminary internal control.
-- `evidence_links` may link closure evidence to `internal_work_order` records.
+- `evidence_links` may link closure evidence to `internal_work_order` records and must directly link evidence to integrity decisions before approval and to report/calculation/integrity-decision entities before final report issue.
 - `audit_logs` records all report issue, blocked issue, work order creation, update, blocked close, and close events.
 - `error_logs` records report issue gate blockage where applicable.
 
@@ -218,3 +218,25 @@ The following source-of-truth entities are represented by migrations `0012` thro
 - `formula_versions`
 
 Phase 1.7 also confirms the boundary relationships remain unchanged: AI extraction is staging-only; calculation execution is deterministic, versioned, audited, and evidence-gated; report issue is human-only and gate-checked; internal work orders are AIM fallback records only; and no external SAP/Maximo/CMMS, full API 579, full API 581, 3D processing, frontend UI, or invented API/ASME formulas are introduced.
+
+
+## UAT Cycle 1 Release Hardening Addendum
+
+- `approval_records.created_at` is part of the approval record audit timeline.
+- `approval_records.approved_at` is nullable and represents actual approval time only.
+- Integrity decision approval is evidence-gated through `evidence_links(linked_entity_type = 'integrity_decision')`.
+- Report issue is evidence-gated per entity: `report`, `calculation_run`, and approved `integrity_decision` must each have direct evidence linkage.
+- Prior report issue gate-blocked `error_logs` remain auditable and are marked `resolved` when the report is successfully issued.
+- Internal AIM work orders remain the MVP fallback before any future external CMMS integration.
+
+## RC2 Governance Gate Reconciliation
+
+Evidence lineage for final report issue now requires three direct evidence link relationships:
+
+```text
+reports.id <- evidence_links(linked_entity_type = 'report')
+calculation_runs.id <- evidence_links(linked_entity_type = 'calculation_run')
+integrity_decisions.id <- evidence_links(linked_entity_type = 'integrity_decision')
+```
+
+Integrity decision approval is blocked until direct integrity-decision evidence exists. Internal work orders may be generated from issued reports or approved integrity decisions and remain inside AIM; External CMMS is out of MVP scope.

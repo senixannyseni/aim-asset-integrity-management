@@ -705,6 +705,7 @@ paths:
       summary: Create FFS cases from calculation warnings
       description: Creates FFS trigger cases from deterministic calculation warning outputs. Trigger only; no fitness declaration.
       x-permission-required: ffs.trigger
+      x-calculation-run-lookup: uuid-or-run-id
       x-audit-event-generated: FFS_CASES_TRIGGERED_FROM_CALCULATION
       requestBody:
         required: true
@@ -897,6 +898,7 @@ paths:
       description: Creates an RBI interface case from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated
         anomaly, or engineering review. Trigger only; no quantitative API RP 581 calculation.
       x-permission-required: rbi.interface.create
+      x-calculation-run-lookup: uuid-or-run-id
       x-audit-event-generated: RBI_CASE_CREATED_FROM_CALCULATION
       requestBody:
         required: true
@@ -1222,6 +1224,161 @@ paths:
       - bearerAuth: []
       x-audit-event-generated: none
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/integrity-decisions/{decisionId}:
+    get:
+      summary: Get integrity decision detail
+      description: Read a human-authored integrity decision. AIM remains the system of record.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.review
+      x-audit-event-generated: none
+      parameters:
+      - in: path
+        name: decisionId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Integrity decision detail
+        '404':
+          description: Integrity decision not found
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are read from PostgreSQL through AIM API only.
+  /api/v1/integrity-decisions:
+    get:
+      summary: List integrity decisions
+      description: List human-authored integrity decisions with direct evidence-link counts for RC2 gate visibility.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.review
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are listed from PostgreSQL through AIM API only.
+      parameters:
+      - in: query
+        name: asset_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: calculation_run_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: decision_status
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Integrity decision list
+    post:
+      summary: Create integrity decision
+      description: Create a human-authored integrity decision after approved calculation. AI agents cannot create final integrity decisions.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.create
+      x-audit-event-generated: INTEGRITY_DECISION_CREATED
+      x-human-review-required: true
+      x-evidence-link-required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - asset_id
+              - calculation_run_id
+              - decision_summary
+              properties:
+                asset_id:
+                  type: string
+                  format: uuid
+                inspection_event_id:
+                  type: string
+                  format: uuid
+                calculation_run_id:
+                  type: string
+                  format: uuid
+                integrity_status:
+                  type: string
+                  enum:
+                  - acceptable
+                  - watch
+                  - action_required
+                  - blocked
+                  - insufficient_data
+                decision_summary:
+                  type: string
+                required_action:
+                  type: string
+                operating_limitation:
+                  type: string
+                due_date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Integrity decision created
+        '403':
+          description: AI agent or unauthorized role blocked
+        '409':
+          description: Calculation is not approved or asset mismatch
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. AI cannot create, approve, or finalize integrity decisions.
+  /api/v1/integrity-decisions/{decisionId}/approve:
+    post:
+      summary: Approve integrity decision
+      description: Senior human approval for integrity decision. AI agents and workflow/service users cannot approve final integrity decisions. Approval requires at least one direct evidence link to the integrity decision.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.approve
+      x-audit-event-generated: INTEGRITY_DECISION_APPROVED
+      x-human-review-required: true
+      x-evidence-link-required: true
+      parameters:
+      - in: path
+        name: decisionId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - approval_comment
+              properties:
+                approval_comment:
+                  type: string
+      responses:
+        '200':
+          description: Integrity decision approved
+        '403':
+          description: Senior human approval required; AI agent cannot approve
+        '404':
+          description: Integrity decision not found
+        '409':
+          description: Integrity decision already approved or direct evidence linkage is missing
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                error:
+                  code: INTEGRITY_DECISION_EVIDENCE_REQUIRED
+                  message: Integrity decision approval requires at least one direct evidence link.
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only, RBAC-controlled, evidence-gated, and audit logged.
   /api/v1/reports:
     get:
       summary: List generated tank integrity reports
@@ -1316,14 +1473,14 @@ paths:
         '200':
           description: Report issued and locked
         '409':
-          description: Report issue blocked by required data/evidence/calculation/review/integrity/approval/workflow-error/comment gates
+          description: Report issue blocked by required data/per-entity evidence/calculation/review/integrity/approval/workflow-error/comment gates
       tags:
       - Reports
       security:
       - bearerAuth: []
       x-human-review-required: true
       x-evidence-link-required: true
-      x-source-of-truth-boundary: AIM is the system of record. Report issue is human-only, audit logged, and blocked unless data, evidence, calculation completion, calculation review, calculation approval, integrity decision approval, report approval, unresolved critical warning, workflow error, and approver comment gates pass. AI and n8n/service users cannot issue reports.
+      x-source-of-truth-boundary: AIM is the system of record. Report issue is human-only, audit logged, and blocked unless data, per-entity evidence, calculation completion, calculation review, calculation approval, integrity decision approval, report approval, unresolved critical warning, workflow error, and approver comment gates pass. Required per-entity evidence includes direct links to the report, calculation_run, and approved integrity_decision. AI and n8n/service users cannot issue reports.
       requestBody:
         required: true
         content:
@@ -1814,6 +1971,28 @@ paths:
         '409':
           $ref: '#/components/responses/GateBlocked'
   /api/v1/work-orders/{workOrderId}:
+    get:
+      tags:
+      - Work Orders
+      summary: Get internal AIM work order detail
+      description: Read an internal AIM work order fallback record and its gate checklist. No external CMMS call is made.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.read
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM internal work order fallback only. No external CMMS write occurs.
+      parameters:
+      - in: path
+        name: workOrderId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Internal work order detail
+        '404':
+          description: Internal work order not found
     patch:
       tags:
       - Work Orders
@@ -2858,7 +3037,7 @@ components:
         gate_confirmation:
           type: object
           additionalProperties: true
-          description: Optional UI-provided gate confirmation. Backend gate evaluation remains authoritative.
+          description: Optional UI-provided gate confirmation. Backend gate evaluation remains authoritative and requires direct report, calculation_run, and integrity_decision evidence links.
         required_gate_types:
           type: array
           items:
@@ -2877,6 +3056,7 @@ components:
           - approver_comment_present
     ReportGateChecklistItem:
       type: object
+      description: Includes required data, per-entity evidence, calculation, review, integrity decision, report approval, workflow-error, and approver-comment gates.
       properties:
         gate_type:
           type: string
@@ -3038,3 +3218,4 @@ components:
           type: string
         x-audit-event-generated:
           type: string
+

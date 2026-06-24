@@ -22,7 +22,7 @@ Implemented:
 - AIM remains the system of record.
 - Original evidence files remain in object storage; this sprint stores metadata and object path only.
 - n8n is not integrated directly and must use AIM APIs only in later sprints.
-- AI extraction runtime is not implemented.
+- Historical Sprint 3 note: AI extraction runtime was not implemented in Sprint 3; current MVP implements AI extraction/staging under AIM API governance and human review.
 - No engineering calculation, report generation, or API/ASME formula implementation is included.
 
 ## Required Commands

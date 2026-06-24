@@ -339,10 +339,13 @@ calculationsRouter.get('/engineering/calculations', requirePermission('calculati
 calculationsRouter.get('/engineering/calculations/:runId', requirePermission('calculation.read'), async (req, res, next) => {
   try {
     const runId = asString(req.params.runId);
-    const runResult = await pool.query<DbRow>(
-      `select * from calculation_runs where id = $1 or run_id = $1 limit 1`,
-      [runId]
-    );
+    if (!runId) {
+      validationError(res, 'runId', 'runId is required.');
+      return;
+    }
+    const runResult = isUuid(runId)
+      ? await pool.query<DbRow>(`select * from calculation_runs where id = $1::uuid limit 1`, [runId])
+      : await pool.query<DbRow>(`select * from calculation_runs where run_id = $1 limit 1`, [runId]);
     const run = runResult.rows[0];
     if (!run) {
       res.status(404).json({ error: { code: 'CALCULATION_RUN_NOT_FOUND', message: 'Calculation run not found.' } });

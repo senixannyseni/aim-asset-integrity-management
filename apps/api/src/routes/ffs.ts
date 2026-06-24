@@ -49,7 +49,7 @@ function asArray(value: unknown): unknown[] {
 }
 
 function isUuid(value: string | undefined | null): value is string {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function uuidOrNull(value: unknown): string | null {
@@ -101,6 +101,14 @@ function validationError(res: ApiResponse, field: string, message: string): void
       details: [{ field, message, severity: 'error' }]
     }
   });
+}
+
+
+async function loadCalculationRunByIdentifier(client: PoolClient, identifier: string): Promise<DbRow | undefined> {
+  const result = isUuid(identifier)
+    ? await client.query<DbRow>('select * from calculation_runs where id = $1::uuid limit 1', [identifier])
+    : await client.query<DbRow>('select * from calculation_runs where run_id = $1 limit 1', [identifier]);
+  return result.rows[0];
 }
 
 async function resolveUserId(client: Queryable, req: Request): Promise<string | null> {
@@ -511,8 +519,7 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const runResult = await client.query<DbRow>('select * from calculation_runs where id = $1 or run_id = $1 limit 1', [calculationRunId]);
-    const run = runResult.rows[0];
+    const run = await loadCalculationRunByIdentifier(client, calculationRunId);
     if (!run) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'CALCULATION_RUN_NOT_FOUND', message: 'Calculation run not found.' } });
@@ -743,3 +750,4 @@ ffsRouter.post('/ffs/cases/:caseId/close', requirePermission('ffs.approve'), asy
     client.release();
   }
 });
+
