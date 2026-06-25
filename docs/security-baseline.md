@@ -1,6 +1,6 @@
 # AIM Tank Integrity Security Baseline
 
-Status: RC3-A security baseline update. RC2 is merged/tagged; RC3-A hardening covers repository hygiene, environment alignment, root route handling, and production-safe RBAC demo route gating.
+Status: RC3-A/RC3-B security baseline update. RC3-A hardening covers repository hygiene, environment alignment, root route handling, and production-safe RBAC demo route gating. RC3-B adds evidence object-storage upload/download and report export artifact object storage.
 
 ## Current authentication model
 
@@ -41,15 +41,15 @@ AI output, when implemented, must remain staging-only until human review and con
 
 ## Object storage security
 
-Evidence files must remain traceable through `evidence_files` and `evidence_links`. Before production use, object storage access must include:
+Evidence files must remain traceable through `evidence_files` and `evidence_links`. RC3-B implements private object-storage upload/download through AIM-controlled signed URLs. Production use must include:
 
 - signed URL generation for read/open actions;
 - signed URL TTL configuration;
 - upload size limits;
 - malware scanning or quarantine workflow;
-- checksum verification;
+- checksum verification using declared SHA-256 values where provided, object metadata when available, and blocked completion when expected checksums cannot be verified;
 - storage path isolation by asset/inspection/evidence code;
-- audit logs for upload, link, open, metadata update, and deletion approval.
+- audit logs for upload URL creation, upload completion, blocked access, signed URL issuance, link, open, metadata update, report export, report-export download URL, and deletion approval. Raw signed URL query strings must never be stored unredacted.
 
 ## Error handling baseline
 
@@ -86,7 +86,7 @@ No API/API-ASME formulas, full API 579/API 581 quantitative calculation, externa
 
 ## Sprint 10 Report Generation Security Notes
 
-Generated DOCX/PDF payloads use object-storage compatible paths. Production deployments must upload these artifacts to controlled object storage, serve them via signed URLs, scan generated outputs for malware, and restrict report approval/issue to verified senior engineer/admin identities. Demo-header auth remains local-development only.
+Generated DOCX/PDF/JSON report export payloads are stored in controlled object storage by RC3-B. AIM stores report export metadata, content hashes, object keys, download status, and audit events in PostgreSQL. Downloads are served through audited short-lived signed URLs. Report approval/issue remains restricted to verified senior engineer/admin/approver identities. Demo-header auth remains local-development only.
 
 
 ## UAT Cycle 1 Release Hardening
@@ -104,4 +104,4 @@ UAT/prod-like validation must not rely on demo headers. AI agents, n8n/service u
 
 The environment contract uses `AUTH_TOKEN_ISSUER`, `AUTH_ACCESS_TOKEN_TTL_SECONDS`, `AUTH_REFRESH_TOKEN_TTL_SECONDS`, `AUTH_ALLOW_LOCAL_DEMO`, `AUTH_LOCAL_DEMO_PASSWORD`, and `AUTH_REQUIRE_STRONG_SECRET_IN_PRODUCTION`. Obsolete documentation-only names such as `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, and `AUTH_SESSION_COOKIE_NAME` must not be used unless code is explicitly updated to support them.
 
-Object storage configuration is aligned for RC3-B with `OBJECT_STORAGE_ACCESS_KEY_ID`, `OBJECT_STORAGE_SECRET_ACCESS_KEY`, `EVIDENCE_MAX_FILE_SIZE_BYTES`, `EVIDENCE_ALLOWED_MIME_TYPES`, and `EVIDENCE_ALLOWED_EXTENSIONS`. RC3-A does not implement binary evidence upload/download; it prepares and validates the configuration boundary.
+Object storage configuration is active for RC3-B with `OBJECT_STORAGE_ACCESS_KEY_ID`, `OBJECT_STORAGE_SECRET_ACCESS_KEY`, `OBJECT_STORAGE_BUCKET`, `OBJECT_STORAGE_ENDPOINT`, `OBJECT_STORAGE_REGION`, `OBJECT_STORAGE_FORCE_PATH_STYLE`, `OBJECT_STORAGE_SIGNED_URL_TTL_SECONDS`, `EVIDENCE_MAX_FILE_SIZE_BYTES`, `EVIDENCE_ALLOWED_MIME_TYPES`, and `EVIDENCE_ALLOWED_EXTENSIONS`. Binary evidence upload/download and report export artifact storage are implemented through AIM APIs and object-storage signed URLs.

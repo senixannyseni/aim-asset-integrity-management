@@ -76,7 +76,8 @@ export class ObjectStorageService {
       contentLength: Number(response.ContentLength ?? 0),
       contentType: response.ContentType,
       eTag: response.ETag,
-      versionId: response.VersionId
+      versionId: response.VersionId,
+      metadata: response.Metadata
     };
   }
 

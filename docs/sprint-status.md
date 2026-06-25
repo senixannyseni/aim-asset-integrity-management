@@ -96,6 +96,10 @@ Implemented report template engine, report versioning/status, DOCX/PDF output pa
 Governance: reports generated from locked or review-ready calculation runs only; draft until approved; issued reports are locked. No API/API-ASME formula expression is embedded.
 
 
-## RC3-A alignment note
+## RC3-A / RC3-B alignment note
 
-RC2 is merged/tagged and RC3 hardening is in progress. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments. Evidence object-storage upload/download and report artifact object-storage storage are planned for later RC3 packages and are not implemented by RC3-A. Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
+RC3-A and RC3-B are now implemented in this repository state. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments.
+
+RC3-B implements evidence object-storage upload/download and report artifact object-storage export. Original evidence files and generated report artifacts are stored in private S3-compatible object storage; PostgreSQL stores metadata, checksums, object keys, upload sessions, status, and audit linkage. Legacy metadata-only evidence upload is retained only for compatibility and is not gate-eligible until object storage verification is completed through the RC3-B flow.
+
+Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.

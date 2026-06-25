@@ -7,6 +7,7 @@ export type ObjectMetadata = {
   contentType?: string;
   eTag?: string;
   versionId?: string;
+  metadata?: Record<string, string>;
 };
 
 export type SignedUrlResult = {
