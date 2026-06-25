@@ -30,7 +30,9 @@ export type AppConfig = {
     forcePathStyle: boolean;
     publicBaseUrl?: string;
     signedUrlTtlSeconds: number;
+    reportExportSignedUrlTtlSeconds: number;
     maxFileSizeBytes: number;
+    reportExportMaxFileSizeBytes: number;
     allowedMimeTypes: string[];
     allowedExtensions: string[];
   };
@@ -195,7 +197,9 @@ export function loadConfig(env: EnvSource = process.env): AppConfig {
       forcePathStyle: boolEnv(env, 'OBJECT_STORAGE_FORCE_PATH_STYLE', true),
       publicBaseUrl: env.OBJECT_STORAGE_PUBLIC_BASE_URL,
       signedUrlTtlSeconds: numberEnv(env, 'OBJECT_STORAGE_SIGNED_URL_TTL_SECONDS', 900),
+      reportExportSignedUrlTtlSeconds: numberEnv(env, 'REPORT_EXPORT_SIGNED_URL_TTL_SECONDS', numberEnv(env, 'OBJECT_STORAGE_SIGNED_URL_TTL_SECONDS', 900)),
       maxFileSizeBytes: evidenceMaxFileSizeBytes(env),
+      reportExportMaxFileSizeBytes: numberEnv(env, 'REPORT_EXPORT_MAX_FILE_SIZE_BYTES', 50 * 1024 * 1024),
       allowedMimeTypes: csvEnv(env, 'EVIDENCE_ALLOWED_MIME_TYPES', [
         'application/pdf',
         'image/jpeg',

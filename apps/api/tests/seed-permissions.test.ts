@@ -32,6 +32,7 @@ describe('Sprint 7 RBAC seed consistency', () => {
     expect(ROLE_PERMISSIONS.ai_agent).not.toContain('integrity_decision.approve');
     expect(ROLE_PERMISSIONS.ai_agent).not.toContain('report.approve');
     expect(ROLE_PERMISSIONS.ai_agent).not.toContain('report.issue');
+    expect(ROLE_PERMISSIONS.ai_agent).not.toContain('report.export');
   });
 
   it('documents DB seed synchronization with TypeScript role map', () => {
