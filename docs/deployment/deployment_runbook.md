@@ -55,8 +55,9 @@ Do not place real secret values in documentation or committed files.
 | `CORS_ORIGIN` | Conditional | `http://localhost:3000` | Allowed frontend origin if frontend is used later. |
 | `OBJECT_STORAGE_ENDPOINT` | Conditional | `http://127.0.0.1:9000` | S3-compatible endpoint placeholder. |
 | `OBJECT_STORAGE_BUCKET` | Conditional | `aim-uat-evidence` | Evidence bucket. |
-| `OBJECT_STORAGE_ACCESS_KEY` | Conditional | `replace-with-local-access-key` | Placeholder only; never commit real value. |
-| `OBJECT_STORAGE_SECRET_KEY` | Conditional | `replace-with-local-secret-key` | Placeholder only; never commit real value. |
+| `OBJECT_STORAGE_ACCESS_KEY_ID` | Conditional | `replace-with-local-access-key` | Placeholder only; never commit real value. |
+| `OBJECT_STORAGE_SECRET_ACCESS_KEY` | Conditional | `replace-with-local-secret-key` | Placeholder only; never commit real value. |
+| `OBJECT_STORAGE_SECRET_KEY` | Deprecated alias | `replace-with-local-secret-key` | Legacy name retained only for backward compatibility notes; prefer `OBJECT_STORAGE_SECRET_ACCESS_KEY`. |
 | `SIGNED_URL_EXPIRY_SECONDS` | Conditional | `900` | Signed evidence URL lifetime. |
 | `N8N_WEBHOOK_SECRET` | Conditional | `replace-with-local-n8n-secret` | Shared secret for workflow calls if enabled. |
 | `AI_PROVIDER_API_KEY` | Conditional | `replace-with-local-provider-key` | AI provider placeholder if extraction service is used. |
@@ -95,7 +96,7 @@ pnpm --filter @aim/api dev
 Health check in a second terminal:
 
 ```powershell
-Invoke-RestMethod -Method Get -Uri "http://localhost:3001/api/v1/health"
+Invoke-RestMethod -Method Get -Uri "http://localhost:3001/health"
 ```
 
 Login smoke test:
@@ -168,7 +169,7 @@ pnpm db:seed
 
 | Smoke Test | Command/Action | Expected Result | Pass/Fail |
 |---|---|---|---|
-| API health | `GET /api/v1/health` | API responds healthy. |  |
+| API health | `GET /health` | API responds healthy. |  |
 | Login | `POST /api/v1/auth/login` | Access token/session metadata returned. |  |
 | Auth me | `GET /api/v1/auth/me` | Current user and permissions returned. |  |
 | Protected route | `GET /api/v1/assets` | Authorized user succeeds; anonymous fails. |  |
@@ -315,7 +316,7 @@ Use the current JWT token path:
 $token = $login.data.accessToken
 ```
 
-The API secret environment variable is `AUTH_JWT_SECRET`. Do not use the obsolete `$login.data.accessToken` path or `AUTH_JWT_SECRET` variable name.
+The API secret environment variable is `AUTH_JWT_SECRET`. Use `$login.data.accessToken` for the JWT returned by `POST /api/v1/auth/login`. Use `AUTH_JWT_SECRET` for signing and `AUTH_TOKEN_ISSUER` for the issuer value; do not use obsolete documentation-only names such as `AUTH_JWT_ISSUER`.
 
 For frontend UAT, demo headers are opt-in only:
 
@@ -327,3 +328,8 @@ Do not enable demo headers in UAT/prod-like validation. Verify `/login`, `/integ
 
 
 
+
+
+## RC3-A alignment note
+
+RC2 is merged/tagged and RC3 hardening is in progress. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments. Evidence object-storage upload/download and report artifact object-storage storage are planned for later RC3 packages and are not implemented by RC3-A. Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.

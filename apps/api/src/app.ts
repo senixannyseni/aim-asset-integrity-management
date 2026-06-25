@@ -23,6 +23,12 @@ import { authRouter } from "./routes/auth.js";
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
+export function allowedCorsHeaders(): string {
+  const baseHeaders = ['Content-Type', 'Authorization', 'x-request-id'];
+  const demoHeaders = ['x-aim-demo-roles', 'x-aim-demo-user-id', 'x-aim-demo-email', 'x-aim-demo-full-name'];
+  return [...baseHeaders, ...(config.allowLocalDemoAuth ? demoHeaders : [])].join(', ');
+}
+
 export function createApp() {
   const app = express();
 
@@ -30,7 +36,7 @@ export function createApp() {
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', config.corsOrigin);
     res.header('Vary', 'Origin');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-aim-demo-roles, x-aim-demo-user-id, x-aim-demo-email, x-request-id');
+    res.header('Access-Control-Allow-Headers', allowedCorsHeaders());
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     if (req.method === 'OPTIONS') {
       res.sendStatus(204);
@@ -45,7 +51,9 @@ export function createApp() {
   app.use(healthRouter);
   app.use('/api/v1', assetsRouter);
   app.use('/api/v1', operationsRouter);
-  app.use('/api/v1', rbacDemoRouter);
+  if (config.allowLocalDemoAuth) {
+    app.use('/api/v1', rbacDemoRouter);
+  }
   app.use('/api/v1', evidenceRouter);
   app.use('/api/v1', ndtRouter);
   app.use('/api/v1', engineeringValidationRouter);
