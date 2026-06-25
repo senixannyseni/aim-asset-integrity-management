@@ -587,7 +587,8 @@ insert into permissions(permission_code, description) values
   ('report.generate', 'Generate draft tank integrity reports'),
   ('report.review', 'Review draft tank integrity reports'),
   ('report.approve', 'Approve generated tank integrity reports'),
-  ('report.issue', 'Issue approved tank integrity reports')
+  ('report.issue', 'Issue approved tank integrity reports'),
+  ('report.export', 'Create and download object-storage report export artifacts')
 on conflict (permission_code) do update set description = excluded.description;
 
 insert into role_permissions(role_id, permission_id)
@@ -600,8 +601,8 @@ on conflict do nothing;
 insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
-join permissions p on p.permission_code in ('report.approve','report.issue')
-where r.role_code in ('admin','senior_engineer')
+join permissions p on p.permission_code in ('report.approve','report.issue','report.export')
+where r.role_code in ('admin','senior_engineer','lead_engineer','approver')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
@@ -611,4 +612,5 @@ join permissions p on p.permission_code = 'report.read'
 where r.role_code = 'client_viewer'
 on conflict do nothing;
 
--- ai_agent intentionally receives no report generation, approval, issue, or finalization permissions.
+-- RC3-B report export object-storage permission synchronization.
+-- ai_agent intentionally receives no report generation, export, approval, issue, or finalization permissions.

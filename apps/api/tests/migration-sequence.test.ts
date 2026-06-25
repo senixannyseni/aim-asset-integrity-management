@@ -29,6 +29,8 @@ describe('database migration sequence', () => {
       '0017_uat_fix_approval_records_created_at.sql',
       '0018_uat_fix_approval_record_approved_at_semantics.sql',
       '0019_allow_integrity_decision_review_gate_domain.sql',
+      '0020_object_storage_evidence_hardening.sql',
+      '0021_report_export_object_storage.sql',
     ]);
   });
 });

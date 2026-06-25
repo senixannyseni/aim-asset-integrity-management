@@ -1,6 +1,9 @@
 import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
+import { objectStorageService, redactSignedUrl, sha256Hex } from '../modules/object-storage/object-storage-service.js';
+import { buildReportExportObjectKey, reportExportMimeType } from '../modules/object-storage/report-storage.js';
+import { config } from '../config/env.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { contentHash, renderConsultantReportText, renderDocxBase64, renderPdfBase64, type ReportDocument, type ReportSection } from '../modules/reporting/template-engine.js';
 
@@ -152,6 +155,58 @@ function mapReport(row: DbRow): Record<string, unknown> {
     issued_at: row.issued_at,
     created_at: row.created_at
   };
+}
+
+
+function mapReportExport(row: DbRow): Record<string, unknown> {
+  return {
+    report_export_id: row.id,
+    export_id: row.id,
+    report_id: row.report_id,
+    report_version_id: row.report_version_id,
+    export_type: row.export_format ?? row.export_type,
+    export_format: row.export_format ?? row.export_type,
+    export_status: row.export_status,
+    download_status: row.download_status,
+    storage_provider: row.storage_provider,
+    storage_bucket: row.storage_bucket,
+    object_key: row.object_key ?? row.object_storage_uri,
+    object_storage_uri: row.object_storage_uri,
+    content_hash_sha256: row.content_hash_sha256 ?? row.checksum_sha256,
+    checksum_sha256: row.checksum_sha256 ?? row.content_hash_sha256,
+    input_snapshot_hash: row.input_snapshot_hash,
+    file_size_bytes: row.file_size_bytes,
+    mime_type: row.mime_type,
+    generated_by: row.generated_by ?? row.exported_by,
+    generated_at: row.generated_at ?? row.exported_at,
+    created_at: row.created_at
+  };
+}
+
+function normalizeExportType(value: unknown): 'pdf' | 'docx' | 'json' | 'html' | undefined {
+  const normalized = asString(value)?.toLowerCase();
+  if (normalized === 'pdf' || normalized === 'docx' || normalized === 'json' || normalized === 'html') return normalized;
+  return undefined;
+}
+
+function filenameForReportExport(report: DbRow, exportId: string, exportType: string): string {
+  const reportCode = String(report.report_code ?? report.id ?? 'report').replace(/[^A-Za-z0-9._-]/g, '-');
+  return `${reportCode}-${exportId}.${exportType}`;
+}
+
+function bufferForReportExport(report: DbRow, exportType: 'pdf' | 'docx' | 'json' | 'html'): Buffer | undefined {
+  if (exportType === 'pdf') {
+    const base64 = asString(report.pdf_content_base64);
+    return base64 ? Buffer.from(base64, 'base64') : undefined;
+  }
+  if (exportType === 'docx') {
+    const base64 = asString(report.docx_content_base64);
+    return base64 ? Buffer.from(base64, 'base64') : undefined;
+  }
+  if (exportType === 'html') {
+    return Buffer.from(`<pre>${String(report.plain_text_content ?? '')}</pre>`, 'utf8');
+  }
+  return Buffer.from(JSON.stringify(mapReport(report), null, 2), 'utf8');
 }
 
 function safeCodePart(value: unknown): string {
@@ -657,6 +712,226 @@ reportsRouter.get('/reports/:reportId', requirePermission('report.read'), async 
     res.json({ data: { ...mapReport(row), sections: row.sections_json, evidence_register: row.evidence_register_json } });
   } catch (error) {
     next(error);
+  }
+});
+
+reportsRouter.get('/reports/:reportId/exports', requirePermission('report.read'), async (req, res, next) => {
+  const reportId = req.params.reportId;
+  if (!isUuid(reportId)) {
+    validationError(res, 'reportId', 'reportId must be a UUID.');
+    return;
+  }
+  try {
+    const result = await pool.query<DbRow>(
+      'select * from report_exports where report_id = $1 order by created_at desc',
+      [reportId]
+    );
+    res.json({ data: result.rows.map(mapReportExport) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+reportsRouter.post('/reports/:reportId/exports', requirePermission('report.export'), async (req, res, next) => {
+  const reportId = req.params.reportId;
+  if (!isUuid(reportId)) {
+    validationError(res, 'reportId', 'reportId must be a UUID.');
+    return;
+  }
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+  if (isNonHumanReportActor(req)) {
+    res.status(403).json({ error: { code: 'HUMAN_REPORT_EXPORT_REQUIRED', message: 'Report export requires an authorized human user. AI/n8n/service actors cannot create final report artifacts.' } });
+    return;
+  }
+  const exportType = normalizeExportType(req.body.export_type ?? req.body.export_format);
+  if (!exportType) {
+    validationError(res, 'export_type', 'export_type must be one of: pdf, docx, json, html.');
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const reportResult = await client.query<DbRow>('select * from reports where id = $1 for update', [reportId]);
+    const report = reportResult.rows[0];
+    if (!report) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
+      return;
+    }
+
+    if ((exportType === 'pdf' || exportType === 'docx') && report.report_status !== 'issued') {
+      const gateContext = await loadReportGateContext(client, report);
+      const gates = buildReportGateChecklist(gateContext, hasRequiredReportComment(req));
+      await persistReportGateChecklist(client, req, reportId, gates);
+      await client.query('commit');
+      res.status(409).json({
+        error: {
+          code: 'REPORT_EXPORT_GATES_NOT_SATISFIED',
+          message: 'Final PDF/DOCX report export is blocked until the report is issued after required governance gates pass.',
+          gates: gates.filter((gateItem) => gateItem.blocking && gateItem.gate_status !== 'pass')
+        }
+      });
+      return;
+    }
+
+    const artifactBuffer = bufferForReportExport(report, exportType);
+    if (!artifactBuffer) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'REPORT_ARTIFACT_CONTENT_MISSING', message: `Report does not contain generated ${exportType.toUpperCase()} content for object-storage export.` } });
+      return;
+    }
+    if (artifactBuffer.length > config.objectStorage.reportExportMaxFileSizeBytes) {
+      await client.query('rollback');
+      res.status(413).json({ error: { code: 'REPORT_EXPORT_TOO_LARGE', message: 'Report export artifact exceeds the configured object-storage size limit.' } });
+      return;
+    }
+
+    const exportIdResult = await client.query<{ id: string }>('select gen_random_uuid()::text as id');
+    const exportId = exportIdResult.rows[0]?.id;
+    if (!exportId) throw new Error('Unable to allocate report export id.');
+    const filename = filenameForReportExport(report, exportId, exportType);
+    const objectKey = buildReportExportObjectKey({ reportId, exportId, filename });
+    const mimeType = reportExportMimeType(exportType);
+    const contentHashSha256 = sha256Hex(artifactBuffer);
+
+    await objectStorageService.putObject({
+      objectKey,
+      body: artifactBuffer,
+      contentType: mimeType,
+      metadata: {
+        report_id: reportId,
+        export_id: exportId,
+        content_hash_sha256: contentHashSha256
+      }
+    });
+
+    const exportResult = await client.query<DbRow>(
+      `insert into report_exports(
+        id,
+        report_id,
+        export_format,
+        export_status,
+        storage_provider,
+        storage_bucket,
+        object_storage_uri,
+        object_key,
+        content_hash_sha256,
+        checksum_sha256,
+        input_snapshot_hash,
+        generated_by,
+        generated_at,
+        exported_by,
+        exported_at,
+        download_status,
+        file_size_bytes,
+        mime_type,
+        metadata_json
+      ) values ($1, $2, $3, 'generated', 's3-compatible', $4, $5, $5, $6, $6, $7, $8, now(), $8, now(), 'not_downloaded', $9, $10, $11::jsonb)
+      returning *`,
+      [
+        exportId,
+        reportId,
+        exportType,
+        config.objectStorage.bucket,
+        objectKey,
+        contentHashSha256,
+        asString(report.input_snapshot_hash) ?? null,
+        actorUserId(req),
+        artifactBuffer.length,
+        mimeType,
+        JSON.stringify({ object_storage_artifact: true, normal_api_base64_response: false })
+      ]
+    );
+    const created = exportResult.rows[0];
+    const signed = await objectStorageService.getSignedDownloadUrl({
+      objectKey,
+      responseContentType: mimeType,
+      expiresInSeconds: config.objectStorage.reportExportSignedUrlTtlSeconds
+    });
+    const auditLogId = await writeAudit(client, req, 'REPORT_EXPORT_CREATED', 'report_export', exportId, null, mapReportExport(created ?? {}), {
+      report_id: reportId,
+      object_key: objectKey,
+      storage_bucket: config.objectStorage.bucket,
+      content_hash_sha256: contentHashSha256,
+      signed_url_redacted: redactSignedUrl(signed.url),
+      signed_url_query_not_logged: true,
+      ai_cannot_export_final_report: true
+    });
+    await client.query('commit');
+    res.status(201).json({
+      data: {
+        ...mapReportExport(created ?? {}),
+        download_url: signed.url,
+        expires_at: signed.expiresAt
+      },
+      auditLogId
+    });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+reportsRouter.get('/report-exports/:exportId/download-url', requirePermission('report.export'), async (req, res, next) => {
+  const exportId = req.params.exportId;
+  if (!isUuid(exportId)) {
+    validationError(res, 'exportId', 'exportId must be a UUID.');
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const exportResult = await client.query<DbRow>('select * from report_exports where id = $1 for update', [exportId]);
+    const reportExport = exportResult.rows[0];
+    if (!reportExport) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'REPORT_EXPORT_NOT_FOUND', message: 'Report export not found.' } });
+      return;
+    }
+    const objectKey = asString(reportExport.object_key ?? reportExport.object_storage_uri);
+    if (!objectKey) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'REPORT_EXPORT_OBJECT_KEY_MISSING', message: 'Report export object key is missing.' } });
+      return;
+    }
+    const exists = await objectStorageService.objectExists(objectKey);
+    if (!exists) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'REPORT_EXPORT_OBJECT_NOT_FOUND', message: 'Report export metadata exists but the object-storage artifact was not found.' } });
+      return;
+    }
+    const signed = await objectStorageService.getSignedDownloadUrl({
+      objectKey,
+      responseContentType: asString(reportExport.mime_type),
+      expiresInSeconds: config.objectStorage.reportExportSignedUrlTtlSeconds
+    });
+    await client.query('update report_exports set download_status = $2, downloaded_at = now() where id = $1', [exportId, 'signed_url_issued']);
+    const auditLogId = await writeAudit(client, req, 'REPORT_EXPORT_DOWNLOAD_URL_CREATED', 'report_export', exportId, null, { export_id: exportId, object_key: objectKey, expires_at: signed.expiresAt }, {
+      signed_url_redacted: redactSignedUrl(signed.url),
+      signed_url_query_not_logged: true,
+      storage_bucket: signed.bucket
+    });
+    await client.query('commit');
+    res.json({
+      data: {
+        report_export_id: exportId,
+        object_key: objectKey,
+        download_url: signed.url,
+        expires_at: signed.expiresAt
+      },
+      auditLogId
+    });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
   }
 });
 

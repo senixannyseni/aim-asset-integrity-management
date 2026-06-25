@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.15.0
-  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-A repository hygiene, config alignment, root route, and demo route gating. AIM is the system of
+  version: 0.16.0
+  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-B evidence/report object-storage hardening. AIM is the system of
     record; PostgreSQL stores final structured engineering data; object storage stores original evidence. n8n remains orchestration-only and must
     call AIM backend APIs only. AI extraction output is staging-only and requires human engineering review before promotion. This contract documents
     implemented auth, AI extraction/staging, evidence governance, approval, and report issue gates; it does not implement API 579/API 581, CMMS,
@@ -273,7 +273,7 @@ paths:
           description: Evidence open metadata
       security:
       - bearerAuth: []
-      x-audit-event-generated: none
+      x-audit-event-generated: EVIDENCE_DOWNLOAD_URL_CREATED
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
   /api/v1/evidence/{evidenceId}/links:
     post:
@@ -1823,7 +1823,7 @@ paths:
       summary: Create short-lived signed evidence download URL after RBAC check
       security:
       - bearerAuth: []
-      x-permission-required: evidence.open
+      x-permission-required: evidence.download_url
       responses:
         '200':
           description: Signed URL issued
@@ -1839,7 +1839,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-      x-audit-event-generated: EVIDENCE_SIGNED_URL_CREATED
+      x-audit-event-generated: EVIDENCE_DOWNLOAD_URL_CREATED
       parameters:
       - in: path
         name: evidenceId
@@ -2049,6 +2049,132 @@ paths:
           description: Internal work order closed
         '409':
           $ref: '#/components/responses/GateBlocked'
+  /api/v1/evidence/upload-url:
+    post:
+      summary: Create an audited signed evidence upload URL
+      description: RC3-B object-storage flow. AIM validates metadata, generates the object key, records a pending upload session, and returns a short-lived signed PUT URL. Evidence metadata is not finalized until complete-upload verifies object existence.
+      x-permission-required: evidence.upload
+      x-audit-event-generated: EVIDENCE_UPLOAD_URL_CREATED
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceUploadUrlRequest'
+      responses:
+        '201':
+          description: Signed upload URL issued
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      x-source-of-truth-boundary: PostgreSQL stores upload-session metadata; original evidence file is uploaded to private object storage.
+      x-human-review-required: true
+  /api/v1/evidence/complete-upload:
+    post:
+      summary: Complete evidence upload after object-storage verification
+      description: Verifies that the uploaded object exists and matches declared metadata before finalizing evidence metadata in AIM.
+      x-permission-required: evidence.upload
+      x-audit-event-generated: EVIDENCE_UPLOAD_COMPLETED
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceCompleteUploadRequest'
+      responses:
+        '201':
+          description: Evidence metadata finalized after object verification
+        '409':
+          description: Object missing, expired session, size mismatch, or checksum mismatch
+      x-source-of-truth-boundary: Metadata is finalized only after object-storage headObject succeeds.
+  /api/v1/evidence/{evidenceId}/download:
+    get:
+      summary: Open evidence file through an audited signed object-storage redirect
+      x-permission-required: evidence.open
+      x-audit-event-generated: EVIDENCE_DOWNLOAD_OPENED
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '302':
+          description: Redirect to signed object-storage URL after RBAC, object-existence, malware-status, and audit checks
+        '409':
+          description: Evidence object missing or blocked by malware scan
+      x-source-of-truth-boundary: Signed URL query secrets are never stored unredacted in audit logs.
+  /api/v1/reports/{reportId}/exports:
+    get:
+      summary: List object-storage report exports
+      x-permission-required: report.read
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: reportId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Report export list
+    post:
+      summary: Create object-storage report export
+      description: Stores generated report artifacts in private object storage and returns export metadata plus a short-lived signed download URL. Final PDF/DOCX exports require issued reports.
+      x-permission-required: report.export
+      x-audit-event-generated: REPORT_EXPORT_CREATED
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: reportId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportExportCreateRequest'
+      responses:
+        '201':
+          description: Report export object artifact created
+        '409':
+          description: Report export blocked by readiness/issue gates or missing generated artifact
+      x-human-review-required: true
+      x-source-of-truth-boundary: PostgreSQL stores report export metadata and hashes; object storage stores generated artifacts.
+  /api/v1/report-exports/{exportId}/download-url:
+    get:
+      summary: Create signed report export download URL
+      x-permission-required: report.export
+      x-audit-event-generated: REPORT_EXPORT_DOWNLOAD_URL_CREATED
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: exportId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Signed report export URL issued after object existence check
+        '409':
+          description: Report export object missing
+      x-source-of-truth-boundary: Signed URL query secrets are redacted from audit metadata.
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -2098,6 +2224,45 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
   schemas:
+    EvidenceUploadUrlRequest:
+      type: object
+      required: [asset_id, filename, mime_type, size_bytes]
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_id:
+          type: string
+          format: uuid
+          nullable: true
+        evidence_code:
+          type: string
+        filename:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+        checksum_sha256:
+          type: string
+          nullable: true
+    EvidenceCompleteUploadRequest:
+      type: object
+      required: [upload_session_id]
+      properties:
+        upload_session_id:
+          type: string
+          format: uuid
+        checksum_sha256:
+          type: string
+          nullable: true
+    ReportExportCreateRequest:
+      type: object
+      required: [export_type]
+      properties:
+        export_type:
+          type: string
+          enum: [pdf, docx, json, html]
     FfsCaseCreateRequest:
       type: object
       required:

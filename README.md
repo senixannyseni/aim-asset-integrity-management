@@ -330,3 +330,35 @@ RC3-A focuses on repository hygiene, configuration alignment, frontend root-rout
 The controlled deployment/hypercare evidence generated against `127.0.0.1:5433/aim_tank_integrity` is a confirmed local deployment database. Treat it as controlled production-like evidence unless that database is explicitly the production target. Final real-production closure remains human-gated and pending hypercare completion.
 
 RC3-A does not implement evidence object-storage upload/download, report artifact object storage, or AI staging-to-final promotion. Those remain assigned to later RC3 work packages.
+
+## RC3-B Evidence and Report Object Storage
+
+RC3-B implements the source-of-truth storage boundary for original evidence files and generated report artifacts:
+For RC3-B, object storage stores original evidence files and generated report export artifacts, while PostgreSQL stores metadata, checksums, object keys, status, and audit linkage.
+
+- Object storage stores original evidence files and generated report export artifacts.
+- PostgreSQL stores metadata, hashes, object keys, upload sessions, report export metadata, and audit logs.
+- Evidence metadata cannot be finalized until object storage existence and declared size are verified.
+- Evidence download URLs and report export download URLs are RBAC-controlled and audit-logged.
+- Signed URL query strings are redacted from audit metadata.
+- AI/n8n/service users cannot create final evidence or report export artifacts.
+
+New RC3-B endpoints:
+
+```text
+POST /api/v1/evidence/upload-url
+POST /api/v1/evidence/complete-upload
+GET  /api/v1/evidence/{evidenceId}/download-url
+GET  /api/v1/evidence/{evidenceId}/download
+POST /api/v1/reports/{reportId}/exports
+GET  /api/v1/reports/{reportId}/exports
+GET  /api/v1/report-exports/{exportId}/download-url
+```
+
+Runbook references:
+
+```text
+docs/deployment/object_storage_evidence_runbook.md
+docs/deployment/report_export_storage_runbook.md
+docs/uat/uat_rc3_object_storage_scripts.md
+```

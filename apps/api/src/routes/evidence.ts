@@ -1,8 +1,10 @@
-import { createHash } from 'node:crypto';
+import path from 'node:path';
 import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { config } from '../config/env.js';
+import { objectStorageService, redactSignedUrl, sha256Hex } from '../modules/object-storage/object-storage-service.js';
+import { buildEvidenceObjectKey, validateEvidenceObjectRequest } from '../modules/object-storage/evidence-storage.js';
 import { requirePermission } from '../middleware/rbac.js';
 import {
   asDateString,
@@ -107,11 +109,16 @@ function mapEvidence(row: DbRow): Record<string, unknown> {
     inspection_event_id: row.inspection_event_id,
     object_storage_path: row.object_storage_path ?? row.object_storage_uri,
     object_storage_uri: row.object_storage_uri,
+    storage_provider: row.storage_provider,
+    storage_bucket: row.storage_bucket,
+    object_key: row.object_key,
+    object_version_id: row.object_version_id,
     file_name: row.file_name ?? row.original_filename,
     original_filename: row.original_filename,
     file_type: row.file_type ?? row.file_extension,
     mime_type: row.mime_type,
-    file_size_bytes: row.file_size_bytes,
+    file_size_bytes: row.file_size_bytes ?? row.size_bytes,
+    size_bytes: row.size_bytes ?? row.file_size_bytes,
     inspection_date: row.inspection_date,
     method: row.method,
     component: row.component,
@@ -121,6 +128,7 @@ function mapEvidence(row: DbRow): Record<string, unknown> {
     checksum: row.checksum ?? row.checksum_sha256,
     status: row.evidence_status ?? row.status,
     malware_scan_status: row.malware_scan_status,
+    upload_status: row.upload_status,
     access_status: row.access_status,
     delete_requested_by: row.delete_requested_by,
     delete_approved_by: row.delete_approved_by,
@@ -209,6 +217,30 @@ function hasSameAssetBoundary(evidenceAssetId: string | null, linkedEntityAssetI
   return Boolean(evidenceAssetId && linkedEntityAssetId && evidenceAssetId === linkedEntityAssetId);
 }
 
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+}
+
+function isNonHumanEvidenceActor(req: Request): boolean {
+  const roles = req.user?.roles ?? [];
+  return roles.includes('ai_agent');
+}
+
+function controlledError(res: ApiResponse, status: number, code: string, message: string, details?: unknown): void {
+  res.status(status).json({ error: { code, message, ...(details ? { details } : {}) } });
+}
+
+function normalizeSha256(value: unknown): string | null {
+  const raw = asString(value);
+  if (!raw) return null;
+  const normalized = raw.toLowerCase();
+  return /^[a-f0-9]{64}$/.test(normalized) ? normalized : null;
+}
+
+function extensionForFilename(filename: string): string {
+  return path.extname(filename).replace(/^\./, '').toUpperCase() || 'BIN';
+}
+
 async function nextEvidenceCode(client: PoolClient): Promise<string> {
   const year = new Date().getUTCFullYear();
   const result = await client.query<{ count: string }>(
@@ -273,20 +305,19 @@ evidenceRouter.get('/evidence/:evidenceId', requirePermission('evidence.read'), 
   }
 });
 
-function buildSignedEvidenceUrl(evidence: DbRow): { signed_url: string; expires_at: string } {
-  const expiresAt = new Date(Date.now() + config.objectStorage.signedUrlTtlSeconds * 1000).toISOString();
-  const storageUri = String(evidence.object_storage_path ?? evidence.object_storage_uri ?? '');
-  const signature = createHash('sha256')
-    .update(`${evidence.id}:${storageUri}:${expiresAt}:${config.authJwtSecret}`)
-    .digest('hex');
-  const encodedPath = encodeURIComponent(storageUri);
-  return {
-    signed_url: `/api/v1/evidence/${String(evidence.id)}/download?path=${encodedPath}&expires=${encodeURIComponent(expiresAt)}&signature=${signature}`,
-    expires_at: expiresAt
-  };
+async function buildSignedEvidenceUrl(params: {
+  objectKey: string;
+  responseContentType?: string | null;
+  expiresInSeconds?: number;
+}) {
+  return objectStorageService.getSignedDownloadUrl({
+    objectKey: params.objectKey,
+    responseContentType: params.responseContentType ?? undefined,
+    expiresInSeconds: params.expiresInSeconds
+  });
 }
 
-async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evidenceId: string): Promise<void> {
+async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evidenceId: string, accessMode: 'download_url' | 'download_open'): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query('begin');
@@ -297,26 +328,75 @@ async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evid
       res.status(404).json({ error: { code: 'EVIDENCE_NOT_FOUND', message: 'Evidence file not found.' } });
       return;
     }
-    if (String(evidence.malware_scan_status ?? 'pending_scan') === 'infected') {
+
+    const scanStatus = String(evidence.malware_scan_status ?? 'pending_scan');
+    if (['infected', 'blocked', 'quarantined'].includes(scanStatus)) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'EVIDENCE_BLOCKED_BY_SCAN', message: 'Evidence access is blocked because malware scan status is infected.' } });
+      res.status(409).json({ error: { code: 'EVIDENCE_BLOCKED_BY_SCAN', message: 'Evidence access is blocked because malware scan status does not allow download.' } });
       return;
     }
-    const signed = buildSignedEvidenceUrl(evidence);
-    await client.query(`update evidence_files set accessed_at = now(), access_status = 'signed_url_issued', updated_at = now() where id = $1`, [evidenceId]);
-    const auditLogId = await writeAudit(client, req, 'EVIDENCE_SIGNED_URL_CREATED', 'evidence_file', evidenceId, null, { evidence_id: evidenceId, expires_at: signed.expires_at }, {
-      signed_url_ttl_seconds: config.objectStorage.signedUrlTtlSeconds,
-      object_storage_path_not_exposed_as_authority: true
+
+    const objectKey = asString(evidence.object_key) ?? asString(evidence.object_storage_path ?? evidence.object_storage_uri);
+    if (!objectKey) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'EVIDENCE_OBJECT_KEY_MISSING', message: 'Evidence object key is missing; download cannot be issued.' } });
+      return;
+    }
+
+    const exists = await objectStorageService.objectExists(objectKey);
+    if (!exists) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'EVIDENCE_OBJECT_NOT_FOUND', message: 'Evidence metadata exists but the object-storage file was not found.' } });
+      return;
+    }
+
+    const signed = await buildSignedEvidenceUrl({
+      objectKey,
+      responseContentType: asString(evidence.mime_type),
+      expiresInSeconds: config.objectStorage.signedUrlTtlSeconds
     });
+    await client.query(
+      `update evidence_files
+       set accessed_at = now(), access_status = $2, signed_url_expires_at = $3::timestamptz, updated_at = now()
+       where id = $1`,
+      [evidenceId, accessMode === 'download_open' ? 'download_opened' : 'signed_url_issued', signed.expiresAt]
+    );
+    const auditLogId = await writeAudit(
+      client,
+      req,
+      accessMode === 'download_open' ? 'EVIDENCE_DOWNLOAD_OPENED' : 'EVIDENCE_DOWNLOAD_URL_CREATED',
+      'evidence_file',
+      evidenceId,
+      null,
+      { evidence_id: evidenceId, expires_at: signed.expiresAt, object_key: objectKey },
+      {
+        access_status: accessMode === 'download_open' ? 'download_opened' : 'signed_url_issued',
+        ...(accessMode === 'download_url'
+          ? { legacy_event_alias: 'EVIDENCE_SIGNED_URL_CREATED' }
+          : {}),
+        signed_url_ttl_seconds: config.objectStorage.signedUrlTtlSeconds,
+        signed_url_redacted: redactSignedUrl(signed.url),
+        object_storage_bucket: signed.bucket,
+        signed_url_query_not_logged: true
+      }
+    );
     await client.query('commit');
+
+    if (accessMode === 'download_open') {
+      res.redirect(302, signed.url);
+      return;
+    }
+
     res.json({
       data: {
         evidence_id: evidence.id,
         evidence_code: evidence.evidence_code,
-        signed_url: signed.signed_url,
-        expires_at: signed.expires_at,
-        malware_scan_status: evidence.malware_scan_status ?? 'pending_scan',
-        note: 'Signed URL is issued by AIM after RBAC check and access audit; object storage remains private.'
+        object_key: objectKey,
+        download_url: signed.url,
+        signed_url: signed.url,
+        expires_at: signed.expiresAt,
+        malware_scan_status: scanStatus,
+        note: 'Signed URL is issued by AIM after RBAC, object-existence, malware-status, and audit checks.'
       },
       auditLogId
     });
@@ -335,22 +415,320 @@ evidenceRouter.get('/evidence/:evidenceId/open', requirePermission('evidence.ope
     return;
   }
   try {
-    await createEvidenceAccessResponse(req, res, evidenceId);
+    await createEvidenceAccessResponse(req, res, evidenceId, 'download_url');
   } catch (error) {
     next(error);
   }
 });
 
-evidenceRouter.get('/evidence/:evidenceId/download-url', requirePermission('evidence.open'), async (req, res, next) => {
+evidenceRouter.get('/evidence/:evidenceId/download-url', requirePermission('evidence.download_url'), async (req, res, next) => {
   const evidenceId = req.params.evidenceId;
   if (!evidenceId) {
     res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'Missing evidenceId.' } });
     return;
   }
   try {
-    await createEvidenceAccessResponse(req, res, evidenceId);
+    await createEvidenceAccessResponse(req, res, evidenceId, 'download_url');
   } catch (error) {
     next(error);
+  }
+});
+
+evidenceRouter.get('/evidence/:evidenceId/download', requirePermission('evidence.open'), async (req, res, next) => {
+  const evidenceId = req.params.evidenceId;
+  if (!evidenceId) {
+    res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'Missing evidenceId.' } });
+    return;
+  }
+  try {
+    await createEvidenceAccessResponse(req, res, evidenceId, 'download_open');
+  } catch (error) {
+    next(error);
+  }
+});
+
+evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload'), async (req, res, next) => {
+  const body = ensureBody(req, res);
+  if (!body) return;
+
+  if (isNonHumanEvidenceActor(req)) {
+    controlledError(res, 403, 'HUMAN_EVIDENCE_UPLOAD_REQUIRED', 'Evidence upload URL creation requires a human user. AI/service actors cannot create final evidence artifacts.');
+    return;
+  }
+
+  const assetId = asString(body.asset_id);
+  const filename = asString(body.filename ?? body.file_name);
+  const mimeType = asString(body.mime_type);
+  const sizeBytes = asInteger(body.size_bytes ?? body.file_size_bytes);
+  const inspectionId = asString(body.inspection_id ?? body.inspection_event_id) ?? null;
+  const requestedEvidenceCode = asString(body.evidence_code);
+  const checksum = normalizeSha256(body.checksum_sha256 ?? body.checksum);
+
+  if (!assetId || !isUuid(assetId) || !filename || !mimeType || !sizeBytes) {
+    validationError(res, [
+      { field: 'asset_id', message: 'asset_id UUID, filename, mime_type, and size_bytes are required.', severity: 'error' }
+    ]);
+    return;
+  }
+  if (inspectionId && !isUuid(inspectionId)) {
+    validationError(res, [{ field: 'inspection_id', message: 'inspection_id must be a UUID when provided.', severity: 'error' }]);
+    return;
+  }
+
+  let safeFilename: string;
+  try {
+    safeFilename = validateEvidenceObjectRequest({ filename, mimeType, sizeBytes }).safeFilename;
+  } catch (error) {
+    validationError(res, [{ field: 'filename', message: error instanceof Error ? error.message : 'Invalid evidence object request.', severity: 'error' }]);
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const assetResult = await client.query<{ id: string; asset_tag: string | null }>('select id, asset_tag from assets where id = $1 and deleted_at is null', [assetId]);
+    const asset = assetResult.rows[0];
+    if (!asset) {
+      await client.query('rollback');
+      controlledError(res, 404, 'ASSET_NOT_FOUND', 'Asset not found for evidence upload URL.');
+      return;
+    }
+
+    if (inspectionId) {
+      const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2', [inspectionId, assetId]);
+      if (inspectionResult.rowCount === 0) {
+        await client.query('rollback');
+        controlledError(res, 404, 'INSPECTION_NOT_FOUND', 'Inspection event not found for asset.');
+        return;
+      }
+    }
+
+    const evidenceCode = requestedEvidenceCode ?? await nextEvidenceCode(client);
+    const objectKey = buildEvidenceObjectKey({
+      assetTagOrId: String(asset.asset_tag ?? assetId),
+      inspectionId,
+      evidenceCode,
+      filename: safeFilename
+    });
+    const signedUpload = await objectStorageService.getSignedUploadUrl({
+      objectKey,
+      contentType: mimeType,
+      contentLength: sizeBytes,
+      checksumSha256: checksum ?? undefined,
+      expiresInSeconds: config.objectStorage.signedUrlTtlSeconds
+    });
+
+    const sessionResult = await client.query<DbRow>(
+      `insert into evidence_upload_sessions(
+        asset_id,
+        inspection_id,
+        evidence_code,
+        original_filename,
+        safe_filename,
+        declared_mime_type,
+        declared_size_bytes,
+        expected_checksum_sha256,
+        storage_bucket,
+        object_key,
+        upload_status,
+        requested_by,
+        expires_at,
+        metadata_json
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12::timestamptz, $13::jsonb)
+      returning *`,
+      [
+        assetId,
+        inspectionId,
+        evidenceCode,
+        filename,
+        safeFilename,
+        mimeType,
+        sizeBytes,
+        checksum,
+        signedUpload.bucket,
+        objectKey,
+        actorUserId(req),
+        signedUpload.expiresAt,
+        JSON.stringify({ signed_url_redacted: redactSignedUrl(signedUpload.url), signed_url_query_not_logged: true })
+      ]
+    );
+    const session = sessionResult.rows[0];
+
+    if (!session) {
+      throw new Error('Evidence upload session insert failed.');
+    }
+
+    const auditLogId = await writeAudit(client, req, 'EVIDENCE_UPLOAD_URL_CREATED', 'evidence_upload_session', String(session.upload_session_id), null, {
+      upload_session_id: session.upload_session_id,
+      asset_id: assetId,
+      evidence_code: evidenceCode,
+      object_key: objectKey,
+      expires_at: signedUpload.expiresAt
+    }, {
+      signed_url_redacted: redactSignedUrl(signedUpload.url),
+      signed_url_query_not_logged: true,
+      storage_bucket: signedUpload.bucket
+    });
+    await client.query('commit');
+    res.status(201).json({
+      data: {
+        upload_session_id: session.upload_session_id,
+        object_key: objectKey,
+        upload_url: signedUpload.url,
+        expires_at: signedUpload.expiresAt,
+        required_headers: { 'Content-Type': mimeType }
+      },
+      auditLogId
+    });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upload'), async (req, res, next) => {
+  const body = ensureBody(req, res);
+  if (!body) return;
+
+  if (isNonHumanEvidenceActor(req)) {
+    controlledError(res, 403, 'HUMAN_EVIDENCE_UPLOAD_REQUIRED', 'Evidence upload completion requires a human user. AI/service actors cannot finalize evidence artifacts.');
+    return;
+  }
+
+  const uploadSessionId = asString(body.upload_session_id);
+  const providedChecksum = normalizeSha256(body.checksum_sha256 ?? body.checksum);
+  if (!uploadSessionId || !isUuid(uploadSessionId)) {
+    validationError(res, [{ field: 'upload_session_id', message: 'upload_session_id UUID is required.', severity: 'error' }]);
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const sessionResult = await client.query<DbRow>('select * from evidence_upload_sessions where upload_session_id = $1 for update', [uploadSessionId]);
+    const session = sessionResult.rows[0];
+    if (!session) {
+      await client.query('rollback');
+      controlledError(res, 404, 'UPLOAD_SESSION_NOT_FOUND', 'Evidence upload session not found.');
+      return;
+    }
+    if (String(session.upload_status) === 'verified') {
+      await client.query('rollback');
+      controlledError(res, 409, 'UPLOAD_SESSION_ALREADY_COMPLETED', 'Evidence upload session is already verified.');
+      return;
+    }
+    if (new Date(String(session.expires_at)).getTime() < Date.now()) {
+      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'expired']);
+      await client.query('commit');
+      controlledError(res, 409, 'UPLOAD_SESSION_EXPIRED', 'Evidence upload session has expired.');
+      return;
+    }
+
+    const objectKey = String(session.object_key);
+    let objectHead;
+    try {
+      objectHead = await objectStorageService.headObject(objectKey);
+    } catch {
+      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
+      await client.query('commit');
+      controlledError(res, 409, 'EVIDENCE_OBJECT_NOT_FOUND', 'Object storage file does not exist. Evidence metadata was not finalized.');
+      return;
+    }
+
+    const expectedSize = Number(session.declared_size_bytes);
+    if (objectHead.contentLength !== expectedSize) {
+      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
+      await client.query('commit');
+      controlledError(res, 409, 'EVIDENCE_OBJECT_SIZE_MISMATCH', 'Object storage size does not match declared upload size.', { expected_size_bytes: expectedSize, actual_size_bytes: objectHead.contentLength });
+      return;
+    }
+
+    const expectedChecksum = asString(session.expected_checksum_sha256);
+    if (expectedChecksum && providedChecksum && expectedChecksum !== providedChecksum) {
+      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
+      await client.query('commit');
+      controlledError(res, 409, 'EVIDENCE_CHECKSUM_MISMATCH', 'Provided checksum does not match expected checksum.');
+      return;
+    }
+
+    const checksum = providedChecksum ?? expectedChecksum ?? sha256Hex(`${objectKey}:${objectHead.contentLength}:${objectHead.eTag ?? ''}`);
+    const safeFilename = String(session.safe_filename);
+    const fileExtension = extensionForFilename(safeFilename);
+    const evidenceResult = await client.query<DbRow>(
+      `insert into evidence_files(
+        evidence_code,
+        asset_id,
+        inspection_event_id,
+        object_storage_uri,
+        object_storage_path,
+        storage_provider,
+        storage_bucket,
+        object_key,
+        object_version_id,
+        original_filename,
+        file_name,
+        file_extension,
+        file_type,
+        mime_type,
+        file_size_bytes,
+        size_bytes,
+        checksum_sha256,
+        checksum,
+        uploaded_by,
+        status,
+        evidence_status,
+        malware_scan_status,
+        access_status,
+        upload_status,
+        uploaded_at,
+        completed_at
+      ) values ($1, $2, $3, $4, $4, 's3-compatible', $5, $6, $7, $8, $8, $9, $9, $10, $11, $11, $12, $12, $13, 'active', 'active', 'pending_scan', 'not_issued', 'verified', now(), now())
+      on conflict (checksum_sha256, object_storage_uri) do update set
+        storage_bucket = excluded.storage_bucket,
+        object_key = excluded.object_key,
+        upload_status = 'verified',
+        completed_at = now(),
+        updated_at = now()
+      returning *`,
+      [
+        String(session.evidence_code),
+        String(session.asset_id),
+        session.inspection_id ?? null,
+        objectKey,
+        String(session.storage_bucket),
+        objectKey,
+        objectHead.versionId ?? null,
+        safeFilename,
+        fileExtension,
+        String(session.declared_mime_type),
+        objectHead.contentLength,
+        checksum,
+        actorUserId(req)
+      ]
+    );
+    const evidence = evidenceResult.rows[0];
+    await client.query(
+      `update evidence_upload_sessions
+       set evidence_id = $2, upload_status = 'verified', completed_at = now(), metadata_json = metadata_json || $3::jsonb
+       where upload_session_id = $1`,
+      [uploadSessionId, evidence?.id, JSON.stringify({ evidence_id: evidence?.id, object_verified: true })]
+    );
+    const auditLogId = await writeAudit(client, req, 'EVIDENCE_UPLOAD_COMPLETED', 'evidence_file', String(evidence?.id ?? ''), null, mapEvidence(evidence ?? {}), {
+      upload_session_id: uploadSessionId,
+      object_key: objectKey,
+      storage_bucket: session.storage_bucket,
+      checksum_sha256: checksum,
+      object_verified: true
+    });
+    await client.query('commit');
+    res.status(201).json({ data: mapEvidence(evidence ?? {}), auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
   }
 });
 

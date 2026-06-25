@@ -29,6 +29,16 @@ type IntegrityDecision = {
   evidence_count?: number;
 };
 
+type ReportExport = {
+  report_export_id: string;
+  export_type?: string;
+  export_format?: string;
+  export_status?: string;
+  download_status?: string;
+  content_hash_sha256?: string;
+  download_url?: string;
+};
+
 type ReportRecord = {
   report_id: string;
   report_code: string;
@@ -130,6 +140,23 @@ export default function ReportsClient() {
     await loadData();
   }
 
+  async function createReportExport(reportId: string, exportType: 'json' | 'pdf') {
+    const response = await apiFetch(`/api/v1/reports/${reportId}/exports`, {
+      method: 'POST',
+      body: JSON.stringify({ export_type: exportType })
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      setMessage(messageFromPayload(payload));
+      setSelected(payload.error ?? null);
+      return;
+    }
+    const exportData = payload.data as ReportExport;
+    setMessage(`Report ${exportType.toUpperCase()} export created in object storage. Hash: ${exportData.content_hash_sha256 ?? 'recorded'}`);
+    setSelected(exportData as unknown as Record<string, unknown>);
+    if (exportData.download_url) window.open(exportData.download_url, '_blank', 'noopener,noreferrer');
+  }
+
   async function issueReport(reportId: string) {
     const response = await apiFetch(`/api/v1/reports/${reportId}/issue`, {
       method: 'POST',
@@ -169,7 +196,7 @@ export default function ReportsClient() {
     <main>
       <p>Sprint 10 / RC2</p>
       <h1>Tank Integrity Report Generation</h1>
-      <p>Reports remain draft until senior approval and final issue gates pass. RC2 requires direct evidence links to report, calculation_run, and approved integrity_decision.</p>
+      <p>Reports remain draft until senior approval and final issue gates pass. RC3-B stores report export artifacts in object storage and returns audited signed download URLs.</p>
       <nav>
         <Link href="/login">Login</Link> | <Link href="/calculations">Calculations</Link> | <Link href="/integrity-decisions">Integrity Decisions</Link> | <Link href="/work-orders">Work Orders</Link> | <Link href="/evidence">Evidence Repository</Link>
       </nav>
@@ -240,6 +267,8 @@ export default function ReportsClient() {
                     <button type="button" onClick={() => setSelected(report as unknown as Record<string, unknown>)}>View</button>
                     <button type="button" disabled={report.report_status === 'issued'} onClick={() => approveReport(report.report_id)}>Approve</button>
                     <button type="button" disabled={!canIssue} onClick={() => issueReport(report.report_id)}>Issue</button>
+                    <button type="button" onClick={() => createReportExport(report.report_id, 'json')}>Export JSON</button>
+                    <button type="button" disabled={report.report_status !== 'issued'} onClick={() => createReportExport(report.report_id, 'pdf')}>Export Final PDF</button>
                   </td>
                 </tr>
               );

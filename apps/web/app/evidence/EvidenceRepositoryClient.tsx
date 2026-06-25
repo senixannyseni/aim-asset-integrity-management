@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { apiFetch, apiUrl } from '../../lib/api-client';
+import { apiFetch } from '../../lib/api-client';
 
 type AssetOption = {
   asset_id: string;
@@ -17,6 +17,11 @@ type EvidenceFile = {
   file_name: string;
   file_type: string;
   object_storage_path: string;
+  object_key?: string;
+  storage_bucket?: string;
+  upload_status?: string;
+  malware_scan_status?: string;
+  size_bytes?: number;
   inspection_date: string;
   method: string;
   component: string;
@@ -58,6 +63,19 @@ export default function EvidenceRepositoryClient() {
   useEffect(() => {
     void loadPageData();
   }, []);
+
+  async function openEvidenceDownload(evidenceId: string) {
+    setMessage(null);
+    const response = await apiFetch(`/api/v1/evidence/${evidenceId}/download-url`, { cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok) {
+      setMessage(payload?.error?.message ?? 'Could not create evidence download URL.');
+      setSelectedEvidence(null);
+      return;
+    }
+    setMessage('Evidence download URL created after RBAC, object-existence, malware-status, and audit checks.');
+    window.open(payload.data?.download_url ?? payload.data?.signed_url, '_blank', 'noopener,noreferrer');
+  }
 
   async function uploadEvidence(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,7 +130,7 @@ export default function EvidenceRepositoryClient() {
         <form className="panel form-grid" onSubmit={uploadEvidence}>
           <div className="panel-heading">
             <h2>Register Evidence</h2>
-            <p>Local MVP captures metadata and object-storage-compatible path. Binary upload/presigned URL is planned for production.</p>
+            <p>RC3-B supports object-storage upload sessions and audited download URLs. This fallback form still registers metadata for legacy/manual evidence records.</p>
           </div>
 
           <label>
@@ -157,15 +175,17 @@ export default function EvidenceRepositoryClient() {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Code</th><th>File</th><th>Type</th><th>Method</th><th>Status</th></tr>
+                <tr><th>Code</th><th>File</th><th>Type</th><th>Method</th><th>Upload</th><th>Scan</th><th>Status</th></tr>
               </thead>
               <tbody>
-                {loading ? <tr><td colSpan={5}>Loading evidence...</td></tr> : evidenceFiles.length === 0 ? <tr><td colSpan={5}>No evidence registered.</td></tr> : evidenceFiles.map((evidence) => (
+                {loading ? <tr><td colSpan={7}>Loading evidence...</td></tr> : evidenceFiles.length === 0 ? <tr><td colSpan={7}>No evidence registered.</td></tr> : evidenceFiles.map((evidence) => (
                   <tr key={evidence.evidence_id}>
                     <td><button className="link-button" type="button" onClick={() => setSelectedEvidence(evidence)}>{evidence.evidence_code}</button></td>
                     <td>{evidence.file_name}</td>
                     <td>{evidence.file_type}</td>
                     <td>{evidence.method}</td>
+                    <td><span className="badge">{evidence.upload_status ?? 'legacy'}</span></td>
+                    <td><span className="badge">{evidence.malware_scan_status ?? 'pending_scan'}</span></td>
                     <td><span className="badge">{evidence.status}</span></td>
                   </tr>
                 ))}
@@ -182,10 +202,15 @@ export default function EvidenceRepositoryClient() {
               <h2>Evidence Viewer Panel</h2>
               <p>{selectedEvidence.evidence_code} — {selectedEvidence.file_name}</p>
             </div>
-            <a className="secondary-button" href={apiUrl(`/api/v1/evidence/${selectedEvidence.evidence_id}/open`)} target="_blank" rel="noreferrer">Open Evidence</a>
+            <button className="secondary-button" type="button" onClick={() => openEvidenceDownload(selectedEvidence.evidence_id)}>Create Audited Download URL</button>
           </div>
           <dl className="metadata-grid">
             <dt>Object Path</dt><dd>{selectedEvidence.object_storage_path}</dd>
+            <dt>Object Key</dt><dd>{selectedEvidence.object_key ?? '-'}</dd>
+            <dt>Storage Bucket</dt><dd>{selectedEvidence.storage_bucket ?? '-'}</dd>
+            <dt>Upload Status</dt><dd>{selectedEvidence.upload_status ?? 'legacy'}</dd>
+            <dt>Malware Scan</dt><dd>{selectedEvidence.malware_scan_status ?? 'pending_scan'}</dd>
+            <dt>Size Bytes</dt><dd>{selectedEvidence.size_bytes ?? '-'}</dd>
             <dt>Checksum</dt><dd>{selectedEvidence.checksum}</dd>
             <dt>Inspection Date</dt><dd>{selectedEvidence.inspection_date?.slice(0, 10)}</dd>
             <dt>Component</dt><dd>{selectedEvidence.component}</dd>
