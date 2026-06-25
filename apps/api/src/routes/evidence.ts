@@ -329,24 +329,43 @@ async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evid
       return;
     }
 
+    const blockEvidenceAccess = async (status: number, code: string, message: string, metadata: Record<string, unknown>): Promise<void> => {
+      await client.query(
+        `update evidence_files
+         set access_status = 'blocked', accessed_at = now(), updated_at = now()
+         where id = $1`,
+        [evidenceId]
+      );
+      const auditLogId = await writeAudit(client, req, 'EVIDENCE_ACCESS_BLOCKED', 'evidence_file', evidenceId, null, {
+        evidence_id: evidenceId,
+        access_status: 'blocked',
+        blocked_code: code,
+        access_mode: accessMode,
+        ...metadata
+      }, {
+        access_status: 'blocked',
+        signed_url_query_not_logged: true,
+        object_storage_access_denied: true
+      });
+      await client.query('commit');
+      res.status(status).json({ error: { code, message, auditLogId } });
+    };
+
     const scanStatus = String(evidence.malware_scan_status ?? 'pending_scan');
     if (['infected', 'blocked', 'quarantined'].includes(scanStatus)) {
-      await client.query('rollback');
-      res.status(409).json({ error: { code: 'EVIDENCE_BLOCKED_BY_SCAN', message: 'Evidence access is blocked because malware scan status does not allow download.' } });
+      await blockEvidenceAccess(409, 'EVIDENCE_BLOCKED_BY_SCAN', 'Evidence access is blocked because malware scan status does not allow download.', { malware_scan_status: scanStatus });
       return;
     }
 
     const objectKey = asString(evidence.object_key) ?? asString(evidence.object_storage_path ?? evidence.object_storage_uri);
     if (!objectKey) {
-      await client.query('rollback');
-      res.status(409).json({ error: { code: 'EVIDENCE_OBJECT_KEY_MISSING', message: 'Evidence object key is missing; download cannot be issued.' } });
+      await blockEvidenceAccess(409, 'EVIDENCE_OBJECT_KEY_MISSING', 'Evidence object key is missing; download cannot be issued.', { object_key_missing: true });
       return;
     }
 
     const exists = await objectStorageService.objectExists(objectKey);
     if (!exists) {
-      await client.query('rollback');
-      res.status(409).json({ error: { code: 'EVIDENCE_OBJECT_NOT_FOUND', message: 'Evidence metadata exists but the object-storage file was not found.' } });
+      await blockEvidenceAccess(409, 'EVIDENCE_OBJECT_NOT_FOUND', 'Evidence metadata exists but the object-storage file was not found.', { object_key: objectKey });
       return;
     }
 
@@ -576,7 +595,10 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
         object_key: objectKey,
         upload_url: signedUpload.url,
         expires_at: signedUpload.expiresAt,
-        required_headers: { 'Content-Type': mimeType }
+        required_headers: {
+          'Content-Type': mimeType,
+          ...(checksum ? { 'x-amz-meta-checksum_sha256': checksum } : {})
+        }
       },
       auditLogId
     });
@@ -646,14 +668,27 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
     }
 
     const expectedChecksum = asString(session.expected_checksum_sha256);
+    const objectChecksum = asString(objectHead.metadata?.checksum_sha256 ?? objectHead.metadata?.['checksum-sha256']);
     if (expectedChecksum && providedChecksum && expectedChecksum !== providedChecksum) {
       await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
       await client.query('commit');
       controlledError(res, 409, 'EVIDENCE_CHECKSUM_MISMATCH', 'Provided checksum does not match expected checksum.');
       return;
     }
+    if (expectedChecksum && objectChecksum && expectedChecksum !== objectChecksum) {
+      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
+      await client.query('commit');
+      controlledError(res, 409, 'EVIDENCE_OBJECT_CHECKSUM_MISMATCH', 'Object storage metadata checksum does not match expected checksum.');
+      return;
+    }
+    if (expectedChecksum && !providedChecksum && !objectChecksum) {
+      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
+      await client.query('commit');
+      controlledError(res, 409, 'EVIDENCE_CHECKSUM_REQUIRED', 'Checksum verification is required because this upload session declared an expected SHA-256 checksum.');
+      return;
+    }
 
-    const checksum = providedChecksum ?? expectedChecksum ?? sha256Hex(`${objectKey}:${objectHead.contentLength}:${objectHead.eTag ?? ''}`);
+    const checksum = providedChecksum ?? objectChecksum ?? expectedChecksum ?? sha256Hex(`${objectKey}:${objectHead.contentLength}:${objectHead.eTag ?? ''}`);
     const safeFilename = String(session.safe_filename);
     const fileExtension = extensionForFilename(safeFilename);
     const evidenceResult = await client.query<DbRow>(
@@ -807,13 +842,17 @@ evidenceRouter.post('/evidence/upload', requirePermission('evidence.upload'), as
         status,
         evidence_status,
         malware_scan_status,
-        access_status
-      ) values ($1, $2, $3, $4, $4, $5, $5, $6, $6, $7, $8, $9, $9, $10, $11, $12, $13, $14, $14, $15, 'active', 'active', 'pending_scan', 'not_issued')
+        access_status,
+        upload_status
+      ) values ($1, $2, $3, $4, $4, $5, $5, $6, $6, $7, $8, $9, $9, $10, $11, $12, $13, $14, $14, $15, 'active', 'metadata_only_pending_object_verification', 'pending_scan', 'blocked', 'pending')
       on conflict (checksum_sha256, object_storage_uri) do update set
         method = excluded.method,
         component = excluded.component,
         location = excluded.location,
         page_or_sheet_ref = excluded.page_or_sheet_ref,
+        evidence_status = 'metadata_only_pending_object_verification',
+        access_status = 'blocked',
+        upload_status = 'pending',
         updated_at = now()
       returning *`,
       [
@@ -836,13 +875,23 @@ evidenceRouter.post('/evidence/upload', requirePermission('evidence.upload'), as
     );
 
     const evidence = result.rows[0];
-    const auditLogId = await writeAudit(client, req, 'EVIDENCE_UPLOADED', 'evidence_file', String(evidence?.id ?? ''), null, mapEvidence(evidence ?? {}), {
+    const auditLogId = await writeAudit(client, req, 'EVIDENCE_LEGACY_METADATA_REGISTERED', 'evidence_file', String(evidence?.id ?? ''), null, mapEvidence(evidence ?? {}), {
       module: 'evidence_repository',
-      object_storage_boundary: 'metadata_only_in_aim'
+      legacy_route: true,
+      gate_eligible: false,
+      object_storage_boundary: 'metadata_only_pending_object_verification',
+      object_verification_required: true
     });
 
     await client.query('commit');
-    res.status(201).json({ data: mapEvidence(evidence ?? {}), auditLogId });
+    res.status(201).json({
+      data: mapEvidence(evidence ?? {}),
+      auditLogId,
+      warning: {
+        code: 'LEGACY_METADATA_IMPORT_REQUIRES_OBJECT_VERIFICATION',
+        message: 'POST /api/v1/evidence/upload is retained only for legacy metadata import. Use /api/v1/evidence/upload-url and /api/v1/evidence/complete-upload for gate-eligible object-storage evidence.'
+      }
+    });
   } catch (error) {
     await client.query('rollback');
     next(error);

@@ -1,6 +1,6 @@
 # Phase 2.3 Release Candidate Go / No-Go Decision Template
 
-**Status:** Controlled UAT Cycle 1 passed with local fixes; release-hardening in progress  
+**Status:** Controlled UAT Cycle 1 passed with local fixes; RC3-A/RC3-B hardening implemented locally; final production go-live remains pending formal sign-off  
 **Decision rule:** Production go-live remains conditional on release-hardening review, security approval, and final sign-off. UAT Cycle 1 evidence is available in `D:\AIM_UAT_Evidence\cycle_1\2026-06-23\`.
 
 ## 1. Release Candidate Identification

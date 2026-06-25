@@ -242,6 +242,37 @@ integrity_decisions.id <- evidence_links(linked_entity_type = 'integrity_decisio
 Integrity decision approval is blocked until direct integrity-decision evidence exists. Internal work orders may be generated from issued reports or approved integrity decisions and remain inside AIM; External CMMS is out of MVP scope.
 
 
-## RC3-A alignment note
+## RC3-A / RC3-B alignment note
 
-RC2 is merged/tagged and RC3 hardening is in progress. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments. Evidence object-storage upload/download and report artifact object-storage storage are planned for later RC3 packages and are not implemented by RC3-A. Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
+RC3-A and RC3-B are now implemented in this repository state. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments.
+
+RC3-B implements evidence object-storage upload/download and report artifact object-storage export. Original evidence files and generated report artifacts are stored in private S3-compatible object storage; PostgreSQL stores metadata, checksums, object keys, upload sessions, status, and audit linkage. Legacy metadata-only evidence upload is retained only for compatibility and is not gate-eligible until object storage verification is completed through the RC3-B flow.
+
+Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
+
+## RC3-B Addendum — Object Storage Relationships
+
+RC3-B adds object-storage metadata and upload-session relationships while preserving AIM/PostgreSQL as the system of record for metadata and audit history.
+
+```mermaid
+erDiagram
+  ASSETS ||--o{ EVIDENCE_UPLOAD_SESSIONS : owns_pending_upload
+  INSPECTION_EVENTS ||--o{ EVIDENCE_UPLOAD_SESSIONS : contextualizes
+  EVIDENCE_UPLOAD_SESSIONS }o--|| EVIDENCE_FILES : finalizes_after_verification
+  EVIDENCE_FILES ||--o{ EVIDENCE_LINKS : supports_engineering_records
+  REPORTS ||--o{ REPORT_EXPORTS : exports_artifacts
+  USERS ||--o{ EVIDENCE_UPLOAD_SESSIONS : requested_by
+  USERS ||--o{ REPORT_EXPORTS : generated_by
+  AUDIT_LOGS }o--|| EVIDENCE_FILES : audits_access
+  AUDIT_LOGS }o--|| REPORT_EXPORTS : audits_export_download
+```
+
+### Relationship rules
+
+- `evidence_upload_sessions` is the pre-finalization object-storage upload control table. It links to `assets`, optional `inspection_events`, optional finalized `evidence_files`, and the requesting human user.
+- `evidence_files` stores object-storage metadata only: provider, bucket, object key, version, size, checksum, upload/access status, and timestamps.
+- Original evidence file bytes are not stored in PostgreSQL.
+- `report_exports` stores report artifact metadata, hashes, object key, file size, MIME type, generation actor, and download status.
+- Generated report artifact bytes are not stored in PostgreSQL.
+- Report issue/evidence gates count only object-verified evidence records. Legacy metadata-only evidence records remain blocked/pending until completed through the RC3-B object-storage verification flow.
+- Blocked evidence access, signed URL issuance, upload completion, report export creation, and report export download URL issuance write audit events.
