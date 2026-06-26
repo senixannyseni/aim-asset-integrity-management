@@ -3,7 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { config } from '../config/env.js';
-import { objectStorageService, redactSignedUrl } from '../modules/object-storage/object-storage-service.js';
+import { objectStorageService, redactSignedUrl, sha256Hex } from '../modules/object-storage/object-storage-service.js';
 import { buildEvidenceObjectKey, validateEvidenceObjectRequest } from '../modules/object-storage/evidence-storage.js';
 import { requirePermission } from '../middleware/rbac.js';
 import {
@@ -491,12 +491,27 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
   const inspectionId = asString(body.inspection_id ?? body.inspection_event_id) ?? null;
   const checksum = normalizeSha256(body.checksum_sha256 ?? body.checksum);
 
-  if (!assetId || !isUuid(assetId) || !filename || !mimeType || !sizeBytes || !checksum) {
-    validationError(res, [
-      { field: 'asset_id', message: 'asset_id UUID, filename, mime_type, size_bytes, and checksum_sha256 are required for gate-eligible object-storage evidence.', severity: 'error' }
-    ]);
-    return;
-  }
+if (!assetId || !isUuid(assetId) || !filename || !mimeType || !sizeBytes) {
+  validationError(res, [
+    {
+      field: 'asset_id',
+      message: 'asset_id UUID, filename, mime_type, and size_bytes are required for gate-eligible object-storage evidence.',
+      severity: 'error'
+    }
+  ]);
+  return;
+}
+
+if (!checksum) {
+  controlledError(
+    res,
+    400,
+    'EVIDENCE_CHECKSUM_REQUIRED',
+    'checksum_sha256 is required for gate-eligible object-storage evidence upload.',
+    { checksum_required: true }
+  );
+  return;
+}
   if (inspectionId && !isUuid(inspectionId)) {
     validationError(res, [{ field: 'inspection_id', message: 'inspection_id must be a UUID when provided.', severity: 'error' }]);
     return;
