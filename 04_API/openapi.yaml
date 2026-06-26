@@ -3193,12 +3193,19 @@ components:
           - reject
         comment:
           type: string
+        reason:
+          type: string
         rejection_reason:
           type: string
         corrected_value:
           type: string
+        corrected_unit:
+          type: string
         correction_reason:
           type: string
+        evidence_file_id:
+          type: string
+          format: uuid
         evidence_reference:
           type: object
           additionalProperties: true
