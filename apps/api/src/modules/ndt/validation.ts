@@ -80,5 +80,15 @@ export function validateNdtMeasurementPayload(body: Record<string, unknown>): Va
     issues.push({ field: 'reading_date', message: 'reading_date must use YYYY-MM-DD.', severity: 'error' });
   }
 
+  const extractionSource = asString(body.extraction_source);
+  const allowedExtractionSources = ['manual', 'bulk_import', 'ai_staging', 'vendor_import'];
+  if (extractionSource && !allowedExtractionSources.includes(extractionSource)) {
+    issues.push({
+      field: 'extraction_source',
+      message: `extraction_source must be one of: ${allowedExtractionSources.join(', ')}.`,
+      severity: 'error'
+    });
+  }
+
   return issues;
 }

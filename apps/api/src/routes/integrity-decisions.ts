@@ -108,6 +108,58 @@ async function writeAudit(
   return result.rows[0]?.id;
 }
 
+async function countLinkedEvidence(client: PoolClient, entityType: string, entityId: string): Promise<number> {
+  const result = await client.query<{ count: string }>(
+    `select count(*)::text as count
+     from evidence_links
+     where linked_entity_type = $1 and linked_entity_id = $2::uuid`,
+    [entityType, entityId]
+  );
+  return Number(result.rows[0]?.count ?? '0');
+}
+
+async function persistIntegrityDecisionApprovalGate(
+  client: PoolClient,
+  req: Request,
+  decisionId: string,
+  gateStatus: 'pass' | 'fail',
+  evidenceCount: number
+): Promise<void> {
+  await client.query(
+    `insert into review_gates(
+      entity_type,
+      entity_id,
+      gate_domain,
+      gate_type,
+      gate_status,
+      blocking,
+      evidence_link_required,
+      checked_by,
+      checked_at,
+      metadata_json,
+      updated_at
+    ) values ('integrity_decision', $1, 'integrity_decision_approval', 'evidence_linked', $2, true, true, $3, now(), $4::jsonb, now())
+    on conflict (entity_type, entity_id, gate_domain, gate_type) do update set
+      gate_status = excluded.gate_status,
+      blocking = excluded.blocking,
+      evidence_link_required = excluded.evidence_link_required,
+      checked_by = excluded.checked_by,
+      checked_at = excluded.checked_at,
+      metadata_json = excluded.metadata_json,
+      updated_at = now()`,
+    [
+      decisionId,
+      gateStatus,
+      actorUserId(req),
+      JSON.stringify({
+        message: 'Integrity decision approval requires direct evidence linkage.',
+        evidence_count: evidenceCount,
+        linked_entity_type: 'integrity_decision'
+      })
+    ]
+  );
+}
+
 integrityDecisionsRouter.get('/integrity-decisions/:decisionId', requirePermission('integrity_decision.review'), async (req, res, next) => {
   const decisionId = req.params.decisionId;
   if (!isUuid(decisionId)) {
@@ -298,6 +350,35 @@ integrityDecisionsRouter.post('/integrity-decisions/:decisionId/approve', requir
     if (before.decision_status === 'approved') {
       await client.query('rollback');
       res.status(409).json({ error: { code: 'INTEGRITY_DECISION_ALREADY_APPROVED', message: 'Integrity decision is already approved.' } });
+      return;
+    }
+
+    const evidenceCount = await countLinkedEvidence(client, 'integrity_decision', decisionId);
+    await persistIntegrityDecisionApprovalGate(client, req, decisionId, evidenceCount > 0 ? 'pass' : 'fail', evidenceCount);
+
+    if (evidenceCount === 0) {
+      const auditLogId = await writeAudit(client, req, 'INTEGRITY_DECISION_APPROVAL_BLOCKED', 'integrity_decision', decisionId, mapDecision(before), mapDecision(before), {
+        reason: 'direct_evidence_link_required',
+        evidence_count: evidenceCount,
+        ai_approved: false
+      });
+      await client.query('commit');
+      res.status(409).json({
+        error: {
+          code: 'INTEGRITY_DECISION_EVIDENCE_REQUIRED',
+          message: 'Integrity decision approval requires at least one direct evidence link.',
+          auditLogId,
+          gates: [
+            {
+              gate_type: 'evidence_linked',
+              gate_status: 'fail',
+              blocking: true,
+              message: 'Integrity decision must have direct linked evidence before approval.',
+              metadata: { evidence_count: evidenceCount, linked_entity_type: 'integrity_decision' }
+            }
+          ]
+        }
+      });
       return;
     }
 

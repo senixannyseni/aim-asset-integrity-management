@@ -42,7 +42,7 @@ $login = Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/login" -ContentType 
   password = $Password
 } | ConvertTo-Json)
 
-$token = $login.data.tokens.accessToken
+$token = $login.data.accessToken
 ```
 
 Expected: access token returned. No password or token should be committed to the repository.

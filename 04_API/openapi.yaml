@@ -1305,7 +1305,7 @@ paths:
   /api/v1/integrity-decisions/{decisionId}/approve:
     post:
       summary: Approve integrity decision
-      description: Senior human approval for integrity decision. AI agents and workflow/service users cannot approve final integrity decisions.
+      description: Senior human approval for integrity decision. AI agents and workflow/service users cannot approve final integrity decisions. Approval requires at least one direct evidence link to the integrity decision.
       tags:
       - Integrity Decisions
       x-permission-required: integrity_decision.approve
@@ -1338,10 +1338,19 @@ paths:
         '404':
           description: Integrity decision not found
         '409':
-          description: Integrity decision already approved
+          description: Integrity decision already approved or direct evidence linkage is missing
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                error:
+                  code: INTEGRITY_DECISION_EVIDENCE_REQUIRED
+                  message: Integrity decision approval requires at least one direct evidence link.
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only, RBAC-controlled, and audit logged.
+      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only, RBAC-controlled, evidence-gated, and audit logged.
   /api/v1/reports:
     get:
       summary: List generated tank integrity reports
@@ -1436,14 +1445,14 @@ paths:
         '200':
           description: Report issued and locked
         '409':
-          description: Report issue blocked by required data/evidence/calculation/review/integrity/approval/workflow-error/comment gates
+          description: Report issue blocked by required data/per-entity evidence/calculation/review/integrity/approval/workflow-error/comment gates
       tags:
       - Reports
       security:
       - bearerAuth: []
       x-human-review-required: true
       x-evidence-link-required: true
-      x-source-of-truth-boundary: AIM is the system of record. Report issue is human-only, audit logged, and blocked unless data, evidence, calculation completion, calculation review, calculation approval, integrity decision approval, report approval, unresolved critical warning, workflow error, and approver comment gates pass. AI and n8n/service users cannot issue reports.
+      x-source-of-truth-boundary: AIM is the system of record. Report issue is human-only, audit logged, and blocked unless data, per-entity evidence, calculation completion, calculation review, calculation approval, integrity decision approval, report approval, unresolved critical warning, workflow error, and approver comment gates pass. Required per-entity evidence includes direct links to the report, calculation_run, and approved integrity_decision. AI and n8n/service users cannot issue reports.
       requestBody:
         required: true
         content:
@@ -2978,7 +2987,7 @@ components:
         gate_confirmation:
           type: object
           additionalProperties: true
-          description: Optional UI-provided gate confirmation. Backend gate evaluation remains authoritative.
+          description: Optional UI-provided gate confirmation. Backend gate evaluation remains authoritative and requires direct report, calculation_run, and integrity_decision evidence links.
         required_gate_types:
           type: array
           items:
@@ -2997,6 +3006,7 @@ components:
           - approver_comment_present
     ReportGateChecklistItem:
       type: object
+      description: Includes required data, per-entity evidence, calculation, review, integrity decision, report approval, workflow-error, and approver-comment gates.
       properties:
         gate_type:
           type: string

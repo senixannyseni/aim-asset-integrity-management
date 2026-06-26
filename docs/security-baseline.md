@@ -80,9 +80,14 @@ Implemented tables/fields include engineering_reviews and approval_records exten
 
 Implemented APIs include GET/POST /api/v1/engineering/reviews, GET/PATCH/COMMENT /api/v1/engineering/reviews/{reviewId}, GET/POST /api/v1/approval-records, POST /api/v1/approval-records/{approvalId}/approve, POST /api/v1/approval-records/{approvalId}/reject, and GET /api/v1/engineering/calculations/{runId} for full calculation audit detail.
 
-No API/API-ASME formulas, AI extraction runtime, report generation, RBI quantitative calculation, CMMS integration, or work-order integration are implemented in this sprint. AIM remains the system of record and n8n remains API-only orchestration.
+No API/API-ASME formulas, full API 579/API 581 quantitative calculation, external CMMS integration, or 3D processing are implemented. Current MVP includes AI extraction/staging, report generation/issue gates, and internal AIM work order fallback while AIM remains the system of record and n8n remains API-only orchestration.
 
 
 ## Sprint 10 Report Generation Security Notes
 
 Generated DOCX/PDF payloads use object-storage compatible paths. Production deployments must upload these artifacts to controlled object storage, serve them via signed URLs, scan generated outputs for malware, and restrict report approval/issue to verified senior engineer/admin identities. Demo-header auth remains local-development only.
+
+
+## UAT Cycle 1 Release Hardening
+
+Integrity decision approval requires direct evidence linkage. Report issue requires per-entity evidence links to the report, calculation run, and approved integrity decision. Prior `REPORT_ISSUE_GATE_BLOCKED` logs remain auditable and are resolved after successful issue. AI and n8n/service users remain blocked from final approvals and report issue.
