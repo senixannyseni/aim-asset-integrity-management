@@ -10,12 +10,43 @@ type ApiResponse = Response<Record<string, unknown>>;
 type DbRow = Record<string, unknown>;
 
 const SENSITIVE_SETTING_PATTERN = /(secret|token|password|credential|access_key|secret_key|private_key|jwt|cookie|signed_url|presigned_url|object_storage|s3_|aws_|env)/i;
-const ALLOWED_SETTING_UPDATES: Record<string, { type: 'string' | 'number' | 'boolean' | 'json'; description: string }> = {
-  evidence_retention_days: { type: 'number', description: 'Non-secret evidence governance retention window in days.' },
-  report_export_expiry_hours: { type: 'number', description: 'Non-secret report export link policy window in hours.' },
-  ai_review_sla_hours: { type: 'number', description: 'Non-secret AI review reminder SLA in hours.' },
-  governance_banner_text: { type: 'string', description: 'Non-secret admin governance banner text.' },
-  admin_governance_read_only_notice_enabled: { type: 'boolean', description: 'Non-secret UI notice toggle for admin governance.' }
+const ALLOWED_SETTING_UPDATES: Record<
+  string,
+  {
+    type: 'string' | 'number' | 'boolean' | 'json';
+    description: string;
+    min?: number;
+    max?: number;
+    maxLength?: number;
+  }
+> = {
+  evidence_retention_days: {
+    type: 'number',
+    min: 30,
+    max: 3650,
+    description: 'Non-secret evidence governance retention window in days.'
+  },
+  report_export_expiry_hours: {
+    type: 'number',
+    min: 1,
+    max: 168,
+    description: 'Non-secret report export link policy window in hours.'
+  },
+  ai_review_sla_hours: {
+    type: 'number',
+    min: 1,
+    max: 720,
+    description: 'Non-secret AI review reminder SLA in hours.'
+  },
+  governance_banner_text: {
+    type: 'string',
+    maxLength: 280,
+    description: 'Non-secret admin governance banner text.'
+  },
+  admin_governance_read_only_notice_enabled: {
+    type: 'boolean',
+    description: 'Non-secret UI notice toggle for admin governance.'
+  }
 };
 
 function asString(value: unknown): string | undefined {
@@ -48,10 +79,24 @@ function actorRoles(req: Request): string[] {
   return req.user?.roles ?? [];
 }
 
+const SERVICE_ADMIN_BLOCKED_ROLES = new Set([
+  'ai_agent',
+  'n8n_service',
+  'integration_service',
+  'workflow_service',
+  'system_service'
+]);
+
 function isServiceAdminActor(req: Request): boolean {
   const roles = req.user?.roles ?? [];
   const email = req.user?.email?.toLowerCase() ?? '';
-  return roles.includes('ai_agent') || email.includes('n8n') || email.includes('service') || email.includes('integration');
+
+  return (
+    roles.some((role) => SERVICE_ADMIN_BLOCKED_ROLES.has(role)) ||
+    email.includes('n8n') ||
+    email.includes('service') ||
+    email.includes('integration')
+  );
 }
 
 function enforceHumanAdminActor(req: Request, res: ApiResponse, action: string): boolean {
@@ -449,6 +494,35 @@ adminGovernanceRouter.patch('/admin-governance/system-settings/:settingKey', req
     const value = parseSettingValue(allowed.type, req.body.setting_value);
     if (value === undefined) {
       validationError(res, 'setting_value', `setting_value must match setting type ${allowed.type}.`);
+      return;
+    }
+
+    if (typeof value === 'number') {
+      if (
+        (allowed.min !== undefined && value < allowed.min) ||
+        (allowed.max !== undefined && value > allowed.max)
+      ) {
+        validationError(
+          res,
+          'setting_value',
+          `setting_value must be between ${allowed.min ?? '-∞'} and ${allowed.max ?? '∞'}.`,
+          'ADMIN_SETTING_VALUE_OUT_OF_RANGE'
+        );
+        return;
+      }
+    }
+
+    if (
+      typeof value === 'string' &&
+      allowed.maxLength !== undefined &&
+      value.length > allowed.maxLength
+    ) {
+      validationError(
+        res,
+        'setting_value',
+        `setting_value must be ${allowed.maxLength} characters or fewer.`,
+        'ADMIN_SETTING_VALUE_TOO_LONG'
+      );
       return;
     }
 
