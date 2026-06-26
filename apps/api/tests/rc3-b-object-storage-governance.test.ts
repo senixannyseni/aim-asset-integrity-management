@@ -90,6 +90,7 @@ describe('RC3-B evidence object-storage API contract', () => {
     expect(route).toContain('checksum_required');
     expect(route).toContain('EVIDENCE_CHECKSUM_REQUIRED');
     expect(route).toContain('EVIDENCE_CHECKSUM_VERIFICATION_REQUIRED');
+    expect(route).toContain('x-amz-meta-checksum_sha256');
     expect(route).toContain('objectHead.metadata?.checksum_sha256');
     expect(route).not.toContain("sha256Hex(`${objectKey}:${objectHead.contentLength}:${objectHead.eTag ?? ''}`)");
     expect(route.match(/EVIDENCE_BLOCKED_BY_SCAN/g)?.length).toBe(1);
