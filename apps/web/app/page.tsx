@@ -6,7 +6,8 @@ const navigationItems = [
   { href: '/evidence', label: 'Evidence', description: 'Open the evidence repository and linkage workspace.' },
   { href: '/integrity-decisions', label: 'Integrity Decisions', description: 'Review integrity decisions and evidence gates.' },
   { href: '/reports', label: 'Reports', description: 'Review report readiness gates and issue controls.' },
-  { href: '/work-orders', label: 'Work Orders', description: 'Manage internal AIM work-order fallback actions.' }
+  { href: '/work-orders', label: 'Work Orders', description: 'Manage internal AIM work-order fallback actions.' },
+  { href: '/audit-logs', label: 'Audit Logs', description: 'View read-only, redacted governance audit trail entries.' }
 ];
 
 export default function HomePage() {

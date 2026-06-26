@@ -31,6 +31,7 @@ describe('database migration sequence', () => {
       '0019_allow_integrity_decision_review_gate_domain.sql',
       '0020_object_storage_evidence_hardening.sql',
       '0021_report_export_object_storage.sql',
+      '0022_audit_log_governance_visibility.sql',
     ]);
   });
 });

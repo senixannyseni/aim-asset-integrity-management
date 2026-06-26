@@ -20,6 +20,7 @@ import { integrityDecisionsRouter } from './routes/integrity-decisions.js';
 import { workOrdersRouter } from './routes/work-orders.js';
 import { aiExtractionRouter } from "./routes/ai-extraction.js";
 import { authRouter } from "./routes/auth.js";
+import { auditLogsRouter } from "./routes/audit-logs.js";
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
@@ -67,6 +68,7 @@ export function createApp() {
   app.use('/api/v1', workOrdersRouter);
   app.use('/api/v1', aiExtractionRouter);
   app.use('/api/v1', authRouter);
+  app.use('/api/v1', auditLogsRouter);
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === 'number'
       ? Number((error as { statusCode: number }).statusCode)

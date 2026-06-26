@@ -297,3 +297,48 @@ textarea {
   border-color: #fecaca;
   color: var(--danger);
 }
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.pagination-row {
+  margin-top: 14px;
+}
+
+.link-button {
+  background: transparent;
+  color: var(--teal);
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.4fr) 1fr;
+  gap: 10px 16px;
+}
+
+.metadata-grid dt {
+  color: var(--gray);
+  font-weight: 800;
+}
+
+.metadata-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.json-panel {
+  background: #0f172a;
+  border-radius: 14px;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  max-height: 360px;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+}
