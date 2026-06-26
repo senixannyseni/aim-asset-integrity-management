@@ -89,6 +89,11 @@ describe('RC3-B evidence object-storage API contract', () => {
     expect(route).toContain('evidence_code_source');
     expect(route).toContain('checksum_required');
     expect(route).toContain('EVIDENCE_CHECKSUM_REQUIRED');
+    expect(route).toContain('EVIDENCE_CHECKSUM_VERIFICATION_REQUIRED');
+    expect(route).toContain('objectHead.metadata?.checksum_sha256');
+    expect(route).not.toContain("sha256Hex(`${objectKey}:${objectHead.contentLength}:${objectHead.eTag ?? ''}`)");
+    expect(route.match(/EVIDENCE_BLOCKED_BY_SCAN/g)?.length).toBe(1);
+    expect(route.match(/EVIDENCE_OBJECT_KEY_MISSING/g)?.length).toBe(1);
   });
 
   it('does not grant evidence upload or report export to ai_agent', () => {
