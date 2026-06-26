@@ -523,7 +523,7 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
                count(*)::text as total_evidence_count
              from evidence_links el
            join evidence_files ef on ef.id = el.evidence_file_id
-            and coalesce(ef.upload_status, 'verified') = 'verified'
+            and ef.upload_status = 'verified'
             and coalesce(ef.object_key, ef.object_storage_path, ef.object_storage_uri) is not null
              where (linked_entity_type = 'report' and linked_entity_id = $1::uuid)
                 or (linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)

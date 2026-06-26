@@ -2061,7 +2061,7 @@ paths:
   /api/v1/evidence/upload-url:
     post:
       summary: Create an audited signed evidence upload URL
-      description: RC3-B object-storage flow. AIM validates metadata, generates the object key, records a pending upload session, and returns a short-lived signed PUT URL. Evidence metadata is not finalized until complete-upload verifies object existence.
+      description: RC3-B object-storage flow. AIM validates metadata, generates the AIM evidence code and object key, records a pending upload session, and returns a short-lived signed PUT URL. `checksum_sha256` is mandatory for gate-eligible uploads. Evidence metadata is not finalized until complete-upload verifies object existence and checksum controls.
       x-permission-required: evidence.upload
       x-audit-event-generated: EVIDENCE_UPLOAD_URL_CREATED
       security:
@@ -2261,7 +2261,7 @@ components:
   schemas:
     EvidenceUploadUrlRequest:
       type: object
-      required: [asset_id, filename, mime_type, size_bytes]
+      required: [asset_id, filename, mime_type, size_bytes, checksum_sha256]
       properties:
         asset_id:
           type: string
@@ -2270,8 +2270,6 @@ components:
           type: string
           format: uuid
           nullable: true
-        evidence_code:
-          type: string
         filename:
           type: string
         mime_type:
@@ -2280,7 +2278,8 @@ components:
           type: integer
         checksum_sha256:
           type: string
-          nullable: true
+          pattern: '^[a-fA-F0-9]{64}$'
+          description: Required SHA-256 checksum for gate-eligible object-storage evidence uploads.
     EvidenceCompleteUploadRequest:
       type: object
       required: [upload_session_id]

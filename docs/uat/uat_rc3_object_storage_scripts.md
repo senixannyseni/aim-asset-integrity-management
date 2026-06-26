@@ -30,15 +30,17 @@ $evidencePath = ".\uat-evidence.pdf"
 $fileSize = (Get-Item $evidencePath).Length
 $fileHash = (Get-FileHash -Path $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant()
 
+# Do not provide evidence_code. AIM generates the EVD-{YYYY}-{six_digit_number} code for gate-eligible object-storage uploads.
 $uploadUrl = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/evidence/upload-url" -Headers $headers -ContentType "application/json" -Body (@{
   asset_id = $assetId
-  evidence_code = "EVD-2026-UAT-001"
   filename = "uat-evidence.pdf"
   mime_type = "application/pdf"
   size_bytes = $fileSize
   checksum_sha256 = $fileHash
 } | ConvertTo-Json)
 ```
+
+Expected: `checksum_sha256` is mandatory and the response includes an AIM-generated `evidence_code` plus an `x-amz-meta-checksum_sha256` upload header.
 
 ## 4. Upload file to object storage
 

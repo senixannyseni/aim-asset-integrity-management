@@ -363,3 +363,15 @@ docs/deployment/object_storage_evidence_runbook.md
 docs/deployment/report_export_storage_runbook.md
 docs/uat/uat_rc3_object_storage_scripts.md
 ```
+
+
+## RC3-B Closeout Polish
+
+The RC3-B closeout polish tightens source-of-truth alignment before RC3-C begins:
+
+- AIM backend generates evidence codes for gate-eligible object-storage upload sessions; callers must not provide controlled evidence IDs.
+- `checksum_sha256` is mandatory before AIM issues a gate-eligible evidence upload URL.
+- Evidence completion verifies object existence, size, and checksum controls before setting `upload_status = verified`.
+- Report issue/export evidence gates count only verified object-storage evidence; legacy/null upload status is not treated as verified.
+- Legacy metadata-only evidence upload remains compatibility-only and cannot satisfy evidence/report gates until object verification is completed.
+- RC3-B n8n workflow behavior is documented as API-only orchestration for intake notifications, review reminders, and failure handling.

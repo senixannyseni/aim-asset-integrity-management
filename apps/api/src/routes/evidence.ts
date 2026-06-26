@@ -244,7 +244,13 @@ function extensionForFilename(filename: string): string {
 async function nextEvidenceCode(client: PoolClient): Promise<string> {
   const year = new Date().getUTCFullYear();
   const result = await client.query<{ count: string }>(
-    `select count(*)::text as count from evidence_files where evidence_code like $1`,
+    `with used_codes as (
+       select evidence_code from evidence_files where evidence_code like $1
+       union
+       select evidence_code from evidence_upload_sessions where evidence_code like $1
+     )
+     select coalesce(max(substring(evidence_code from '^EVD-[0-9]{4}-([0-9]{6})$')::int), 0)::text as count
+     from used_codes`,
     [`EVD-${year}-%`]
   );
   const next = Number(result.rows[0]?.count ?? '0') + 1;
@@ -354,17 +360,20 @@ async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evid
     const scanStatus = String(evidence.malware_scan_status ?? 'pending_scan');
     if (['infected', 'blocked', 'quarantined'].includes(scanStatus)) {
       await blockEvidenceAccess(409, 'EVIDENCE_BLOCKED_BY_SCAN', 'Evidence access is blocked because malware scan status does not allow download.', { malware_scan_status: scanStatus });
+      await blockEvidenceAccess(409, 'EVIDENCE_BLOCKED_BY_SCAN', 'Evidence access is blocked because malware scan status does not allow download.', { malware_scan_status: scanStatus });
       return;
     }
 
     const objectKey = asString(evidence.object_key) ?? asString(evidence.object_storage_path ?? evidence.object_storage_uri);
     if (!objectKey) {
       await blockEvidenceAccess(409, 'EVIDENCE_OBJECT_KEY_MISSING', 'Evidence object key is missing; download cannot be issued.', { object_key_missing: true });
+      await blockEvidenceAccess(409, 'EVIDENCE_OBJECT_KEY_MISSING', 'Evidence object key is missing; download cannot be issued.', { object_key_missing: true });
       return;
     }
 
     const exists = await objectStorageService.objectExists(objectKey);
     if (!exists) {
+      await blockEvidenceAccess(409, 'EVIDENCE_OBJECT_NOT_FOUND', 'Evidence metadata exists but the object-storage file was not found.', { object_key: objectKey });
       await blockEvidenceAccess(409, 'EVIDENCE_OBJECT_NOT_FOUND', 'Evidence metadata exists but the object-storage file was not found.', { object_key: objectKey });
       return;
     }
@@ -480,15 +489,29 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
   const mimeType = asString(body.mime_type);
   const sizeBytes = asInteger(body.size_bytes ?? body.file_size_bytes);
   const inspectionId = asString(body.inspection_id ?? body.inspection_event_id) ?? null;
-  const requestedEvidenceCode = asString(body.evidence_code);
   const checksum = normalizeSha256(body.checksum_sha256 ?? body.checksum);
 
-  if (!assetId || !isUuid(assetId) || !filename || !mimeType || !sizeBytes) {
-    validationError(res, [
-      { field: 'asset_id', message: 'asset_id UUID, filename, mime_type, and size_bytes are required.', severity: 'error' }
-    ]);
-    return;
-  }
+if (!assetId || !isUuid(assetId) || !filename || !mimeType || !sizeBytes) {
+  validationError(res, [
+    {
+      field: 'asset_id',
+      message: 'asset_id UUID, filename, mime_type, and size_bytes are required for gate-eligible object-storage evidence.',
+      severity: 'error'
+    }
+  ]);
+  return;
+}
+
+if (!checksum) {
+  controlledError(
+    res,
+    400,
+    'EVIDENCE_CHECKSUM_REQUIRED',
+    'checksum_sha256 is required for gate-eligible object-storage evidence upload.',
+    { checksum_required: true }
+  );
+  return;
+}
   if (inspectionId && !isUuid(inspectionId)) {
     validationError(res, [{ field: 'inspection_id', message: 'inspection_id must be a UUID when provided.', severity: 'error' }]);
     return;
@@ -522,7 +545,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
       }
     }
 
-    const evidenceCode = requestedEvidenceCode ?? await nextEvidenceCode(client);
+    const evidenceCode = await nextEvidenceCode(client);
     const objectKey = buildEvidenceObjectKey({
       assetTagOrId: String(asset.asset_tag ?? assetId),
       inspectionId,
@@ -568,7 +591,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
         objectKey,
         actorUserId(req),
         signedUpload.expiresAt,
-        JSON.stringify({ signed_url_redacted: redactSignedUrl(signedUpload.url), signed_url_query_not_logged: true })
+        JSON.stringify({ signed_url_redacted: redactSignedUrl(signedUpload.url), signed_url_query_not_logged: true, evidence_code_source: 'aim_backend_generated', checksum_required: true })
       ]
     );
     const session = sessionResult.rows[0];
@@ -581,6 +604,8 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
       upload_session_id: session.upload_session_id,
       asset_id: assetId,
       evidence_code: evidenceCode,
+      evidence_code_source: 'aim_backend_generated',
+      checksum_required: true,
       object_key: objectKey,
       expires_at: signedUpload.expiresAt
     }, {
@@ -595,10 +620,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
         object_key: objectKey,
         upload_url: signedUpload.url,
         expires_at: signedUpload.expiresAt,
-        required_headers: {
-          'Content-Type': mimeType,
-          ...(checksum ? { 'x-amz-meta-checksum_sha256': checksum } : {})
-        }
+        required_headers: { 'Content-Type': mimeType }
       },
       auditLogId
     });
@@ -668,27 +690,14 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
     }
 
     const expectedChecksum = asString(session.expected_checksum_sha256);
-    const objectChecksum = asString(objectHead.metadata?.checksum_sha256 ?? objectHead.metadata?.['checksum-sha256']);
     if (expectedChecksum && providedChecksum && expectedChecksum !== providedChecksum) {
       await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
       await client.query('commit');
       controlledError(res, 409, 'EVIDENCE_CHECKSUM_MISMATCH', 'Provided checksum does not match expected checksum.');
       return;
     }
-    if (expectedChecksum && objectChecksum && expectedChecksum !== objectChecksum) {
-      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
-      await client.query('commit');
-      controlledError(res, 409, 'EVIDENCE_OBJECT_CHECKSUM_MISMATCH', 'Object storage metadata checksum does not match expected checksum.');
-      return;
-    }
-    if (expectedChecksum && !providedChecksum && !objectChecksum) {
-      await client.query('update evidence_upload_sessions set upload_status = $2 where upload_session_id = $1', [uploadSessionId, 'failed']);
-      await client.query('commit');
-      controlledError(res, 409, 'EVIDENCE_CHECKSUM_REQUIRED', 'Checksum verification is required because this upload session declared an expected SHA-256 checksum.');
-      return;
-    }
 
-    const checksum = providedChecksum ?? objectChecksum ?? expectedChecksum ?? sha256Hex(`${objectKey}:${objectHead.contentLength}:${objectHead.eTag ?? ''}`);
+    const checksum = providedChecksum ?? expectedChecksum ?? sha256Hex(`${objectKey}:${objectHead.contentLength}:${objectHead.eTag ?? ''}`);
     const safeFilename = String(session.safe_filename);
     const fileExtension = extensionForFilename(safeFilename);
     const evidenceResult = await client.query<DbRow>(
