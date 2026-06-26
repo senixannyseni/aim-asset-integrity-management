@@ -306,3 +306,24 @@ Before marking release rehearsal complete, record:
 - smoke-test results,
 - known defects,
 - sign-off roles.
+
+## RC2 Runtime and Frontend Validation Notes
+
+Use the current JWT token path:
+
+```powershell
+$token = $login.data.accessToken
+```
+
+The API secret environment variable is `AUTH_JWT_SECRET`. Do not use the obsolete `$login.data.accessToken` path or `AUTH_JWT_SECRET` variable name.
+
+For frontend UAT, demo headers are opt-in only:
+
+```text
+NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true
+```
+
+Do not enable demo headers in UAT/prod-like validation. Verify `/login`, `/integrity-decisions`, `/reports`, and `/work-orders` with real RBAC roles. External CMMS remains out of MVP scope; internal AIM work order fallback remains active. n8n remains orchestration-only and must not write final engineering data directly to PostgreSQL.
+
+
+

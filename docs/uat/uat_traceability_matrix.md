@@ -65,3 +65,16 @@ Status values:
 | Internal work orders | covered | Create/update/close, completion note/evidence, no external CMMS. |
 | n8n boundary/error handling | covered | AIM API only, workflow/error logs, no finalization by n8n. |
 | Audit logs | covered | Critical actions and audit read permissions. |
+
+## RC2 / UAT Cycle 2 Addendum
+
+| Source-of-truth requirement | RC2 verification |
+|---|---|
+| AIM is system of record | API and frontend routes read/write through AIM API only. |
+| AI output staging-only | UAT Cycle 2 includes AI/service-user denial checks for approvals/finalization. |
+| AI must not approve final engineering actions | Integrity decision, calculation, report issue, and work order close negative tests remain required. |
+| Evidence linkage mandatory | Report issue requires direct evidence on report, calculation_run, and approved integrity_decision. |
+| Deterministic calculation remains bounded | FFS/RBI routes use calculation trigger/interface only; no full API 579/API 581 formulas are implemented. |
+| n8n orchestration-only | UAT Cycle 2 checks that no n8n direct PostgreSQL write path exists. |
+| Internal work order fallback | Work order UI/API verifies internal fallback; External CMMS reference is rejected. |
+| JWT/RBAC frontend | `/login` and api client use `data.accessToken`; demo headers are opt-in only. |

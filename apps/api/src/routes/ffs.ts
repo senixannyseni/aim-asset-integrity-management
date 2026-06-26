@@ -103,6 +103,14 @@ function validationError(res: ApiResponse, field: string, message: string): void
   });
 }
 
+
+async function loadCalculationRunByIdentifier(client: PoolClient, identifier: string): Promise<DbRow | undefined> {
+  const result = isUuid(identifier)
+    ? await client.query<DbRow>('select * from calculation_runs where id = $1::uuid limit 1', [identifier])
+    : await client.query<DbRow>('select * from calculation_runs where run_id = $1 limit 1', [identifier]);
+  return result.rows[0];
+}
+
 async function resolveUserId(client: Queryable, req: Request): Promise<string | null> {
   const explicit = actorUserId(req);
   if (explicit) return explicit;
@@ -511,8 +519,7 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const runResult = await client.query<DbRow>('select * from calculation_runs where id = $1 or run_id = $1 limit 1', [calculationRunId]);
-    const run = runResult.rows[0];
+    const run = await loadCalculationRunByIdentifier(client, calculationRunId);
     if (!run) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'CALCULATION_RUN_NOT_FOUND', message: 'Calculation run not found.' } });

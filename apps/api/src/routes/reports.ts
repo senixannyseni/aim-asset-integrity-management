@@ -939,7 +939,7 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
        where error_code = 'REPORT_ISSUE_GATE_BLOCKED'
          and related_entity_type = 'report'
          and related_entity_id = $1::uuid
-         and status not in ('resolved','ignored')
+         and status not in ('resolved','closed')
        returning id`,
       [reportId]
     );

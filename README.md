@@ -301,3 +301,16 @@ Boundary: no API/API-ASME formula expression is embedded or invented; reports ci
 UAT Cycle 1 passed with local fixes on branch `phase2-3-uat-signoff`. Release hardening adds direct evidence gating before integrity decision approval, per-entity evidence gates before final report issue, controlled NDT `extraction_source` validation, safe calculation run lookup by UUID or run code, and resolution of stale report issue gate-blocked logs after successful report issue.
 
 Current hard boundaries remain: AIM is the system of record; AI output remains staging-only until human review; AI/n8n/service users cannot approve or issue final engineering outputs; n8n is orchestration-only; external CMMS remains out of MVP scope; internal AIM work orders remain the fallback.
+
+## Phase 2.5 / RC2 Runtime and Frontend UAT Closure
+
+The RC2 branch adds product-facing UAT closure items:
+
+- JWT login is available at `/login`; frontend API calls use `Authorization: Bearer <token>` from `data.accessToken`.
+- Demo headers are disabled by default and are only sent when `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true`.
+- Integrity decision workflow is available at `/integrity-decisions` and requires direct evidence before approval.
+- Report UI shows per-entity evidence actions for `report`, `calculation_run`, and `integrity_decision` before final issue.
+- Internal AIM work order fallback is available at `/work-orders`; External CMMS remains out of MVP scope.
+- FFS/RBI calculation-run lookup is UUID/text-aware and must not expose PostgreSQL UUID/text operator errors.
+
+AIM remains the system of record. AI must not approve final engineering actions. n8n remains orchestration-only and must not write final engineering data directly to PostgreSQL.

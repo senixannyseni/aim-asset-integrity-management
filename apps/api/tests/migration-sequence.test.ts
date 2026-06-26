@@ -28,6 +28,8 @@ describe('database migration sequence', () => {
       '0016_phase1_6_report_issue_work_order_gates.sql',
       '0017_uat_fix_approval_records_created_at.sql',
       '0018_uat_fix_approval_record_approved_at_semantics.sql',
+      '0019_allow_integrity_decision_review_gate_domain.sql',
     ]);
   });
 });
+

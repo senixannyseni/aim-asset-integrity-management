@@ -228,3 +228,15 @@ Phase 1.7 also confirms the boundary relationships remain unchanged: AI extracti
 - Report issue is evidence-gated per entity: `report`, `calculation_run`, and approved `integrity_decision` must each have direct evidence linkage.
 - Prior report issue gate-blocked `error_logs` remain auditable and are marked `resolved` when the report is successfully issued.
 - Internal AIM work orders remain the MVP fallback before any future external CMMS integration.
+
+## RC2 Governance Gate Reconciliation
+
+Evidence lineage for final report issue now requires three direct evidence link relationships:
+
+```text
+reports.id <- evidence_links(linked_entity_type = 'report')
+calculation_runs.id <- evidence_links(linked_entity_type = 'calculation_run')
+integrity_decisions.id <- evidence_links(linked_entity_type = 'integrity_decision')
+```
+
+Integrity decision approval is blocked until direct integrity-decision evidence exists. Internal work orders may be generated from issued reports or approved integrity decisions and remain inside AIM; External CMMS is out of MVP scope.

@@ -912,3 +912,10 @@ Controlled UAT Cycle 1 result is `PASS_WITH_LOCAL_FIXES`. Release hardening reco
 - Report issue evidence gate is per-entity: direct evidence must be linked to the `report`, `calculation_run`, and approved `integrity_decision`.
 - Prior `REPORT_ISSUE_GATE_BLOCKED` logs remain auditable but are resolved after a later successful report issue.
 - Internal AIM work order fallback is implemented; `external_cmms_reference` remains a rejected/out-of-scope MVP field, not an integration.
+
+## RC2 Runtime / Frontend Closure Notes
+
+- `integrity_decisions` is now exposed through AIM API list/detail/create/approve routes. Approval requires direct evidence linkage through `evidence_links.linked_entity_type = 'integrity_decision'` and `linked_entity_id = integrity_decisions.id`.
+- Report issue gates require direct evidence links to `report`, `calculation_run`, and approved `integrity_decision`. Aggregate evidence count alone is insufficient.
+- `approval_records.created_at` is present from UAT Cycle 1 hardening. `approval_records.approved_at` is nullable and must only be populated when an approval is actually approved.
+- Internal work orders remain AIM-local fallback records. External CMMS references remain null/omitted for MVP.

@@ -146,3 +146,16 @@ Decision: `Pending`
 | IT Admin / DevOps |  | Pending |  |  |
 | UAT Lead |  | Pending |  |  |
 | Security Owner if applicable |  | Pending / N/A |  |  |
+
+## RC2 Go/No-Go Addendum
+
+Before production-like go/no-go, execute UAT Cycle 2. The release candidate should not be marked production-ready until:
+
+- Runtime tests verify integrity decision evidence gates and report per-entity evidence gates.
+- Frontend walkthrough verifies JWT/RBAC, gate visibility, evidence linking, report issue, and internal work order fallback.
+- FFS/RBI UUID/text lookup regression checks pass.
+- NDT invalid extraction_source returns controlled 400.
+- AI/service-user approval/finalization denials are confirmed.
+- n8n remains orchestration-only with no direct PostgreSQL final-data writes.
+
+External CMMS integration is still out of MVP scope.
