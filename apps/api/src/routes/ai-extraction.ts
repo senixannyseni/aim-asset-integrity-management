@@ -529,10 +529,41 @@ async function buildPromotionGateResults(
     pass('data_quality_checks', 'No unresolved blocking data quality checks were found.');
   }
 
-  if (confidenceScore !== null && confidenceScore < 0.75 && reviewStatus !== 'corrected') {
-    block('confidence_gate', 'LOW_CONFIDENCE_CORRECTION_REQUIRED', 'Low-confidence AI extraction fields require human correction before promotion.', { confidence_score: confidenceScore });
+  const stagingMetadata = isPlainObject(params.staging.metadata_json)
+    ? params.staging.metadata_json
+    : {};
+
+  const lowConfidenceApprovedWithReason =
+    stagingMetadata.low_confidence_or_flagged_approval_with_reason === true &&
+    isMeaningfulReason(asString(stagingMetadata.rc3c_review_reason));
+
+  if (
+    confidenceScore !== null &&
+    confidenceScore < 0.75 &&
+    reviewStatus !== 'corrected' &&
+    !lowConfidenceApprovedWithReason
+  ) {
+    block(
+      'confidence_gate',
+      'LOW_CONFIDENCE_REVIEW_RATIONALE_REQUIRED',
+      'Low-confidence AI extraction fields require human correction or explicit human approval with meaningful rationale before promotion.',
+      {
+        confidence_score: confidenceScore,
+        review_status: reviewStatus,
+        low_confidence_approved_with_reason: false,
+        legacy_code: 'LOW_CONFIDENCE_CORRECTION_REQUIRED'
+      }
+    );
   } else {
-    pass('confidence_gate', 'Confidence gate satisfied.', { confidence_score: confidenceScore });
+    pass(
+      'confidence_gate',
+      'Confidence gate satisfied.',
+      {
+        confidence_score: confidenceScore,
+        review_status: reviewStatus,
+        low_confidence_approved_with_reason: lowConfidenceApprovedWithReason
+      }
+    );
   }
 
   const reviewerId = asString(params.staging.reviewer_id ?? params.field?.reviewer_id);
@@ -877,27 +908,61 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
       return;
     }
 
+    const lowConfidenceOrFlagged =
+      confidenceScore === null || confidenceScore < 0.75 || validationFlags.length > 0;
+
+    const reviewMetadata = {
+      rc3c_review_reason: reason ?? null,
+      low_confidence_or_flagged_approval_with_reason:
+        decision === 'approve' && lowConfidenceOrFlagged && isMeaningfulReason(reason)
+    };
+
     const explicitEvidenceFileId = asUuid(req.body.evidence_file_id);
-    const verifiedEvidence = sourceReferenceRequiresEvidence(before.source_reference_json)
+
+    const sourceRequiresEvidence = sourceReferenceRequiresEvidence(before.source_reference_json);
+
+    const evidenceRequiredForDecision =
+      decision !== 'reject' && sourceReferenceRequiresEvidence
+
+    const verifiedEvidence = sourceRequiresEvidence
       ? await findVerifiedEvidenceReference(client, {
-        extractionJobId: asString(before.extraction_job_id),
-        extractionFieldId: req.params.fieldId,
-        stagingRecordId: asString(staging.id),
-        sourceReference: before.source_reference_json,
-        evidenceFileId: explicitEvidenceFileId
-      })
+          extractionJobId: asString(before.extraction_job_id),
+          extractionFieldId: req.params.fieldId,
+          stagingRecordId: asString(staging.id),
+          sourceReference: before.source_reference_json,
+          evidenceFileId: explicitEvidenceFileId
+        })
       : null;
-    if (sourceReferenceRequiresEvidence(before.source_reference_json) && !verifiedEvidence) {
-      await writeAudit(client, req, 'AI_FIELD_REVIEW_BLOCKED', 'extraction_field', req.params.fieldId ?? null, mapExtractionField(before), mapExtractionField(before), {
-        blocked_reason: 'Verified object-storage evidence is required before approve/correct/reject.',
+
+    if (evidenceRequiredForDecision && !verifiedEvidence) {
+      await writeAudit(
+        client, 
+        req, 
+        'AI_FIELD_REVIEW_BLOCKED', 
+        'extraction_field', 
+        req.params.fieldId ?? null, 
+        mapExtractionField(before), 
+        mapExtractionField(before), 
+        {
+          blocked_reason: 'Verified object-storage evidence is required before approve/correct.',
         decision,
         upload_status_required: 'verified'
-      });
+        }
+      );
+
       await client.query('commit');
-      controlledError(res, 409, 'VERIFIED_EVIDENCE_LINK_REQUIRED', 'Verified object-storage evidence linkage is required before reviewing this extracted field.', {
-        decision,
-        upload_status_required: 'verified'
-      });
+      
+      controlledError(
+        res, 
+        409, 
+        'VERIFIED_EVIDENCE_LINK_REQUIRED', 
+        'Verified object-storage evidence linkage is required before approving or correcting this extracted field.', 
+        {
+          decision,
+          upload_status_required: 'verified'
+        }
+      );
+      
       return;
     }
 
@@ -917,14 +982,22 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
     );
     const updatedStagingResult = await client.query<DbRow>(
       `update staging_records
-       set review_status = $2,
-           normalized_value = coalesce($3, normalized_value),
-           unit = coalesce($4, unit),
-           reviewer_id = $5,
-           reviewed_at = now(),
-           updated_at = now()
-       where id = $1 returning *`,
-      [staging.id, newReviewStatus, newValue, asString(req.body.corrected_unit), actorUserId(req)]
+      set review_status = $2,
+          normalized_value = coalesce($3, normalized_value),
+          unit = coalesce($4, unit),
+          reviewer_id = $5,
+          reviewed_at = now(),
+          metadata_json = coalesce(metadata_json, '{}'::jsonb) || $6::jsonb,
+          updated_at = now()
+      where id = $1 returning *`,
+      [
+        staging.id,
+        newReviewStatus,
+        newValue,
+        asString(req.body.corrected_unit),
+        actorUserId(req),
+        JSON.stringify(reviewMetadata)
+      ]
     );
 
     let manualOverride: DbRow | null = null;
