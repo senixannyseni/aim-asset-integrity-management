@@ -922,7 +922,7 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
     const sourceRequiresEvidence = sourceReferenceRequiresEvidence(before.source_reference_json);
 
     const evidenceRequiredForDecision =
-      decision !== 'reject' && sourceReferenceRequiresEvidence
+      decision !== 'reject' && sourceRequiresEvidence;
 
     const verifiedEvidence = sourceRequiresEvidence
       ? await findVerifiedEvidenceReference(client, {
