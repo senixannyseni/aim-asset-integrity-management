@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.17.0
-  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-D audit log governance visibility. AIM is the system of
+  version: 0.18.0
+  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-E admin governance console visibility and safe controls. AIM is the system of
     record; PostgreSQL stores final structured engineering data; object storage stores original evidence. n8n remains orchestration-only and must
     call AIM backend APIs only. AI extraction output is staging-only and requires human engineering review before promotion. This contract documents
     implemented auth, AI extraction/staging, evidence governance, approval, and report issue gates; it does not implement API 579/API 581, CMMS,
@@ -2404,6 +2404,219 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       x-source-of-truth-boundary: Signed URL query secrets are redacted from audit metadata.
+  /api/v1/admin-governance/users:
+    get:
+      summary: List users for admin governance without credential fields
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.view
+      x-admin-governance: true
+      x-secrets-exposed: false
+      responses:
+        '200':
+          description: Redacted users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin-governance/roles:
+    get:
+      summary: List roles for admin governance
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.view
+      x-admin-governance: true
+      responses:
+        '200':
+          description: Roles list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin-governance/permissions:
+    get:
+      summary: List permissions for admin governance
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.view
+      x-admin-governance: true
+      responses:
+        '200':
+          description: Permissions list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin-governance/role-permissions:
+    get:
+      summary: List role-permission mappings for admin governance
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.view
+      x-admin-governance: true
+      responses:
+        '200':
+          description: Role-permission mappings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin-governance/user-roles:
+    get:
+      summary: List user-role assignments for admin governance
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.view
+      x-admin-governance: true
+      responses:
+        '200':
+          description: User-role assignments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Assign a user role with reason and audit logging
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.manage_roles
+      x-audit-event-generated: ADMIN_USER_ROLE_ASSIGNED, ADMIN_ROLE_CHANGE_BLOCKED
+      x-admin-governance: true
+      x-human-admin-required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserRoleChangeRequest'
+      responses:
+        '201':
+          description: Role assignment accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+    delete:
+      summary: Remove a user role with reason and audit logging
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.manage_roles
+      x-audit-event-generated: ADMIN_USER_ROLE_REMOVED, ADMIN_ROLE_CHANGE_BLOCKED
+      x-admin-governance: true
+      x-human-admin-required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserRoleChangeRequest'
+      responses:
+        '200':
+          description: Role assignment removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+  /api/v1/admin-governance/system-settings:
+    get:
+      summary: List system settings with secret values redacted
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.view
+      x-admin-governance: true
+      x-secrets-exposed: false
+      x-redaction-enforced: true
+      responses:
+        '200':
+          description: Redacted system settings list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin-governance/system-settings/{settingKey}:
+    patch:
+      summary: Update allowlisted non-secret system setting with reason and audit logging
+      security:
+      - bearerAuth: []
+      x-permission-required: admin_governance.manage_settings
+      x-audit-event-generated: ADMIN_SYSTEM_SETTING_UPDATED, ADMIN_SYSTEM_SETTING_UPDATE_BLOCKED
+      x-admin-governance: true
+      x-human-admin-required: true
+      x-secrets-exposed: false
+      parameters:
+      - in: path
+        name: settingKey
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminSystemSettingUpdateRequest'
+      responses:
+        '200':
+          description: Allowlisted setting updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -2453,6 +2666,34 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
   schemas:
+
+    AdminUserRoleChangeRequest:
+      type: object
+      required:
+      - user_id
+      - role_id
+      - reason
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          description: Meaningful human admin reason required for audit logging.
+    AdminSystemSettingUpdateRequest:
+      type: object
+      required:
+      - setting_value
+      - reason
+      properties:
+        setting_value:
+          description: New non-secret allowlisted setting value. Secret, credential, token, signed URL, private key, and environment-derived settings are blocked.
+        reason:
+          type: string
+          description: Meaningful human admin reason required for audit logging.
     AuditLogEntry:
       type: object
       properties:

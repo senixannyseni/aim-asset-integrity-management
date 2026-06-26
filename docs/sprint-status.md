@@ -146,3 +146,23 @@ Status: Implemented as package candidate.
 - Preserves audit log immutability: no edit/delete/purge/suppress/backdate/overwrite controls are introduced.
 - Documents n8n API-only orchestration boundary for audit governance events.
 - Out of scope remains admin UI, dashboard, n8n console, NDT visualization, hypercare dashboard, object-storage expansion, AI extraction expansion, and calculation expansion.
+
+## RC3-E Admin Governance Console / RBAC & System Settings Visibility
+
+Status: Implemented as RC3-E package candidate.
+
+RC3-E adds an admin governance console while preserving AIM's source-of-truth and audit boundaries. It provides RBAC-controlled visibility into users, roles, permissions, role-permission mappings, user-role assignments, and system settings.
+
+Implemented RC3-E controls:
+
+- `GET /api/v1/admin-governance/users`, `roles`, `permissions`, `role-permissions`, `user-roles`, and `system-settings`;
+- `POST /api/v1/admin-governance/user-roles` and `DELETE /api/v1/admin-governance/user-roles` for reasoned, audited user-role assignment management;
+- `PATCH /api/v1/admin-governance/system-settings/{settingKey}` for allowlisted non-secret system setting updates only;
+- `admin_governance.view`, `admin_governance.manage_roles`, and `admin_governance.manage_settings` permissions;
+- frontend route `/admin-governance`;
+- redaction and omission of password hashes, tokens, secrets, credentials, signed URLs, private keys, and environment-derived values;
+- self-escalation and last-admin removal blocks;
+- audit events for admin role and system setting changes;
+- n8n boundary addendum confirming n8n must not administer RBAC or system settings directly.
+
+Out of scope remains unchanged: dashboard, n8n console, NDT visualization, hypercare dashboard, new AI features, new calculations, secret management UI, direct database editing, and audit log editing/deletion are not included.

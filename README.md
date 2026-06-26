@@ -410,3 +410,30 @@ Implemented RC3-D controls:
 - n8n addendum confirming n8n may create orchestration events through AIM APIs only and must not mutate audit logs or write directly to PostgreSQL.
 
 Out of scope remains unchanged: admin UI, dashboard, n8n console, NDT visualization, hypercare dashboard, external CMMS integration, new object-storage features, new AI extraction/staging-promotion features, and new API/API-ASME formula implementation are not included.
+
+## RC3-E Admin Governance Console
+
+RC3-E adds RBAC-controlled admin governance visibility and safe admin controls. The frontend route `/admin-governance` shows users, roles, permissions, role-permission mappings, user-role assignments, and redacted system settings.
+
+Implemented API endpoints:
+
+```text
+GET    /api/v1/admin-governance/users
+GET    /api/v1/admin-governance/roles
+GET    /api/v1/admin-governance/permissions
+GET    /api/v1/admin-governance/role-permissions
+GET    /api/v1/admin-governance/user-roles
+POST   /api/v1/admin-governance/user-roles
+DELETE /api/v1/admin-governance/user-roles
+GET    /api/v1/admin-governance/system-settings
+PATCH  /api/v1/admin-governance/system-settings/{settingKey}
+```
+
+Governance controls:
+
+- access requires `admin_governance.view` or stricter `admin_governance.manage_roles` / `admin_governance.manage_settings` permissions;
+- service, AI, and n8n-style actors are blocked from broad admin governance management;
+- role and system-setting mutations require meaningful reasons and are audit logged;
+- password hashes, tokens, credentials, signed URLs, private keys, and environment variables are not exposed;
+- system setting updates are allowlisted and non-secret only;
+- no dashboard, n8n console, NDT visualization, hypercare dashboard, secret editor, direct database editor, or audit log mutation control is introduced.
