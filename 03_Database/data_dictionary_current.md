@@ -23,13 +23,13 @@ Completed implementation state covered by this dictionary:
 - AI extraction/staging workflow exists within AIM API governance boundaries. AI output must go to extraction/staging tables only and must not write final engineering tables directly.
 - AI must not approve engineering data, NDT records, formulas, calculations, integrity decisions, or reports.
 - No API/API-ASME formula expression is hard-coded or invented in this schema. Formula Registry stores controlled metadata and placeholders only unless an authorized engineer enters licensed/approved source content.
-- Universal deterministic engineering calculations are implemented for AIM-owned screening logic only. Report issue, work-order integration, AI extraction runtime, API/API-ASME formula execution, and full FFS calculations and quantitative API RP 581 calculations remain outside the implemented baseline.
+- Universal deterministic engineering calculations are implemented for AIM-owned screening logic only. Report issue gates, internal work-order fallback, AI extraction/staging runtime, and RC3-B evidence/report object storage are implemented inside AIM governance. API/API-ASME formula execution, external CMMS integration, full FFS calculations, and quantitative API RP 581 calculations remain outside the implemented baseline.
 
 ## Implemented Table Inventory
 
 | Table | Status | Primary Owner Role | Notes |
 |---|---|---|---|
-| users | Implemented | admin | Demo identity baseline. Production authentication is not implemented yet. |
+| users | Implemented | admin / IT admin | DB-backed JWT/RBAC user baseline with local demo fallback gated by RC3-A configuration. Enterprise SSO/MFA remains future hardening. |
 | roles | Implemented | admin | Stores role master data. |
 | permissions | Implemented | admin | Stores permission master data used by RBAC middleware. |
 | user_roles | Implemented | admin | User-to-role mapping. |
@@ -38,7 +38,7 @@ Completed implementation state covered by this dictionary:
 | tank_geometry | Implemented | engineer | Tank geometry/design basis master data. Length values are normalized to meters. |
 | shell_courses | Implemented | engineer | Shell course master data. Thickness and course height values are normalized to millimeters. |
 | materials | Implemented | engineer / qa_qc | Material reference selector with Sprint 4 allowable-stress readiness fields. |
-| evidence_files | Implemented | inspector / engineer | Evidence metadata and object-storage-compatible path registry. Binary object handling remains storage-layer responsibility. |
+| evidence_files | RC3-B implemented | inspector / engineer | Evidence metadata, object key, bucket, checksum, upload/access status, and traceability registry. Original binaries are stored in private S3-compatible object storage. |
 | evidence_links | Implemented | inspector / engineer | Evidence-to-entity traceability table. Same-asset linkage is enforced for asset, inspection_event, ndt_measurement, calculation_run, ffs_case, and rbi_case targets. Used by NDT approval evidence gate. |
 | ndt_measurements | Implemented | inspector / engineer / qa_qc | NDT UT thickness measurement records with review/approval status and evidence gate. |
 | workflow_events | Implemented | service / admin | AIM API event intake for n8n orchestration events. |
@@ -67,7 +67,7 @@ Supporting baseline tables also exist in the clean-clone schema and are used as 
 | id | uuid | yes | PK | Internal user identifier. |
 | email | text | yes | unique | User email. Demo-only identity baseline. |
 | full_name | text | yes |  | User display name. |
-| password_hash | text | yes |  | Placeholder/demo auth only; production password/auth flow is future work. |
+| password_hash | text | yes |  | Password hash used by the DB-backed auth baseline; production hardening may replace or extend this with SSO/MFA. |
 | status | text | yes | allowed: active, inactive, locked | User lifecycle. |
 | created_at | timestamptz | yes | default now() | Creation timestamp. |
 | updated_at | timestamptz | yes | default now() | Last update timestamp. |
@@ -233,7 +233,7 @@ Validation notes: missing `code_edition`, required design basis fields, and ambi
 | file_extension | text | yes |  | Legacy file extension. |
 | file_type | text | conditional |  | Normalized file type: PDF, XLSX, CSV, JPG, PNG, DWG, DXF, STL, ZIP. |
 | mime_type | text | yes |  | MIME type. |
-| file_size_bytes | bigint | yes | check >= 0 | File size; metadata-only MVP may use zero when binary upload is not implemented. |
+| file_size_bytes | bigint | yes | check >= 0 | File size. RC3-B gate-eligible evidence must also have verified `size_bytes` from object storage. |
 | checksum_sha256 | text | yes | unique with object_storage_uri | Legacy checksum. |
 | checksum | text | conditional |  | Current checksum alias used by Sprint 3 API/UI. |
 | method | text | optional |  | Inspection/NDT method. |
@@ -921,6 +921,105 @@ Controlled UAT Cycle 1 result is `PASS_WITH_LOCAL_FIXES`. Release hardening reco
 - Internal work orders remain AIM-local fallback records. External CMMS references remain null/omitted for MVP.
 
 
-## RC3-A alignment note
+## RC3-A / RC3-B alignment note
 
-RC2 is merged/tagged and RC3 hardening is in progress. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments. Evidence object-storage upload/download and report artifact object-storage storage are planned for later RC3 packages and are not implemented by RC3-A. Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
+RC3-A and RC3-B are now implemented in this repository state. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments.
+
+RC3-B implements evidence object-storage upload/download and report artifact object-storage export. Original evidence files and generated report artifacts are stored in private S3-compatible object storage; PostgreSQL stores metadata, checksums, object keys, upload sessions, status, and audit linkage. Legacy metadata-only evidence upload is retained only for compatibility and is not gate-eligible until object storage verification is completed through the RC3-B flow.
+
+Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
+
+## RC3-B Addendum — Evidence and Report Object Storage
+
+RC3-B completes the object-storage boundary required by the AIM source of truth. AIM/PostgreSQL remains the system of record for metadata, status, checksums, object keys, linkage, workflow state, and audit records. Private S3-compatible object storage stores original evidence binaries and generated report export artifacts.
+
+### Updated `evidence_files` fields
+
+RC3-B adds or formalizes the following evidence object-storage fields:
+
+| field_name | data_type | required | description | governance rule |
+|---|---|---:|---|---|
+| `storage_provider` | text | yes | Object storage provider identifier, currently `s3-compatible`. | Must not imply PostgreSQL stores binaries. |
+| `storage_bucket` | text | yes for RC3-B uploads | Private bucket containing the evidence object. | Do not expose bucket credentials or raw signed URL query strings. |
+| `object_key` | text | yes for RC3-B uploads | Sanitized object-storage key generated by AIM. | Must prevent path traversal and use evidence folder convention. |
+| `object_version_id` | text | no | Optional storage-provider version ID. | Retained for traceability if provider supports versioning. |
+| `size_bytes` | bigint | yes for RC3-B uploads | Verified object size from object storage. | Must match declared upload size during completion. |
+| `upload_status` | text | yes | `pending`, `uploaded`, `verified`, `failed`, `expired`, or `cancelled`. | Only `verified` evidence is gate-eligible for report/evidence readiness. |
+| `uploaded_at` | timestamptz | no | Upload/session creation timestamp. | Audit-supporting timestamp. |
+| `completed_at` | timestamptz | no | Time object-storage verification completed. | Required for verified RC3-B evidence. |
+| `signed_url_expires_at` | timestamptz | no | Expiry of latest AIM-issued signed URL. | Raw signed URL query strings must not be stored. |
+| `accessed_at` | timestamptz | no | Last AIM-controlled evidence access attempt/success. | Blocked access attempts are also audited. |
+
+### New `evidence_upload_sessions` table
+
+`evidence_upload_sessions` records pending RC3-B object-storage upload sessions before evidence metadata is finalized.
+
+| field_name | data_type | required | description | governance rule |
+|---|---|---:|---|---|
+| `upload_session_id` | uuid | yes | Primary key for the upload session. | Created only by AIM API. |
+| `evidence_id` | uuid | no | Final evidence record after completion. | Null until object verification succeeds. |
+| `asset_id` | uuid | yes | Asset that owns the evidence. | Must reference active AIM asset. |
+| `inspection_id` | uuid | no | Optional inspection context. | Must belong to the same asset when provided. |
+| `evidence_code` | text | yes | AIM evidence code. | Generated by AIM backend for gate-eligible object-storage upload sessions. Caller-supplied evidence codes are not used in the RC3-B upload-session flow. |
+| `original_filename` | text | yes | Submitted file name. | Must be sanitized before object key creation. |
+| `safe_filename` | text | yes | Sanitized file name. | Must reject path traversal. |
+| `declared_mime_type` | text | yes | Client-declared MIME type. | Must be allowed by RC3-B configuration. |
+| `declared_size_bytes` | bigint | yes | Client-declared file size. | Must match object-storage head result. |
+| `expected_checksum_sha256` | text | yes for new gate-eligible RC3-B uploads | Required declared SHA-256 checksum. | Completion must verify the checksum through caller-provided checksum or object metadata; otherwise completion is blocked. |
+| `storage_provider` | text | yes | Storage provider used for the session. | Currently `s3-compatible`. |
+| `storage_bucket` | text | yes | Target private bucket. | Never expose credentials. |
+| `object_key` | text | yes | Target object key. | Unique per bucket/session. |
+| `upload_status` | text | yes | Upload session lifecycle state. | Verified session creates/finalizes `evidence_files`. |
+| `requested_by` | uuid | no | Human user who requested upload URL. | AI/service actors cannot create final evidence artifacts. |
+| `expires_at` | timestamptz | yes | Upload URL/session expiry. | Expired sessions cannot finalize evidence. |
+| `completed_at` | timestamptz | no | Completion timestamp. | Populated only after verification. |
+| `metadata_json` | jsonb | yes | Redacted signed URL metadata and verification details. | Must not store raw signed URL query strings. |
+
+### Legacy metadata-only evidence upload policy
+
+`POST /api/v1/evidence/upload` remains only for compatibility with earlier metadata-import flows. It now marks records as `metadata_only_pending_object_verification`, `upload_status = 'pending'`, and `access_status = 'blocked'`. It must not satisfy evidence/report gates until the RC3-B `/evidence/upload-url` and `/evidence/complete-upload` flow verifies object storage.
+
+### Updated `report_exports` fields
+
+RC3-B adds or formalizes these report export artifact fields:
+
+| field_name | data_type | required | description | governance rule |
+|---|---|---:|---|---|
+| `storage_provider` | text | yes | Object-storage provider identifier. | Currently `s3-compatible`. |
+| `storage_bucket` | text | yes | Private bucket holding the export artifact. | No credentials or raw signed URL query strings in database. |
+| `object_key` | text | yes | Object key for generated export. | Generated by AIM using report/export identity. |
+| `object_version_id` | text | no | Optional object version ID. | Retained for traceability. |
+| `content_hash_sha256` | text | yes | SHA-256 hash of generated artifact content. | Required for artifact traceability. |
+| `input_snapshot_hash` | text | no | Hash of report input snapshot where available. | Supports reproducibility. |
+| `generated_by` | uuid | no | Human user who generated export. | AI/service actors cannot create final artifacts. |
+| `generated_at` | timestamptz | no | Artifact generation timestamp. | Required for auditability. |
+| `download_status` | text | yes | `not_downloaded`, `signed_url_issued`, `downloaded`, or `blocked`. | Updated by AIM-controlled download URL flow. |
+| `file_size_bytes` | bigint | no | Artifact byte length. | Stored from generated artifact buffer/object metadata. |
+| `mime_type` | text | no | Artifact MIME type. | Must match export format. |
+
+### Required RC3-B audit events
+
+- `EVIDENCE_UPLOAD_URL_CREATED`
+- `EVIDENCE_UPLOAD_COMPLETED`
+- `EVIDENCE_LEGACY_METADATA_REGISTERED`
+- `EVIDENCE_ACCESS_BLOCKED`
+- `EVIDENCE_DOWNLOAD_URL_CREATED`
+- `EVIDENCE_DOWNLOAD_OPENED`
+- `REPORT_EXPORT_CREATED`
+- `REPORT_EXPORT_DOWNLOAD_URL_CREATED`
+
+### Required RC3-B gates
+
+- Evidence metadata is finalized only after object storage existence and declared size are verified.
+- New gate-eligible object-storage upload sessions must declare a SHA-256 checksum before a signed upload URL is issued; completion must verify it through the provided checksum or object metadata, otherwise completion is blocked.
+- Signed URL query strings must be redacted before audit metadata is stored.
+- Report issue evidence gates must count only object-verified evidence (`upload_status = 'verified'`).
+- AI/n8n/service actors cannot create final evidence artifacts, report export artifacts, or approvals.
+
+
+### RC3-B closeout polish controls
+
+- Evidence upload URL requests no longer require or use caller-provided `evidence_code`; AIM generates the Evidence ID/code for the upload session.
+- `checksum_sha256` is mandatory for new gate-eligible object-storage uploads.
+- `evidence_upload_sessions.expected_checksum_sha256` must be populated before completion can create a verified `evidence_files` record.
+- Report evidence gates must treat `upload_status = 'verified'` as the only gate-eligible object-storage status; null/legacy upload statuses remain incompatible with RC3-B report readiness gates.

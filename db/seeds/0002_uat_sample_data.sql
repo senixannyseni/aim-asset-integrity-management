@@ -544,7 +544,9 @@ on conflict (report_code) do update set
   evidence_register_json = excluded.evidence_register_json,
   issue_gate_status = excluded.issue_gate_status,
   issue_gate_checklist_json = excluded.issue_gate_checklist_json,
-  updated_at = now();
+  updated_at = now()
+where coalesce(reports.locked_flag, false) = false
+  and coalesce(reports.report_status, '') <> 'issued';
 
 insert into report_versions(id, report_id, report_version, version_status, content_hash, generated_by, approved_by, generated_at, approved_at, locked_flag)
 values (

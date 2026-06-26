@@ -26,19 +26,30 @@ $headers = @{ Authorization = "Bearer $token" }
 
 ```powershell
 $assetId = "22000000-0000-4000-8000-000000000001"
+$evidencePath = ".\uat-evidence.pdf"
+$fileSize = (Get-Item $evidencePath).Length
+$fileHash = (Get-FileHash -Path $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant()
+
+# Do not provide evidence_code. AIM generates the EVD-{YYYY}-{six_digit_number} code for gate-eligible object-storage uploads.
 $uploadUrl = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/evidence/upload-url" -Headers $headers -ContentType "application/json" -Body (@{
   asset_id = $assetId
-  evidence_code = "EVD-2026-UAT-001"
   filename = "uat-evidence.pdf"
   mime_type = "application/pdf"
-  size_bytes = 1234
+  size_bytes = $fileSize
+  checksum_sha256 = $fileHash
 } | ConvertTo-Json)
 ```
+
+Expected: `checksum_sha256` is mandatory and the response includes an AIM-generated `evidence_code` plus an `x-amz-meta-checksum_sha256` upload header.
 
 ## 4. Upload file to object storage
 
 ```powershell
-Invoke-WebRequest -Method Put -Uri $uploadUrl.data.upload_url -ContentType "application/pdf" -InFile ".\uat-evidence.pdf"
+$uploadHeaders = @{ "Content-Type" = "application/pdf" }
+if ($uploadUrl.data.required_headers."x-amz-meta-checksum_sha256") {
+  $uploadHeaders["x-amz-meta-checksum_sha256"] = $uploadUrl.data.required_headers."x-amz-meta-checksum_sha256"
+}
+Invoke-WebRequest -Method Put -Uri $uploadUrl.data.upload_url -Headers $uploadHeaders -InFile $evidencePath
 ```
 
 ## 5. Complete evidence upload
@@ -46,6 +57,7 @@ Invoke-WebRequest -Method Put -Uri $uploadUrl.data.upload_url -ContentType "appl
 ```powershell
 $complete = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/evidence/complete-upload" -Headers $headers -ContentType "application/json" -Body (@{
   upload_session_id = $uploadUrl.data.upload_session_id
+  checksum_sha256 = $fileHash
 } | ConvertTo-Json)
 ```
 
