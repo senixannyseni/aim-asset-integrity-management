@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A and RC3-B finalized; RC3-C AI staging promotion governance package prepared**
+Sprint status: **RC3-A, RC3-B, and RC3-C finalized; RC3-D audit log governance visibility implemented**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-C AI staging promotion governance hardening: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-D audit log governance visibility: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -392,3 +392,21 @@ RC3-C adds/updates:
 - n8n API-only routing/reminder boundaries for staging review.
 
 RC3-C does not add dashboard, audit-log UI, admin UI, n8n console, NDT visualization, hypercare dashboard, external CMMS integration, or new API/API-ASME formulas.
+
+
+## RC3-D Audit Log Governance Visibility Status
+
+Status: Implemented as RC3-D package candidate.
+
+RC3-D adds read-only audit log governance visibility while preserving audit immutability. Audit log API/UI access is RBAC-controlled through `audit_logs.view`, sensitive metadata is redacted before display, and broad audit visibility is blocked for AI/service/n8n-style actors.
+
+Implemented RC3-D controls:
+
+- `GET /api/v1/audit-logs` with event, entity, actor, timestamp, safe-search, pagination, and created_at-desc ordering;
+- `GET /api/v1/audit-logs/{auditLogId}` for read-only detail view;
+- frontend route `/audit-logs` with list, filters, pagination, detail panel, and traceability labels/links where existing AIM routes support them;
+- redaction of tokens, secrets, passwords, authorization headers, cookies, signed URLs, presigned URLs, credentials, access keys, secret keys, and private keys;
+- no audit edit, delete, purge, suppress, backdate, overwrite, approve, reject, promote, issue, or other mutation controls;
+- n8n addendum confirming n8n may create orchestration events through AIM APIs only and must not mutate audit logs or write directly to PostgreSQL.
+
+Out of scope remains unchanged: admin UI, dashboard, n8n console, NDT visualization, hypercare dashboard, external CMMS integration, new object-storage features, new AI extraction/staging-promotion features, and new API/API-ASME formula implementation are not included.

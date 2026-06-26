@@ -72,6 +72,7 @@ insert into permissions(permission_code, description) values
   ('work_order.close', 'Close internal work orders'),
   ('workflow_event.create', 'Create workflow events'),
   ('audit.read', 'Read audit logs'),
+  ('audit_logs.view', 'View redacted, read-only audit log governance records'),
   ('admin.manage', 'Manage users, roles, and settings')
 on conflict (permission_code) do update set description = excluded.description;
 
@@ -191,7 +192,7 @@ join permissions p on p.permission_code in (
   'ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','formula.read','formula.create','formula.update',
   'calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.trigger','ffs.review','ffs.request_assessment',
   'rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve',
-  'report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','audit.read'
+  'report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','audit.read','audit_logs.view'
 )
 where r.role_code = 'senior_engineer'
 on conflict do nothing;
@@ -201,7 +202,7 @@ select r.id, p.id
 from roles r
 join permissions p on p.permission_code in (
   'asset.read','inspection.read','evidence.read','ai_extraction.read','ndt.read','formula.read',
-  'calculation.read','calculation.review','ffs.review','rbi.interface.read','integrity_decision.review','report.read','report.review','report.approve','audit.read'
+  'calculation.read','calculation.review','ffs.review','rbi.interface.read','integrity_decision.review','report.read','report.review','report.approve','audit.read','audit_logs.view'
 )
 where r.role_code = 'qa_qc'
 on conflict do nothing;
@@ -278,6 +279,7 @@ insert into permissions(permission_code, description) values
   ('validation.read', 'Validation Read'),
   ('validation.run', 'Validation Run'),
   ('audit.read', 'Audit Read'),
+  ('audit_logs.view', 'Audit Logs View'),
   ('admin.manage', 'Admin Manage')
 on conflict (permission_code) do update set description = excluded.description;
 
@@ -305,7 +307,7 @@ on conflict do nothing;
 insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
-join permissions p on p.permission_code in ('asset.read','asset.update','asset.delete','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','ndt.import','formula.read','formula.create','formula.update','formula.approve','formula.retire','formula.test','calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','ffs.request_assessment','ffs.approve','ffs.close','rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve','report.read','report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','validation.read','validation.run','workflow_event.create','error_log.create','error_log.read','audit.read')
+join permissions p on p.permission_code in ('asset.read','asset.update','asset.delete','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt.review','ndt.approve','ndt.import','formula.read','formula.create','formula.update','formula.approve','formula.retire','formula.test','calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','ffs.request_assessment','ffs.approve','ffs.close','rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve','report.read','report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','validation.read','validation.run','workflow_event.create','error_log.create','error_log.read','audit.read','audit_logs.view')
 where r.role_code = 'senior_engineer'
 on conflict do nothing;
 

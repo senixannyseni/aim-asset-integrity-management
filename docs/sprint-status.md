@@ -133,3 +133,16 @@ Implemented RC3-C controls:
 - n8n addendum confirming n8n may route/remind/query AIM APIs only and must not approve/correct/reject/promote.
 
 Out of scope remains unchanged: audit log UI, admin UI, dashboard, n8n console, NDT visualization, hypercare dashboard, external CMMS integration, and new API/API-ASME formula implementation are not included.
+
+
+## RC3-D Audit Log Governance Visibility
+
+Status: Implemented as package candidate.
+
+- Adds RBAC-controlled, read-only audit log API visibility through `GET /api/v1/audit-logs` and `GET /api/v1/audit-logs/{auditLogId}`.
+- Adds frontend route `/audit-logs` with filters, pagination, and read-only detail panel.
+- Adds sensitive metadata redaction for tokens, secrets, signed URLs, credentials, and private keys.
+- Adds `audit_logs.view` permission alias and DB synchronization migration.
+- Preserves audit log immutability: no edit/delete/purge/suppress/backdate/overwrite controls are introduced.
+- Documents n8n API-only orchestration boundary for audit governance events.
+- Out of scope remains admin UI, dashboard, n8n console, NDT visualization, hypercare dashboard, object-storage expansion, AI extraction expansion, and calculation expansion.

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.16.0
-  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-B evidence/report object-storage hardening. AIM is the system of
+  version: 0.17.0
+  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-D audit log governance visibility. AIM is the system of
     record; PostgreSQL stores final structured engineering data; object storage stores original evidence. n8n remains orchestration-only and must
     call AIM backend APIs only. AI extraction output is staging-only and requires human engineering review before promotion. This contract documents
     implemented auth, AI extraction/staging, evidence governance, approval, and report issue gates; it does not implement API 579/API 581, CMMS,
@@ -433,6 +433,117 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: unspecified
+  /api/v1/audit-logs:
+    get:
+      summary: List redacted read-only audit log entries
+      description: RC3-D audit governance visibility endpoint. Returns RBAC-controlled, read-only audit records with sensitive metadata redacted; no audit mutation, deletion, purge, suppress, approve, reject, promote, or issue controls are exposed.
+      tags:
+      - Audit Logs
+      x-permission-required: audit_logs.view
+      x-audit-event-generated: none
+      x-read-only: true
+      x-redaction-required: true
+      x-sensitive-fields-redacted: token, secret, password, authorization, cookie, signed_url, presigned_url, credential, access_key, secret_key, private_key
+      parameters:
+      - in: query
+        name: event_type
+        schema:
+          type: string
+      - in: query
+        name: entity_type
+        schema:
+          type: string
+      - in: query
+        name: entity_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: actor_user_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Searches safe fields only: event type, entity type, request ID, actor email, and actor full name.
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      responses:
+        '200':
+          description: Redacted audit log list with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. Audit logs are immutable governance records displayed for visibility only.
+      x-n8n-boundary: n8n may create orchestration events through AIM APIs only; n8n must not edit, delete, suppress, or directly write audit logs.
+  /api/v1/audit-logs/{auditLogId}:
+    get:
+      summary: Get redacted audit log detail
+      description: RC3-D read-only audit log detail endpoint. Sensitive metadata values are redacted before API/UI display.
+      tags:
+      - Audit Logs
+      x-permission-required: audit_logs.view
+      x-audit-event-generated: none
+      x-read-only: true
+      x-redaction-required: true
+      parameters:
+      - in: path
+        name: auditLogId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Redacted audit log detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogDetailResponse'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. Audit log detail is immutable and read-only.
+      x-n8n-boundary: n8n must not edit audit logs or write directly to PostgreSQL.
   /api/v1/formulas:
     get:
       summary: List Formula Registry versions
@@ -2342,6 +2453,87 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
   schemas:
+    AuditLogEntry:
+      type: object
+      properties:
+        audit_log_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        actor_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        actor_email:
+          type: string
+          nullable: true
+        actor_full_name:
+          type: string
+          nullable: true
+        actor_role_codes:
+          type: array
+          items:
+            type: string
+        entity_type:
+          type: string
+          nullable: true
+        entity_id:
+          type: string
+          format: uuid
+          nullable: true
+        request_id:
+          type: string
+          nullable: true
+        before:
+          nullable: true
+          description: Redacted before_json snapshot.
+        after:
+          nullable: true
+          description: Redacted after_json snapshot.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Redacted metadata. Sensitive values are replaced with [REDACTED].
+        traceability:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        redaction_notice:
+          type: string
+        read_only:
+          type: boolean
+    AuditLogListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total_count:
+              type: integer
+            has_next_page:
+              type: boolean
+        governance:
+          type: object
+          additionalProperties: true
+    AuditLogDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuditLogEntry'
+        governance:
+          type: object
+          additionalProperties: true
     EvidenceUploadUrlRequest:
       type: object
       required: [asset_id, filename, mime_type, size_bytes, checksum_sha256]

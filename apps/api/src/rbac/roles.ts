@@ -105,6 +105,7 @@ export const PERMISSIONS = [
   'validation.read',
   'validation.run',
   'audit.read',
+  'audit_logs.view',
   'engineering_review.read',
   'engineering_review.create',
   'engineering_review.update',
@@ -303,7 +304,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.run',
     'validation.read',
     'validation.run',
-    'audit.read'
+    'audit.read',
+    'audit_logs.view'
   ],
   qa_qc: [
     'asset.read',
@@ -332,7 +334,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.read',
     'validation.run',
     'error_log.read',
-    'audit.read'
+    'audit.read',
+    'audit_logs.view'
   ],
   lead_engineer: [
     'asset.read',
@@ -416,7 +419,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.run',
     'validation.read',
     'validation.run',
-    'audit.read'
+    'audit.read',
+    'audit_logs.view'
   ],
   approver: [
     'asset.read',
@@ -440,7 +444,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'work_order.update',
     'work_order.close',
     'dashboard.view',
-    'audit.read'
+    'audit.read',
+    'audit_logs.view'
   ],
   management: [
     ...readOnlyPermissions,
@@ -464,6 +469,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'error_log.create',
     'error_log.read',
     'audit.read',
+    'audit_logs.view',
     'admin.manage',
     'asset.read',
     'evidence.read',
