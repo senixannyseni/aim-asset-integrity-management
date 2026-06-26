@@ -617,7 +617,10 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
         object_key: objectKey,
         upload_url: signedUpload.url,
         expires_at: signedUpload.expiresAt,
-        required_headers: { 'Content-Type': mimeType }
+        required_headers: {
+          'Content-Type': mimeType,
+          'x-amz-meta-checksum_sha256': checksum
+        }
       },
       auditLogId
     });
