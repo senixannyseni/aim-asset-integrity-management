@@ -433,6 +433,33 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: unspecified
+  /api/v1/governance-dashboard/overview:
+    get:
+      summary: Read-only governance dashboard readiness overview
+      description: Returns RBAC-controlled read-only counts and safe governance summaries from existing AIM state. Does not compute engineering outputs, expose secrets, or mutate records.
+      security:
+      - bearerAuth: []
+      x-permission-required: dashboard.view
+      x-read-only: true
+      x-dashboard-readiness-overview: true
+      x-source-of-truth-boundary: AIM PostgreSQL metadata and governed AIM APIs only; n8n must not compute or write dashboard state directly.
+      x-redaction-required: true
+      responses:
+        '200':
+          description: Governance dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernanceDashboardOverviewEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+      tags:
+      - Governance Dashboard
+
   /api/v1/audit-logs:
     get:
       summary: List redacted read-only audit log entries
@@ -3936,6 +3963,42 @@ components:
           type: string
           format: uuid
           description: Required when closure_evidence_required is true.
+    GovernanceDashboardOverviewEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GovernanceDashboardOverview'
+    GovernanceDashboardOverview:
+      type: object
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        permission_required:
+          type: string
+          example: dashboard.view
+        read_only:
+          type: boolean
+          example: true
+        source_of_truth:
+          type: string
+        redaction_notice:
+          type: string
+          description: Secrets, signed_url, presigned_url, token, password, credential, private_key, and raw evidence/report contents are not returned.
+        sections:
+          type: object
+          additionalProperties: true
+          description: Existing AIM state summaries for evidence readiness, AI review queue, staging promotion readiness, calculation review readiness, report issue readiness, work-order follow-up, and governance warnings.
+        traceability_links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        prohibited_controls:
+          type: array
+          items:
+            type: string
+          description: Documents that the dashboard exposes no approve/reject/correct/promote/report issue/delete/admin mutation controls.
     AuditEventEnvelope:
       type: object
       properties:

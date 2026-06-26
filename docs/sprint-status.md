@@ -166,3 +166,20 @@ Implemented RC3-E controls:
 - n8n boundary addendum confirming n8n must not administer RBAC or system settings directly.
 
 Out of scope remains unchanged: dashboard, n8n console, NDT visualization, hypercare dashboard, new AI features, new calculations, secret management UI, direct database editing, and audit log editing/deletion are not included.
+
+## RC3-F Governance Dashboard / Readiness Overview
+
+Status: Implemented as RC3-F package candidate.
+
+RC3-F adds a read-only governance dashboard overview while preserving AIM as the system of record. Dashboard data is summarized from existing AIM database state and exposed only through RBAC-controlled AIM APIs.
+
+Implemented RC3-F controls:
+
+- `GET /api/v1/governance-dashboard/overview` protected by `dashboard.view`;
+- frontend route `/dashboard`;
+- read-only cards for asset/inspection coverage, evidence readiness, AI review queue, staging promotion readiness, calculation review readiness, report issue readiness, work-order follow-up, and governance/audit warnings;
+- safe links to existing AIM workspaces only;
+- no dashboard mutation endpoints or mutation controls;
+- n8n addendum confirming n8n must not compute or store dashboard state directly in PostgreSQL.
+
+Out of scope remains unchanged: n8n console, NDT visualization, hypercare dashboard, new AI features, new object-storage features, new report builder features, new calculations, direct database editing, audit mutation, admin mutation, external CMMS integration, and final engineering decision automation are not included.

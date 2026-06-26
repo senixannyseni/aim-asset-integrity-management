@@ -437,3 +437,11 @@ Governance controls:
 - password hashes, tokens, credentials, signed URLs, private keys, and environment variables are not exposed;
 - system setting updates are allowlisted and non-secret only;
 - no dashboard, n8n console, NDT visualization, hypercare dashboard, secret editor, direct database editor, or audit log mutation control is introduced.
+
+## RC3-F Governance Dashboard Readiness Overview
+
+RC3-F adds the read-only governance dashboard route `/dashboard` and the API endpoint `GET /api/v1/governance-dashboard/overview`.
+
+The dashboard summarizes existing AIM state only, including evidence readiness, AI extraction review queue, staging promotion readiness, calculation/review readiness, report issue gates, work-order follow-up, and governance/audit warnings. Access is controlled by `dashboard.view`.
+
+RC3-F does not add dashboard mutation controls, n8n console, NDT visualization, hypercare dashboard, new AI extraction/staging features, object-storage expansion, report issue actions, admin changes, direct database editing, or new engineering calculations. Secrets, signed URLs, tokens, object-storage credentials, passwords, private keys, and raw evidence/report contents are not exposed by the dashboard API or UI.
