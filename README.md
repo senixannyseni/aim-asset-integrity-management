@@ -1,14 +1,14 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC2 merged/tagged; Sprint 2.6 / RC3-A hardening in progress — repository hygiene, config alignment, root route, and demo route gating**
+Sprint status: **RC3-A and RC3-B completed locally — repository hygiene/config/root/demo gating plus evidence/report object storage**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through RC2 controlled UAT closure and RC3-A hardening preparation: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-B object-storage hardening: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
 - AIM is the system of record.
 - PostgreSQL stores final structured engineering data, metadata, validation snapshots, audit logs, workflow events, and error logs.
-- Object storage stores original evidence files; RC3-A aligns configuration for future RC3-B object-storage implementation, while the current MVP still stores object-storage-compatible evidence metadata/path.
+- Object storage stores original evidence files and generated report export artifacts; PostgreSQL stores metadata, checksums, object keys, upload sessions, linkage, and audit history.
 - n8n is orchestration only and must call AIM backend APIs.
 - n8n must not write directly to PostgreSQL.
 - AI extraction output must go to extraction/staging tables only and must remain non-final until human review and controlled promotion.
@@ -320,7 +320,7 @@ AIM remains the system of record. AI must not approve final engineering actions.
 
 ## Sprint 2.6 / RC3-A Hardening
 
-RC3-A focuses on repository hygiene, configuration alignment, frontend root-route handling, and production-safe demo route gating. Correct runtime endpoints for RC2/RC3 are:
+RC3-A is completed and covers repository hygiene, configuration alignment, frontend root-route handling, and production-safe demo route gating. Correct runtime endpoints for RC2/RC3 are:
 
 - API health: `GET /health` and `GET /health/db`.
 - JWT login: `POST /api/v1/auth/login`.
@@ -329,7 +329,7 @@ RC3-A focuses on repository hygiene, configuration alignment, frontend root-rout
 
 The controlled deployment/hypercare evidence generated against `127.0.0.1:5433/aim_tank_integrity` is a confirmed local deployment database. Treat it as controlled production-like evidence unless that database is explicitly the production target. Final real-production closure remains human-gated and pending hypercare completion.
 
-RC3-A does not implement evidence object-storage upload/download, report artifact object storage, or AI staging-to-final promotion. Those remain assigned to later RC3 work packages.
+RC3-B is completed after RC3-A and implements evidence object-storage upload/download plus report artifact object-storage export. AI staging-to-final promotion remains out of scope for this package and must be handled in a later RC3 package.
 
 ## RC3-B Evidence and Report Object Storage
 
@@ -342,6 +342,7 @@ For RC3-B, object storage stores original evidence files and generated report ex
 - Evidence download URLs and report export download URLs are RBAC-controlled and audit-logged.
 - Signed URL query strings are redacted from audit metadata.
 - AI/n8n/service users cannot create final evidence or report export artifacts.
+- Legacy `POST /api/v1/evidence/upload` is retained only for metadata compatibility; it marks evidence as pending object verification and must not satisfy report/evidence gates until the RC3-B upload-url/complete-upload flow verifies object storage.
 
 New RC3-B endpoints:
 
@@ -362,3 +363,15 @@ docs/deployment/object_storage_evidence_runbook.md
 docs/deployment/report_export_storage_runbook.md
 docs/uat/uat_rc3_object_storage_scripts.md
 ```
+
+
+## RC3-B Closeout Polish
+
+The RC3-B closeout polish tightens source-of-truth alignment before RC3-C begins:
+
+- AIM backend generates evidence codes for gate-eligible object-storage upload sessions; callers must not provide controlled evidence IDs.
+- `checksum_sha256` is mandatory before AIM issues a gate-eligible evidence upload URL.
+- Evidence completion verifies object existence, size, and checksum controls before setting `upload_status = verified`.
+- Report issue/export evidence gates count only verified object-storage evidence; legacy/null upload status is not treated as verified.
+- Legacy metadata-only evidence upload remains compatibility-only and cannot satisfy evidence/report gates until object verification is completed.
+- RC3-B n8n workflow behavior is documented as API-only orchestration for intake notifications, review reminders, and failure handling.

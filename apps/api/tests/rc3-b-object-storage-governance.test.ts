@@ -86,6 +86,9 @@ describe('RC3-B evidence object-storage API contract', () => {
     expect(route).toContain('EVIDENCE_BLOCKED_BY_SCAN');
     expect(route).toContain('EVIDENCE_DOWNLOAD_URL_CREATED');
     expect(route).toContain('HUMAN_EVIDENCE_UPLOAD_REQUIRED');
+    expect(route).toContain('evidence_code_source');
+    expect(route).toContain('checksum_required');
+    expect(route).toContain('EVIDENCE_CHECKSUM_REQUIRED');
   });
 
   it('does not grant evidence upload or report export to ai_agent', () => {
@@ -113,6 +116,7 @@ describe('RC3-B report artifact object-storage API contract', () => {
     expect(route).toContain('REPORT_EXPORT_DOWNLOAD_URL_CREATED');
     expect(route).toContain('HUMAN_REPORT_EXPORT_REQUIRED');
     expect(route).toContain('normal_api_base64_response: false');
+    expect(route).toContain("ef.upload_status = 'verified'");
   });
 
   it('updates minimal frontend evidence and report object-storage controls', () => {
@@ -144,5 +148,10 @@ describe('RC3-B report artifact object-storage API contract', () => {
     const readme = readRepoFile('README.md');
     expect(readme).toContain('RC3-B');
     expect(readme).toContain('object storage stores original evidence files');
+    expect(readme).toContain('AIM backend generates evidence codes');
+
+    const n8nAddendum = readRepoFile('05_n8n/rc3b_object_storage_workflow_addendum.md');
+    expect(n8nAddendum).toContain('n8n remains workflow orchestration only');
+    expect(n8nAddendum).toContain('AIM-generated');
   });
 });
