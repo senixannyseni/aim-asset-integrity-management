@@ -244,6 +244,10 @@ Migration/release rehearsal passes only when:
 Phase 2.0 must not introduce schema migrations that delete, truncate, rewrite, or silently promote engineering data. If a future migration is required, it must be additive, reviewed, tested on a clean DB, and documented here before acceptance.
 
 
-## RC3-A alignment note
+## RC3-A / RC3-B alignment note
 
-RC2 is merged/tagged and RC3 hardening is in progress. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments. Evidence object-storage upload/download and report artifact object-storage storage are planned for later RC3 packages and are not implemented by RC3-A. Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
+RC3-A and RC3-B are now implemented in this repository state. Correct health endpoints are `GET /health` and `GET /health/db`. Correct authentication endpoints are `POST /api/v1/auth/login` and `GET /api/v1/auth/me`. RBAC demo endpoints and demo CORS headers are local/development/test only when `AUTH_ALLOW_LOCAL_DEMO=true`; they are unavailable in production-like environments.
+
+RC3-B implements evidence object-storage upload/download and report artifact object-storage export. Original evidence files and generated report artifacts are stored in private S3-compatible object storage; PostgreSQL stores metadata, checksums, object keys, upload sessions, status, and audit linkage. Legacy metadata-only evidence upload is retained only for compatibility and is not gate-eligible until object storage verification is completed through the RC3-B flow.
+
+Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
