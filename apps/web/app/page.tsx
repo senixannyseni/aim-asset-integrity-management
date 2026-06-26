@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 const navigationItems = [
   { href: '/login', label: 'Login', description: 'Start a JWT-authenticated AIM session.' },
+  { href: '/dashboard', label: 'Governance Dashboard', description: 'View read-only readiness, evidence, report, work-order, and governance summaries.' },
   { href: '/calculations', label: 'Calculations', description: 'Review deterministic calculation runs and engineering warnings.' },
   { href: '/evidence', label: 'Evidence', description: 'Open the evidence repository and linkage workspace.' },
   { href: '/integrity-decisions', label: 'Integrity Decisions', description: 'Review integrity decisions and evidence gates.' },
