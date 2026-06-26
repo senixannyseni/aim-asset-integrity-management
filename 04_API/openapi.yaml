@@ -230,12 +230,15 @@ paths:
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
   /api/v1/evidence/upload:
     post:
-      summary: Register evidence metadata and object storage path
+      summary: Legacy evidence metadata import only; not gate-eligible until object storage is verified
+      description: Deprecated RC2 metadata-only route retained for compatibility. It registers metadata as metadata_only_pending_object_verification and upload_status=pending. Use /api/v1/evidence/upload-url followed by /api/v1/evidence/complete-upload for gate-eligible RC3-B object-storage evidence.
       x-permission-required: evidence.upload
-      x-audit-event-generated: EVIDENCE_UPLOADED
+      x-audit-event-generated: EVIDENCE_LEGACY_METADATA_REGISTERED
       responses:
         '201':
-          description: Evidence registered
+          description: Legacy metadata registered but not object-storage verified
+        '409':
+          $ref: '#/components/responses/GateBlocked'
       security:
       - bearerAuth: []
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
@@ -1839,6 +1842,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: Evidence object missing, object key missing, or access blocked by malware scan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
       x-audit-event-generated: EVIDENCE_DOWNLOAD_URL_CREATED
       parameters:
       - in: path
@@ -2052,7 +2061,7 @@ paths:
   /api/v1/evidence/upload-url:
     post:
       summary: Create an audited signed evidence upload URL
-      description: RC3-B object-storage flow. AIM validates metadata, generates the object key, records a pending upload session, and returns a short-lived signed PUT URL. Evidence metadata is not finalized until complete-upload verifies object existence.
+      description: RC3-B object-storage flow. AIM validates metadata, generates the AIM evidence code and object key, records a pending upload session, and returns a short-lived signed PUT URL. `checksum_sha256` is mandatory for gate-eligible uploads. Evidence metadata is not finalized until complete-upload verifies object existence and checksum controls.
       x-permission-required: evidence.upload
       x-audit-event-generated: EVIDENCE_UPLOAD_URL_CREATED
       security:
@@ -2089,9 +2098,21 @@ paths:
       responses:
         '201':
           description: Evidence metadata finalized after object verification
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
-          description: Object missing, expired session, size mismatch, or checksum mismatch
-      x-source-of-truth-boundary: Metadata is finalized only after object-storage headObject succeeds.
+          description: Object missing, expired session, size mismatch, checksum mismatch, or checksum-required failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      x-source-of-truth-boundary: Metadata is finalized only after object-storage headObject succeeds and declared size/checksum rules pass.
   /api/v1/evidence/{evidenceId}/download:
     get:
       summary: Open evidence file through an audited signed object-storage redirect
@@ -2110,8 +2131,12 @@ paths:
         '302':
           description: Redirect to signed object-storage URL after RBAC, object-existence, malware-status, and audit checks
         '409':
-          description: Evidence object missing or blocked by malware scan
-      x-source-of-truth-boundary: Signed URL query secrets are never stored unredacted in audit logs.
+          description: Evidence object missing, object key missing, or blocked by malware scan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      x-source-of-truth-boundary: Signed URL query secrets are never stored unredacted in audit logs; blocked access attempts are audit-logged as EVIDENCE_ACCESS_BLOCKED.
   /api/v1/reports/{reportId}/exports:
     get:
       summary: List object-storage report exports
@@ -2172,8 +2197,18 @@ paths:
       responses:
         '200':
           description: Signed report export URL issued after object existence check
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           description: Report export object missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
       x-source-of-truth-boundary: Signed URL query secrets are redacted from audit metadata.
 components:
   securitySchemes:
@@ -2226,7 +2261,7 @@ components:
   schemas:
     EvidenceUploadUrlRequest:
       type: object
-      required: [asset_id, filename, mime_type, size_bytes]
+      required: [asset_id, filename, mime_type, size_bytes, checksum_sha256]
       properties:
         asset_id:
           type: string
@@ -2235,8 +2270,6 @@ components:
           type: string
           format: uuid
           nullable: true
-        evidence_code:
-          type: string
         filename:
           type: string
         mime_type:
@@ -2245,7 +2278,8 @@ components:
           type: integer
         checksum_sha256:
           type: string
-          nullable: true
+          pattern: '^[a-fA-F0-9]{64}$'
+          description: Required SHA-256 checksum for gate-eligible object-storage evidence uploads.
     EvidenceCompleteUploadRequest:
       type: object
       required: [upload_session_id]
