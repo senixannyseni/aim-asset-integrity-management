@@ -90,6 +90,45 @@ describe('Deterministic calculation engine', () => {
     expect(result.final_use_status).toBe('requires_engineering_review');
   });
 
+
+  it('aligns zero corrosion rate behavior with the validation workbook fixture', () => {
+    const context = JSON.parse(JSON.stringify(baseContext)) as typeof baseContext;
+    context.ndt_measurements[0]!.measured_thickness = 10;
+    context.ndt_measurements[1]!.measured_thickness = 10;
+
+    const result = runDeterministicCalculation(context);
+
+    expect(result.corrosion_rates[0]?.corrosion_rate_mm_per_year).toBe(0);
+    expect(result.remaining_life[0]?.remaining_life_years).toBeNull();
+    expect(result.remaining_life[0]?.status).toBe('not_determined');
+    expect(result.warnings.map((warning) => warning.code)).toContain('ZERO_CORROSION_RATE_REVIEW');
+  });
+
+  it('aligns negative corrosion rate behavior with the validation workbook fixture', () => {
+    const context = JSON.parse(JSON.stringify(baseContext)) as typeof baseContext;
+    context.ndt_measurements[0]!.measured_thickness = 9.8;
+    context.ndt_measurements[1]!.measured_thickness = 10.1;
+
+    const result = runDeterministicCalculation(context);
+
+    expect(result.corrosion_rates[0]?.corrosion_rate_mm_per_year).toBeLessThan(0);
+    expect(result.remaining_life[0]?.remaining_life_years).toBeNull();
+    expect(result.remaining_life[0]?.status).toBe('not_determined');
+    expect(result.warnings.map((warning) => warning.code)).toContain('NEGATIVE_CORROSION_RATE');
+  });
+
+  it('blocks final use when previous thickness is missing for a corrosion-rate group', () => {
+    const context = JSON.parse(JSON.stringify(baseContext)) as typeof baseContext;
+    context.ndt_measurements = [context.ndt_measurements[1]!];
+
+    const result = runDeterministicCalculation(context);
+
+    expect(result.corrosion_rates).toHaveLength(0);
+    expect(result.final_use_status).toBe('blocked');
+    expect(result.final_use_blockers).toContain('INCOMPLETE_INPUT');
+    expect(result.warnings.map((warning) => warning.code)).toContain('INCOMPLETE_INPUT');
+  });
+
   it('preserves NDT source entity and evidence identifiers in normalized inputs', () => {
     const result = runDeterministicCalculation(baseContext);
     const measurements = result.normalized_inputs.ndt_measurements;
