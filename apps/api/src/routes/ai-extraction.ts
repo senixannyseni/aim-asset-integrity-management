@@ -82,6 +82,41 @@ function validationError(res: ApiResponse, field: string, message: string, code 
   res.status(400).json({ error: { code, message, details: [{ field, message }] } });
 }
 
+function controlledError(res: ApiResponse, status: number, code: string, message: string, details: Record<string, unknown> = {}): void {
+  res.status(status).json({ error: { code, message, ...details } });
+}
+
+const SERVICE_ONLY_ACTOR_ROLES = new Set(['ai_agent', 'n8n_service', 'integration_service', 'workflow_service', 'system_service']);
+
+function isServiceOnlyActor(req: Request): boolean {
+  return actorRoles(req).some((role) => SERVICE_ONLY_ACTOR_ROLES.has(role));
+}
+
+function ensureHumanReviewerActor(req: Request, res: ApiResponse, action: string): boolean {
+  if (!actorUserId(req) || isServiceOnlyActor(req)) {
+    controlledError(res, 403, 'AI_SERVICE_ACTOR_BLOCKED', `Human engineer actor is required to ${action}.`, {
+      actor_roles: actorRoles(req),
+      human_review_required: true
+    });
+    return false;
+  }
+  return true;
+}
+
+const WEAK_REASON_VALUES = new Set(['n/a', 'na', 'none', 'nil', '-', '--', 'test', 'testing', 'tbd', 'todo']);
+
+function isMeaningfulReason(value: unknown): value is string {
+  const reason = asString(value);
+  if (!reason) return false;
+  const normalized = reason.toLowerCase().replace(/[.\s]+$/g, '').trim();
+  return reason.length >= 8 && !WEAK_REASON_VALUES.has(normalized);
+}
+
+function sourceReferenceRequiresEvidence(sourceReference: unknown): boolean {
+  if (!isPlainObject(sourceReference)) return true;
+  return sourceReference.evidence_not_required !== true;
+}
+
 async function writeAudit(
   client: PoolClient,
   req: Request,
@@ -365,6 +400,244 @@ async function hasBlockingDataQualityChecks(client: PoolClient, stagingRecordId:
   return (result.rowCount ?? 0) > 0;
 }
 
+async function findVerifiedEvidenceReference(
+  client: PoolClient,
+  params: { extractionJobId?: string | null; extractionFieldId?: string | null; stagingRecordId?: string | null; sourceReference?: unknown; evidenceFileId?: string | null }
+): Promise<{ evidence_file_id: string; evidence_code: string | null } | null> {
+  const sourceEvidenceId = asUuid(isPlainObject(params.sourceReference) ? params.sourceReference.evidence_file_id : null);
+  const explicitEvidenceId = asUuid(params.evidenceFileId) ?? sourceEvidenceId;
+  const result = await client.query<{ evidence_file_id: string; evidence_code: string | null }>(
+    `with candidates as (
+       select ef.id as evidence_file_id, ef.evidence_code
+       from evidence_files ef
+       where $1::uuid is not null and ef.id = $1::uuid and ef.upload_status = 'verified'
+       union
+       select ef.id as evidence_file_id, ef.evidence_code
+       from evidence_links el
+       join evidence_files ef on ef.id = el.evidence_file_id
+       where ef.upload_status = 'verified'
+         and (
+           ($2::uuid is not null and el.linked_entity_type = 'extraction_job' and el.linked_entity_id = $2::uuid)
+           or ($3::uuid is not null and el.linked_entity_type = 'extraction_field' and el.linked_entity_id = $3::uuid)
+           or ($4::uuid is not null and el.linked_entity_type = 'staging_record' and el.linked_entity_id = $4::uuid)
+         )
+       union
+       select ef.id as evidence_file_id, ef.evidence_code
+       from extraction_jobs ej
+       join evidence_files ef on ef.id = ej.source_evidence_file_id
+       where $2::uuid is not null and ej.id = $2::uuid and ef.upload_status = 'verified'
+       union
+       select ef.id as evidence_file_id, ef.evidence_code
+       from manual_overrides mo
+       join evidence_files ef on ef.id = mo.evidence_file_id
+       where ef.upload_status = 'verified'
+         and (
+           ($3::uuid is not null and mo.extraction_field_id = $3::uuid)
+           or ($4::uuid is not null and mo.staging_record_id = $4::uuid)
+         )
+     )
+     select evidence_file_id, evidence_code from candidates limit 1`,
+    [
+      explicitEvidenceId,
+      params.extractionJobId ?? null,
+      params.extractionFieldId ?? null,
+      params.stagingRecordId ?? null
+    ]
+  );
+  return result.rows[0] ?? null;
+}
+
+async function hasVerifiedEvidenceLink(client: PoolClient, entityType: string, entityId: string): Promise<boolean> {
+  const result = await client.query(
+    `select 1
+     from evidence_links el
+     join evidence_files ef on ef.id = el.evidence_file_id
+     where el.linked_entity_type = $1
+       and el.linked_entity_id = $2
+       and ef.upload_status = 'verified'
+     limit 1`,
+    [entityType, entityId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+type PromotionGateResult = {
+  gate: string;
+  status: 'pass' | 'blocked';
+  code?: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+};
+
+async function buildPromotionGateResults(
+  client: PoolClient,
+  params: {
+    req: Request;
+    staging: DbRow;
+    field?: DbRow | null;
+    job?: DbRow | null;
+    comment?: string | null;
+  }
+): Promise<{ canPromote: boolean; gates: PromotionGateResult[]; verifiedEvidence: { evidence_file_id: string; evidence_code: string | null } | null }> {
+  const gates: PromotionGateResult[] = [];
+  const actorId = actorUserId(params.req);
+  const reviewStatus = String(params.staging.review_status ?? '');
+  const fieldStatus = String(params.field?.field_status ?? '');
+  const confidenceScore = params.field?.confidence_score === null || params.field?.confidence_score === undefined
+    ? null
+    : Number(params.field.confidence_score);
+  const sourceReference = params.field?.source_reference_json ?? {};
+  const evidenceRequired = sourceReferenceRequiresEvidence(sourceReference);
+
+  function pass(gate: string, message: string, metadata: Record<string, unknown> = {}): void {
+    gates.push({ gate, status: 'pass', message, metadata });
+  }
+
+  function block(gate: string, code: string, message: string, metadata: Record<string, unknown> = {}): void {
+    gates.push({ gate, status: 'blocked', code, message, metadata });
+  }
+
+  if (!params.job) {
+    block('extraction_job_exists', 'EXTRACTION_JOB_NOT_FOUND', 'Extraction job is required before staging promotion.');
+  } else {
+    pass('extraction_job_exists', 'Extraction job exists.', { extraction_job_id: params.job.id });
+  }
+
+  if (!params.field) {
+    block('extraction_field_exists', 'EXTRACTION_FIELD_NOT_FOUND', 'Extraction field is required before staging promotion.');
+  } else {
+    pass('extraction_field_exists', 'Extraction field exists.', { extraction_field_id: params.field.id });
+  }
+
+  if (reviewStatus === 'rejected' || fieldStatus === 'rejected_by_engineer') {
+    block('engineer_review_status', 'REJECTED_FIELD_CANNOT_BE_PROMOTED', 'Rejected AI extraction fields cannot be promoted.');
+  } else if (!['approved_for_promotion', 'corrected'].includes(reviewStatus)) {
+    block('engineer_review_status', 'ENGINEER_REVIEW_REQUIRED', 'Staging record must be approved or corrected by a human engineer before promotion.', { review_status: reviewStatus });
+  } else {
+    pass('engineer_review_status', 'Human engineer review status allows promotion.', { review_status: reviewStatus });
+  }
+
+  if (['invalid', 'rejected_by_validation'].includes(fieldStatus)) {
+    block('field_validation_status', 'FIELD_VALIDATION_STATUS_BLOCKED', 'Invalid or validation-rejected fields cannot be promoted.', { field_status: fieldStatus });
+  } else {
+    pass('field_validation_status', 'Field validation status allows promotion.', { field_status: fieldStatus });
+  }
+
+  if (await hasBlockingDataQualityChecks(client, String(params.staging.id))) {
+    block('data_quality_checks', 'BLOCKING_DATA_QUALITY_CHECKS', 'Unresolved blocking data quality checks prevent promotion.');
+  } else {
+    pass('data_quality_checks', 'No unresolved blocking data quality checks were found.');
+  }
+
+  if (confidenceScore !== null && confidenceScore < 0.75 && reviewStatus !== 'corrected') {
+    block('confidence_gate', 'LOW_CONFIDENCE_CORRECTION_REQUIRED', 'Low-confidence AI extraction fields require human correction before promotion.', { confidence_score: confidenceScore });
+  } else {
+    pass('confidence_gate', 'Confidence gate satisfied.', { confidence_score: confidenceScore });
+  }
+
+  const reviewerId = asString(params.staging.reviewer_id ?? params.field?.reviewer_id);
+  if (!reviewerId) {
+    block('reviewer_identity', 'HUMAN_REVIEWER_REQUIRED', 'A human reviewer identity is required before promotion.');
+  } else if (reviewerId === actorId) {
+    block('segregation_of_duty', 'SEGREGATION_OF_DUTY_BLOCKED', 'Promoter must be independent from the reviewer for staging promotion.');
+  } else {
+    pass('segregation_of_duty', 'Segregation-of-duty check passed.', { reviewer_id: reviewerId, promoter_id: actorId });
+  }
+
+  let manualOverrideReasonOk = true;
+  if (reviewStatus === 'corrected') {
+    const overrideResult = await client.query<{ correction_reason: string | null }>(
+      `select correction_reason
+       from manual_overrides
+       where staging_record_id = $1 or extraction_field_id = $2
+       order by created_at desc
+       limit 1`,
+      [params.staging.id, params.staging.extraction_field_id]
+    );
+    const overrideReason = overrideResult.rows[0]?.correction_reason ?? null;
+    manualOverrideReasonOk = isMeaningfulReason(overrideReason);
+    if (!manualOverrideReasonOk) {
+      block('manual_override_reason', 'MANUAL_OVERRIDE_REASON_REQUIRED', 'Corrected fields require a meaningful manual override reason.');
+    } else {
+      pass('manual_override_reason', 'Manual override reason is present and meaningful.');
+    }
+  }
+
+  const verifiedEvidence = evidenceRequired
+    ? await findVerifiedEvidenceReference(client, {
+      extractionJobId: asString(params.staging.extraction_job_id),
+      extractionFieldId: asString(params.staging.extraction_field_id),
+      stagingRecordId: asString(params.staging.id),
+      sourceReference
+    })
+    : null;
+  if (evidenceRequired && !verifiedEvidence) {
+    block(
+      'verified_evidence_linkage',
+      'VERIFIED_EVIDENCE_LINK_REQUIRED',
+      'Verified object-storage evidence is required before promotion; metadata-only legacy evidence is not sufficient.',
+      {
+        engineer_review_evidence_gate: true,
+        upload_status_required: 'verified'
+      }
+    );
+  } else if (evidenceRequired) {
+    pass(
+      'verified_evidence_linkage',
+      'Verified object-storage evidence is linked.',
+      {
+        engineer_review_evidence_gate: true,
+        ...(verifiedEvidence ?? {})
+      }
+    );
+  } else {
+    pass(
+      'verified_evidence_linkage',
+      'Evidence was explicitly marked not required for this field.',
+      {
+        engineer_review_evidence_gate: true,
+        evidence_required: false
+      }
+    );
+  }
+
+  const canPromote = gates.every((gate) => gate.status === 'pass') && manualOverrideReasonOk;
+  return { canPromote, gates, verifiedEvidence };
+}
+
+async function persistPromotionGates(
+  client: PoolClient,
+  req: Request,
+  entityId: string,
+  gates: PromotionGateResult[]
+): Promise<void> {
+  for (const gate of gates) {
+    await client.query(
+      `insert into review_gates(entity_type, entity_id, gate_domain, gate_type, gate_status, blocking, evidence_link_required, checked_by, checked_at, metadata_json)
+       values ('staging_record', $1, 'staging_promotion', $2, $3, true, $4, $5, now(), $6::jsonb)
+       on conflict (entity_type, entity_id, gate_domain, gate_type) do update set
+         gate_status = excluded.gate_status,
+         checked_by = excluded.checked_by,
+         checked_at = now(),
+         evidence_link_required = excluded.evidence_link_required,
+         metadata_json = excluded.metadata_json,
+         updated_at = now()`,
+      [
+        entityId,
+        gate.gate,
+        gate.status === 'pass' ? 'pass' : 'blocked',
+        gate.gate === 'verified_evidence_linkage',
+        actorUserId(req),
+        JSON.stringify({
+          code: gate.code ?? null,
+          message: gate.message,
+          ...(gate.metadata ?? {})
+        })
+      ]
+    );
+  }
+}
+
 aiExtractionRouter.get('/extraction-jobs', requirePermission('ai_extraction.read'), async (req, res, next) => {
   try {
     const values: unknown[] = [];
@@ -540,6 +813,7 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/fields', requirePermission('ai_
 });
 
 aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission('ai_extraction.review'), async (req, res, next) => {
+  if (!ensureHumanReviewerActor(req, res, 'review AI extracted fields')) return;
   if (!isPlainObject(req.body)) {
     validationError(res, 'body', 'JSON object body is required.');
     return;
@@ -549,9 +823,9 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
     validationError(res, 'decision', 'decision must be approve, correct, or reject.');
     return;
   }
-  const reason = asString(req.body.reason ?? req.body.comment);
-  if ((decision === 'correct' || decision === 'reject') && !reason) {
-    validationError(res, 'reason', 'Correction and rejection require a reason.');
+  const reason = asString(req.body.reason ?? req.body.comment ?? req.body.correction_reason ?? req.body.rejection_reason);
+  if ((decision === 'correct' || decision === 'reject') && !isMeaningfulReason(reason)) {
+    validationError(res, 'reason', 'Correction and rejection require a meaningful human reason.', decision === 'correct' ? 'MANUAL_OVERRIDE_REASON_REQUIRED' : 'REJECTION_REASON_REQUIRED');
     return;
   }
   const correctedValue = req.body.corrected_value === undefined || req.body.corrected_value === null ? undefined : String(req.body.corrected_value);
@@ -575,6 +849,55 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
     if (!staging) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'STAGING_RECORD_NOT_FOUND', message: 'Staging record not found for field.' } });
+      return;
+    }
+    const jobResult = await client.query<DbRow>('select * from extraction_jobs where id = $1 for update', [before.extraction_job_id]);
+    const job = jobResult.rows[0] ?? null;
+
+    if (['rejected_by_engineer', 'rejected_by_validation'].includes(String(before.field_status))) {
+      await writeAudit(client, req, 'AI_FIELD_REJECTED', 'extraction_field', req.params.fieldId ?? null, mapExtractionField(before), mapExtractionField(before), {
+        blocked_reason: 'Field already rejected.',
+        legacy_event_alias: 'extraction_field.rejected_by_engineer'
+      });
+      await client.query('commit');
+      controlledError(res, 409, 'FIELD_ALREADY_REJECTED', 'Rejected fields cannot be re-reviewed without a new extraction run.');
+      return;
+    }
+
+    const confidenceScore = before.confidence_score === null || before.confidence_score === undefined ? null : Number(before.confidence_score);
+    const validationFlags = Array.isArray(before.validation_flags) ? before.validation_flags : [];
+    if (decision === 'approve' && (confidenceScore === null || confidenceScore < 0.75 || validationFlags.length > 0) && !isMeaningfulReason(reason)) {
+      await writeAudit(client, req, 'AI_FIELD_REVIEW_BLOCKED', 'extraction_field', req.params.fieldId ?? null, mapExtractionField(before), mapExtractionField(before), {
+        blocked_reason: 'Low-confidence or validation-flagged approval requires reviewer rationale.',
+        confidence_score: confidenceScore,
+        validation_flags: validationFlags
+      });
+      await client.query('commit');
+      validationError(res, 'reason', 'Approval of low-confidence or validation-flagged fields requires a meaningful reviewer rationale.', 'REVIEW_RATIONALE_REQUIRED');
+      return;
+    }
+
+    const explicitEvidenceFileId = asUuid(req.body.evidence_file_id);
+    const verifiedEvidence = sourceReferenceRequiresEvidence(before.source_reference_json)
+      ? await findVerifiedEvidenceReference(client, {
+        extractionJobId: asString(before.extraction_job_id),
+        extractionFieldId: req.params.fieldId,
+        stagingRecordId: asString(staging.id),
+        sourceReference: before.source_reference_json,
+        evidenceFileId: explicitEvidenceFileId
+      })
+      : null;
+    if (sourceReferenceRequiresEvidence(before.source_reference_json) && !verifiedEvidence) {
+      await writeAudit(client, req, 'AI_FIELD_REVIEW_BLOCKED', 'extraction_field', req.params.fieldId ?? null, mapExtractionField(before), mapExtractionField(before), {
+        blocked_reason: 'Verified object-storage evidence is required before approve/correct/reject.',
+        decision,
+        upload_status_required: 'verified'
+      });
+      await client.query('commit');
+      controlledError(res, 409, 'VERIFIED_EVIDENCE_LINK_REQUIRED', 'Verified object-storage evidence linkage is required before reviewing this extracted field.', {
+        decision,
+        upload_status_required: 'verified'
+      });
       return;
     }
 
@@ -606,7 +929,6 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
 
     let manualOverride: DbRow | null = null;
     if (decision === 'correct') {
-      const evidenceFileId = asUuid(req.body.evidence_file_id);
       const evidenceReference = isPlainObject(req.body.evidence_reference) ? req.body.evidence_reference : {};
       const manualResult = await client.query<DbRow>(
         `insert into manual_overrides(
@@ -621,30 +943,56 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
           asString(req.body.corrected_unit) ?? asString(before.unit) ?? null,
           reason,
           actorUserId(req),
-          evidenceFileId,
-          JSON.stringify(evidenceReference)
+          explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null,
+          JSON.stringify({ ...evidenceReference, evidence_file_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null })
         ]
       );
       manualOverride = manualResult.rows[0] ?? null;
+      await writeAudit(client, req, 'AI_FIELD_OVERRIDE_RECORDED', 'manual_override', String(manualOverride?.id ?? ''), null, manualOverride, {
+        extraction_job_id: before.extraction_job_id,
+        extraction_field_id: req.params.fieldId,
+        staging_record_id: staging.id,
+        field_name: before.field_name,
+        original_value: asString(before.extracted_value) ?? null,
+        corrected_value: correctedValue,
+        evidence_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null,
+        reason
+      });
     }
 
     const eventType = decision === 'approve'
+      ? 'AI_FIELD_APPROVED'
+      : decision === 'correct'
+        ? 'AI_FIELD_CORRECTED'
+        : 'AI_FIELD_REJECTED';
+    const legacyEventAlias = decision === 'approve'
       ? 'extraction_field.approved_by_engineer'
       : decision === 'correct'
         ? 'manual_override.created'
         : 'extraction_field.rejected_by_engineer';
     const auditLogId = await writeAudit(client, req, eventType, 'extraction_field', req.params.fieldId ?? null, mapExtractionField(before), mapExtractionField(updatedFieldResult.rows[0] ?? {}), {
+      legacy_event_alias: legacyEventAlias,
       decision,
+      extraction_job_id: before.extraction_job_id,
       staging_record_id: staging.id,
       manual_override_id: manualOverride?.id ?? null,
-      reason: reason ?? null
+      reason: reason ?? null,
+      field_name: before.field_name,
+      validation_status: before.field_status,
+      confidence_score: confidenceScore,
+      evidence_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null
     });
     await client.query('commit');
     res.json({
       data: {
         field: mapExtractionField(updatedFieldResult.rows[0] ?? {}),
         staging_record: mapStagingRecord(updatedStagingResult.rows[0] ?? {}),
-        manual_override: manualOverride
+        manual_override: manualOverride,
+        review_governance: {
+          human_review_required: true,
+          verified_evidence_required: sourceReferenceRequiresEvidence(before.source_reference_json),
+          verified_evidence_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null
+        }
       },
       auditLogId
     });
@@ -656,14 +1004,235 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
   }
 });
 
-aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePermission('ai_extraction.promote'), async (req, res, next) => {
+aiExtractionRouter.get('/extraction-jobs/:jobId/promotion-readiness', requirePermission('ai_extraction.read'), async (req, res, next) => {
+  const jobId = req.params.jobId;
+  try {
+    const jobResult = await pool.query<DbRow>('select * from extraction_jobs where id = $1', [jobId]);
+    const job = jobResult.rows[0];
+    if (!job) {
+      res.status(404).json({ error: { code: 'EXTRACTION_JOB_NOT_FOUND', message: 'Extraction job not found.' } });
+      return;
+    }
+    const stagingResult = await pool.query<DbRow>(
+      `select sr.*, ef.field_status, ef.field_name, ef.confidence_score, ef.validation_flags, ef.source_reference_json, ef.reviewer_id as field_reviewer_id
+       from staging_records sr
+       left join extraction_fields ef on ef.id = sr.extraction_field_id
+       where sr.extraction_job_id = $1
+       order by sr.created_at`,
+      [jobId]
+    );
+    const client = await pool.connect();
+    try {
+      const readiness = [];
+      for (const staging of stagingResult.rows) {
+        const field = staging.extraction_field_id
+          ? {
+            id: staging.extraction_field_id,
+            extraction_job_id: staging.extraction_job_id,
+            field_status: staging.field_status,
+            field_name: staging.field_name,
+            confidence_score: staging.confidence_score,
+            validation_flags: staging.validation_flags,
+            source_reference_json: staging.source_reference_json,
+            reviewer_id: staging.field_reviewer_id
+          }
+          : null;
+        const result = await buildPromotionGateResults(client, { req, staging, field, job });
+        readiness.push({
+          staging_record_id: staging.id,
+          extraction_field_id: staging.extraction_field_id,
+          can_promote: result.canPromote,
+          gates: result.gates
+        });
+      }
+      res.json({
+        data: {
+          extraction_job_id: jobId,
+          can_promote: readiness.length > 0 && readiness.every((item) => item.can_promote),
+          staging_records: readiness
+        }
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai_extraction.promote'), async (req, res, next) => {
+  if (!ensureHumanReviewerActor(req, res, 'promote AI staging records')) return;
+  const jobId = asString(req.params.jobId);
+
+  if (!jobId) {
+    validationError(res, 'jobId', 'extraction job id is required.', 'EXTRACTION_JOB_ID_REQUIRED');
+    return;
+  }
   if (!isPlainObject(req.body)) {
     validationError(res, 'body', 'JSON object body is required.');
     return;
   }
   const comment = asString(req.body.comment ?? req.body.reason);
-  if (!comment) {
-    validationError(res, 'comment', 'Promotion requires a reviewer comment/reason.');
+  if (!isMeaningfulReason(comment)) {
+    validationError(res, 'comment', 'Promotion requires a meaningful reviewer comment/reason.', 'PROMOTION_REASON_REQUIRED');
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const jobResult = await client.query<DbRow>('select * from extraction_jobs where id = $1 for update', [jobId]);
+    const job = jobResult.rows[0];
+    if (!job) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'EXTRACTION_JOB_NOT_FOUND', message: 'Extraction job not found.' } });
+      return;
+    }
+    const stagingResult = await client.query<DbRow>(
+      `select sr.*
+       from staging_records sr
+       where sr.extraction_job_id = $1
+       order by sr.created_at
+       for update`,
+      [jobId]
+    );
+    if (stagingResult.rowCount === 0) {
+      await writeAudit(client, req, 'AI_STAGING_PROMOTION_BLOCKED', 'extraction_job', jobId, mapExtractionJob(job), mapExtractionJob(job), {
+        blocked_reason: 'No staging records exist for extraction job.',
+        promotion_gate_results: [{ gate: 'staging_records_exist', status: 'blocked', code: 'NO_STAGING_RECORDS' }]
+      });
+      await client.query('commit');
+      controlledError(res, 409, 'NO_STAGING_RECORDS', 'Extraction job has no staging records to promote.');
+      return;
+    }
+
+    const readiness = [];
+    for (const staging of stagingResult.rows) {
+      const fieldResult = await client.query<DbRow>('select * from extraction_fields where id = $1 for update', [staging.extraction_field_id]);
+      const field = fieldResult.rows[0] ?? null;
+      const gateResult = await buildPromotionGateResults(client, { req, staging, field, job, comment });
+      readiness.push({ staging, field, ...gateResult });
+      await persistPromotionGates(client, req, String(staging.id), gateResult.gates);
+    }
+
+    const blocked = readiness.filter((item) => !item.canPromote);
+    await writeAudit(client, req, 'AI_STAGING_PROMOTION_REQUESTED', 'extraction_job', jobId, mapExtractionJob(job), mapExtractionJob(job), {
+      extraction_job_id: jobId,
+      actor_user_id: actorUserId(req),
+      staging_record_count: readiness.length,
+      promotion_gate_results: readiness.map((item) => ({ staging_record_id: item.staging.id, gates: item.gates }))
+    });
+
+    if (blocked.length > 0) {
+      await client.query(
+        `update staging_records
+         set promotion_status = 'blocked', updated_at = now()
+         where extraction_job_id = $1 and id = any($2::uuid[])`,
+        [jobId, blocked.map((item) => item.staging.id)]
+      );
+      await writeAudit(client, req, 'AI_STAGING_PROMOTION_BLOCKED', 'extraction_job', jobId, mapExtractionJob(job), mapExtractionJob(job), {
+        blocked_reason: 'One or more staging promotion gates failed.',
+        promotion_gate_results: readiness.map((item) => ({ staging_record_id: item.staging.id, gates: item.gates }))
+      });
+      await client.query('commit');
+      controlledError(res, 409, 'PROMOTION_GATE_FAILED', 'AI staging promotion gates are not satisfied.', {
+        promotion_gate_results: readiness.map((item) => ({ staging_record_id: item.staging.id, gates: item.gates }))
+      });
+      return;
+    }
+
+    const promoted = [];
+    for (const item of readiness) {
+      const result = await client.query<DbRow>(
+        `update staging_records
+         set review_status = 'promoted',
+             promotion_status = 'promoted',
+             promoted_by = $2,
+             promoted_at = now(),
+             updated_at = now(),
+             metadata_json = metadata_json || $3::jsonb
+         where id = $1 returning *`,
+        [
+          item.staging.id,
+          actorUserId(req),
+          JSON.stringify({
+            rc3c_promoted: true,
+            promoted_from_ai_staging: true,
+            final_table_mutation: false,
+            promotion_comment: comment,
+            verified_evidence_file_id: item.verifiedEvidence?.evidence_file_id ?? null
+          })
+        ]
+      );
+      const updated = result.rows[0] ?? {};
+      promoted.push(mapStagingRecord(updated));
+      await writeAudit(client, req, 'AI_STAGING_PROMOTED', 'staging_record', String(item.staging.id), mapStagingRecord(item.staging), mapStagingRecord(updated), {
+        legacy_event_alias: 'staging_record.promoted',
+        extraction_job_id: jobId,
+        staging_record_id: item.staging.id,
+        extraction_field_id: item.staging.extraction_field_id,
+        field_name: item.field?.field_name ?? null,
+        evidence_id: item.verifiedEvidence?.evidence_file_id ?? null,
+        promotion_gate_results: item.gates,
+        final_table_mutation: false,
+        comment
+      });
+    }
+
+    await client.query(
+      `update extraction_jobs
+       set status = 'completed',
+           metadata_json = metadata_json || $2::jsonb,
+           updated_at = now()
+       where id = $1`,
+      [
+        jobId,
+        JSON.stringify({
+          rc3c_promotion_governance: 'passed',
+          promoted_staging_record_count: promoted.length,
+          final_table_mutation: false
+        })
+      ]
+    );
+
+    await client.query('commit');
+    res.json({
+      data: {
+        extraction_job_id: jobId,
+        promoted_staging_records: promoted,
+        final_table_mutation: false,
+        promotion_gate_results: readiness.map((item) => ({ staging_record_id: item.staging.id, gates: item.gates }))
+      }
+    });
+  } catch (error) {
+    await client.query('rollback');
+    try {
+      const auditClient = await pool.connect();
+      try {
+        await writeAudit(auditClient, req, 'AI_STAGING_PROMOTION_FAILED', 'extraction_job', jobId, null, null, {
+          blocked_reason: error instanceof Error ? error.message : 'Unknown promotion failure.'
+        });
+      } finally {
+        auditClient.release();
+      }
+    } catch {
+      // Preserve original failure path; audit failure must not mask API error.
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePermission('ai_extraction.promote'), async (req, res, next) => {
+  if (!ensureHumanReviewerActor(req, res, 'promote AI staging records')) return;
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+  const comment = asString(req.body.comment ?? req.body.reason);
+  if (!isMeaningfulReason(comment)) {
+    validationError(res, 'comment', 'Promotion requires a meaningful reviewer comment/reason.', 'PROMOTION_REASON_REQUIRED');
     return;
   }
   const client = await pool.connect();
@@ -676,39 +1245,63 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
       res.status(404).json({ error: { code: 'STAGING_RECORD_NOT_FOUND', message: 'Staging record not found.' } });
       return;
     }
-    if (!['approved_for_promotion', 'corrected'].includes(String(before.review_status))) {
-      await client.query('rollback');
-      res.status(409).json({ error: { code: 'ENGINEER_REVIEW_REQUIRED', message: 'Staging record must be approved or corrected by an engineer before promotion.' } });
-      return;
-    }
-    if (await hasBlockingDataQualityChecks(client, String(before.id))) {
-      await client.query('rollback');
-      res.status(409).json({ error: { code: 'BLOCKING_DATA_QUALITY_CHECKS', message: 'Unresolved blocking data quality checks prevent promotion.' } });
-      return;
-    }
-    const linkedEvidence = await hasEvidenceLink(client, 'staging_record', String(before.id));
-    if (!linkedEvidence) {
-      await client.query('rollback');
-      res.status(409).json({ error: { code: 'EVIDENCE_LINK_REQUIRED', message: 'Evidence link to staging_record is required before promotion.' } });
+    const fieldResult = await client.query<DbRow>('select * from extraction_fields where id = $1 for update', [before.extraction_field_id]);
+    const field = fieldResult.rows[0] ?? null;
+    const jobResult = await client.query<DbRow>('select * from extraction_jobs where id = $1 for update', [before.extraction_job_id]);
+    const job = jobResult.rows[0] ?? null;
+
+    const gateResult = await buildPromotionGateResults(client, { req, staging: before, field, job, comment });
+    await persistPromotionGates(client, req, String(before.id), gateResult.gates);
+
+    if (!gateResult.canPromote) {
+      await client.query(
+        `update staging_records
+         set promotion_status = 'blocked', updated_at = now()
+         where id = $1`,
+        [req.params.stagingRecordId]
+      );
+      await writeAudit(client, req, 'AI_STAGING_PROMOTION_BLOCKED', 'staging_record', String(before.id), mapStagingRecord(before), mapStagingRecord(before), {
+        blocked_reason: 'Staging promotion gate failed.',
+        extraction_job_id: before.extraction_job_id,
+        staging_record_id: before.id,
+        extraction_field_id: before.extraction_field_id,
+        promotion_gate_results: gateResult.gates
+      });
+      await client.query('commit');
+      controlledError(res, 409, 'PROMOTION_GATE_FAILED', 'AI staging promotion gates are not satisfied.', { promotion_gate_results: gateResult.gates });
       return;
     }
 
     const result = await client.query<DbRow>(
       `update staging_records
-       set review_status = 'promoted', promotion_status = 'promoted', promoted_by = $2, promoted_at = now(), updated_at = now()
+       set review_status = 'promoted',
+           promotion_status = 'promoted',
+           promoted_by = $2,
+           promoted_at = now(),
+           updated_at = now(),
+           metadata_json = metadata_json || $3::jsonb
        where id = $1 returning *`,
-      [req.params.stagingRecordId, actorUserId(req)]
+      [
+        req.params.stagingRecordId,
+        actorUserId(req),
+        JSON.stringify({
+          rc3c_promoted: true,
+          promoted_from_ai_staging: true,
+          final_table_mutation: false,
+          promotion_comment: comment,
+          verified_evidence_file_id: gateResult.verifiedEvidence?.evidence_file_id ?? null
+        })
+      ]
     );
     const updated = result.rows[0];
-    await client.query(
-      `insert into review_gates(entity_type, entity_id, gate_domain, gate_type, gate_status, blocking, evidence_link_required, checked_by, checked_at, metadata_json)
-       values ('staging_record', $1, 'staging_promotion', 'engineer_review_evidence_gate', 'pass', true, true, $2, now(), $3::jsonb)
-       on conflict (entity_type, entity_id, gate_domain, gate_type) do update set
-         gate_status = 'pass', checked_by = excluded.checked_by, checked_at = now(), metadata_json = excluded.metadata_json, updated_at = now()`,
-      [before.id, actorUserId(req), JSON.stringify({ comment, no_final_table_mutation: true })]
-    );
-    const auditLogId = await writeAudit(client, req, 'staging_record.promoted', 'staging_record', String(updated?.id), mapStagingRecord(before), mapStagingRecord(updated ?? {}), {
+    const auditLogId = await writeAudit(client, req, 'AI_STAGING_PROMOTED', 'staging_record', String(updated?.id), mapStagingRecord(before), mapStagingRecord(updated ?? {}), {
+      legacy_event_alias: 'staging_record.promoted',
       comment,
+      extraction_job_id: before.extraction_job_id,
+      staging_record_id: before.id,
+      extraction_field_id: before.extraction_field_id,
+      evidence_id: gateResult.verifiedEvidence?.evidence_file_id ?? null,
+      promotion_gate_results: gateResult.gates,
       evidence_link_required: true,
       final_table_mutation: false,
       note: 'Promotion state recorded; final table mapping remains deterministic and reviewed in later implementation.'
