@@ -196,7 +196,7 @@ pnpm dev:web
 
 - Universal deterministic calculation execution is implemented for AIM-owned unit conversion, corrosion-rate, remaining-life screening, comparator, warning, and placeholder interval logic.
 - No API/API-ASME formula expression is embedded or executed.
-- Evidence binary upload/signed object-storage URL flow is not production-ready.
+- Evidence binary upload/signed object-storage URL flow is implemented in RC3-B through AIM-controlled upload sessions, checksum verification, object-existence checks, RBAC-controlled signed URLs, and audit logging. Production deployment still requires environment-specific S3-compatible object-storage credentials, malware scanning integration, retention policy, and operational monitoring.
 - AI extraction/staging workflow is implemented within AIM API governance boundaries and remains staging-only until human review.
 - Report generation, report issue gates, integrity decision approval, and internal AIM work-order fallback are implemented.
 - External CMMS/SAP/Maximo integration remains out of MVP scope.
