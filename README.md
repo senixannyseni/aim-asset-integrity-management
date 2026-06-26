@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A and RC3-B completed locally — repository hygiene/config/root/demo gating plus evidence/report object storage**
+Sprint status: **RC3-A and RC3-B finalized; RC3-C AI staging promotion governance package prepared**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-B object-storage hardening: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-C AI staging promotion governance hardening: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -375,3 +375,20 @@ The RC3-B closeout polish tightens source-of-truth alignment before RC3-C begins
 - Report issue/export evidence gates count only verified object-storage evidence; legacy/null upload status is not treated as verified.
 - Legacy metadata-only evidence upload remains compatibility-only and cannot satisfy evidence/report gates until object verification is completed.
 - RC3-B n8n workflow behavior is documented as API-only orchestration for intake notifications, review reminders, and failure handling.
+
+
+## RC3-C AI Staging Promotion Governance
+
+RC3-C hardens the AI extraction review and staging promotion boundary. AI extraction output remains in `extraction_jobs`, `extraction_fields`, and `staging_records` until a permitted human engineering actor approves, corrects, or rejects each field and promotion gates pass.
+
+RC3-C adds/updates:
+
+- explicit human-only review controls for approve/correct/reject;
+- meaningful reason enforcement for corrections, rejections, low-confidence approvals, and promotion;
+- verified object-storage evidence linkage before review/promotion where evidence is required;
+- segregation-of-duty checks between reviewer and promoter;
+- transactional promotion readiness and job-level promotion gates;
+- audit events `AI_FIELD_APPROVED`, `AI_FIELD_CORRECTED`, `AI_FIELD_REJECTED`, `AI_FIELD_OVERRIDE_RECORDED`, `AI_STAGING_PROMOTION_REQUESTED`, `AI_STAGING_PROMOTION_BLOCKED`, `AI_STAGING_PROMOTED`, and `AI_STAGING_PROMOTION_FAILED`;
+- n8n API-only routing/reminder boundaries for staging review.
+
+RC3-C does not add dashboard, audit-log UI, admin UI, n8n console, NDT visualization, hypercare dashboard, external CMMS integration, or new API/API-ASME formulas.

@@ -112,3 +112,24 @@ Final production closure remains human-gated after hypercare completion; AI and 
 ## RC3-B Closeout Polish Status
 
 RC3-B closeout polish is complete when the repository enforces AIM-generated evidence codes for object-storage upload sessions, checksum-required gate-eligible uploads, object-verified evidence gates, and an n8n addendum confirming API-only workflow orchestration for object-storage evidence/report artifacts.
+
+
+## RC3-C AI Staging Promotion Governance Status
+
+Status: Implemented as RC3-C package candidate.
+
+RC3-C hardens AI extraction review and staging promotion governance while preserving the source-of-truth boundary: AI output remains staging-only, n8n remains API-only orchestration, and final engineering data cannot be derived from unreviewed AI output.
+
+Implemented RC3-C controls:
+
+- human-only approve/correct/reject enforcement for AI-extracted fields;
+- meaningful reason enforcement for corrections, rejections, low-confidence approvals, and promotion;
+- verified object-storage evidence requirement for review/promotion where evidence is required;
+- rejected fields and validation-rejected fields are blocked from promotion;
+- low-confidence fields require correction before promotion;
+- segregation-of-duty check between reviewer and promoter;
+- transactional job-level promotion readiness and promotion gates;
+- audit events for AI field review, manual override, promotion request, promotion block, promotion success, and promotion failure;
+- n8n addendum confirming n8n may route/remind/query AIM APIs only and must not approve/correct/reject/promote.
+
+Out of scope remains unchanged: audit log UI, admin UI, dashboard, n8n console, NDT visualization, hypercare dashboard, external CMMS integration, and new API/API-ASME formula implementation are not included.

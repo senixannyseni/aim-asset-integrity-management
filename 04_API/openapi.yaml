@@ -1666,6 +1666,87 @@ paths:
       x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
       x-ai-output-staging-only: true
       x-human-review-required: true
+  /api/v1/extraction-jobs/{jobId}/promotion-readiness:
+    get:
+      summary: Get RC3-C promotion readiness gates for an AI extraction job
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.read
+      responses:
+        '200':
+          description: Promotion readiness result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+      x-audit-event-generated: none
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags: *id001
+      x-source-of-truth-boundary: AIM is the system of record. Readiness checks inspect reviewed staging records and verified evidence without mutating final engineering tables.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+      x-evidence-link-required: true
+      x-n8n-boundary: n8n may query readiness through AIM API only and must not approve, correct, reject, or promote.
+  /api/v1/extraction-jobs/{jobId}/promote:
+    post:
+      summary: Promote all eligible staging records for an AI extraction job after RC3-C gates pass
+      security:
+      - bearerAuth: []
+      x-permission-required: ai_extraction.promote
+      responses:
+        '200':
+          description: Extraction job staging promotion completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+      x-audit-event-generated: AI_STAGING_PROMOTION_REQUESTED, AI_STAGING_PROMOTION_BLOCKED, AI_STAGING_PROMOTED, AI_STAGING_PROMOTION_FAILED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StagingPromotionRequest'
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags: *id001
+      x-source-of-truth-boundary: AIM is the system of record. Promotion updates only governed staging promotion status and review gates; raw AI output is never written directly to final engineering tables.
+      x-ai-output-staging-only: true
+      x-human-review-required: true
+      x-evidence-link-required: true
+      x-segregation-of-duty-required: true
+      x-n8n-boundary: n8n must not call this endpoint as an approver/promoter; human engineering actor required.
   /api/v1/extraction-jobs/{jobId}:
     get:
       summary: Get extraction job with fields and staging records
@@ -1760,7 +1841,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-      x-audit-event-generated: extraction_field.approved_by_engineer or extraction_field.rejected_by_engineer or manual_override.created
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+      x-audit-event-generated: AI_FIELD_APPROVED, AI_FIELD_CORRECTED, AI_FIELD_REJECTED, AI_FIELD_OVERRIDE_RECORDED, manual_override.created
       requestBody:
         required: true
         content:
@@ -1802,7 +1885,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/GateBlocked'
-      x-audit-event-generated: staging_record.promoted
+      x-audit-event-generated: AI_STAGING_PROMOTION_REQUESTED, AI_STAGING_PROMOTION_BLOCKED, AI_STAGING_PROMOTED, AI_STAGING_PROMOTION_FAILED
       requestBody:
         required: true
         content:
@@ -3159,6 +3242,10 @@ components:
       properties:
         comment:
           type: string
+          description: Meaningful human promotion reason/comment. Empty, n/a, '-' and test-only values are rejected.
+        reason:
+          type: string
+          description: Alias for comment.
         evidence_link_ids:
           type: array
           items:
