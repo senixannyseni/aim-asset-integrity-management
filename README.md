@@ -1,10 +1,12 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish added**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 RC4-A adds Sprint 0 foundation polish only: dedicated health endpoint tests, Sprint 0 closure checklist documentation, historical clarification that Sprint 0 had no calculation runtime at that time, role evolution notes, and seed idempotency documentation. RC4-A does not change runtime engineering calculation behavior, does not add formulas, and does not change AI, n8n, approval, report, FFS, RBI, NDT, evidence, object-storage, or frontend behavior.
+
+RC4-B completes the user-facing Tank Asset Register frontend. The `/assets` and `/assets/[assetId]` routes now expose asset list/create, asset detail/edit, tank geometry input, shell-course table editing, material master selection, validation messages, related links, loading/empty/error/permission-denied states, and manual UAT documentation. RC4-B uses existing backend APIs only, introduces no new formulas, no calculation behavior, no AI/n8n behavior changes, no approval/report/FFS/RBI/NDT/evidence behavior changes, and no backend schema changes.
 
 ## Non-negotiable Architecture Boundary
 
@@ -33,10 +35,11 @@ RC4-A adds Sprint 0 foundation polish only: dedicated health endpoint tests, Spr
 
 ### Sprint 2 — Tank Asset Register and Engineering Master Data
 
-- Asset CRUD APIs and UI.
-- Tank geometry and shell course master data.
-- Material selector.
-- Unit-normalized validation for geometry and thickness inputs.
+- Asset CRUD APIs and completed RC4-B frontend UI at `/assets` and `/assets/[assetId]`.
+- Asset list/create page with search/filter, operating status, inspection due date, and safe related links.
+- Asset detail/edit page with tank geometry form, shell-course table editor, material master selector, related links, and audit-log link.
+- Frontend field validation for tank tag, asset name, code edition, construction year, inspection due date, diameter, shell height, shell-course material, joint efficiency, and numeric/unit fields.
+- Unit-normalized backend validation for geometry and thickness inputs remains authoritative.
 - Audit logging for create/update/delete master-data actions.
 
 ### Sprint 2.5 — AIM/n8n Governance Hardening
@@ -502,3 +505,17 @@ RC4-A adds Sprint 0 foundation polish only:
 RC4-A does not add API routes, frontend routes, database tables, migrations, formulas, calculation behavior, AI behavior, n8n behavior, approval behavior, report behavior, FFS/RBI behavior, NDT behavior, or evidence/object-storage behavior.
 
 Governance boundary reminder: AIM remains the system of record; n8n remains orchestration-only; AI/n8n/service actors cannot approve, promote, issue, calculate, close, or make final engineering decisions; evidence linkage and human review remain mandatory; no API/API-ASME/API 579/API 581/FFS/RBI formulas are introduced.
+
+
+## RC4-B Tank Asset Register Frontend Completion
+
+Status: Implemented as frontend-focused completion package.
+
+RC4-B completes the Tank Asset Register and Engineering Master Data frontend using existing AIM backend APIs. It adds/updates:
+
+- `apps/web/app/assets/page.tsx` for tank asset list, search/filter, create form, operating status, inspection due date, and safe links to evidence, NDT, calculations, and reports.
+- `apps/web/app/assets/[assetId]/page.tsx` for asset detail/edit, tank geometry input, shell-course table editor, material master selector, audit-log link, evidence link, NDT link, calculation link, and report link.
+- Frontend validation messages for missing `tank_tag`, `asset_name`, `code_edition`, invalid `construction_year`, invalid `inspection_due_date`, missing `diameter`, missing `shell_height`, missing shell-course `material_id`, missing/invalid `joint_efficiency`, numeric range issues, and unit ambiguity where applicable.
+- Manual UAT coverage in `docs/uat/uat_rc4b_tank_asset_register_frontend.md` and release report in `docs/release/AIM_RC4B_tank_asset_register_frontend_report.md`.
+
+Frontend validation is UX-only. Backend validation, RBAC, audit logging, and persistence remain authoritative. RC4-B introduces no new engineering formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no report/FFS/RBI/NDT/evidence behavior changes, and no backend schema changes.
