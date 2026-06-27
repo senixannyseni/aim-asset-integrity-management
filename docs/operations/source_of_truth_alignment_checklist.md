@@ -26,3 +26,24 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] Evidence linkage remains mandatory.
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AIM remains the system of record.
+
+## RC4-A Source-of-Truth Alignment
+
+- [ ] RC4-A is documentation/test polish for Sprint 0 foundation closure only.
+- [ ] Health endpoint tests were added in `apps/api/tests/health.test.ts`.
+- [ ] Sprint 0 closure checklist was added in `docs/release/sprint0_foundation_closure_checklist.md`.
+- [ ] Sprint 0 “no calculation yet” criterion is documented as historical and superseded by later governed deterministic calculation modules.
+- [ ] Role evolution is documented without adding new roles or permissions.
+- [ ] Seed idempotency behavior and harmless append-only audit seed entries are documented.
+- [ ] No new API routes are introduced by RC4-A.
+- [ ] No new frontend routes are introduced by RC4-A.
+- [ ] No new database tables are introduced by RC4-A.
+- [ ] No new database migration is introduced by RC4-A.
+- [ ] No new engineering formulas are introduced by RC4-A.
+- [ ] RC4-A does not change runtime engineering calculation behavior.
+- [ ] RC4-A does not change AI, n8n, approval, report, FFS, RBI, NDT, evidence, or object-storage behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory.
