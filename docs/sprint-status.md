@@ -237,3 +237,25 @@ Implemented RC3-I controls:
 - n8n addendum confirming n8n must not write directly to PostgreSQL, compute/store go-live readiness state as final AIM data, close hypercare blockers directly, override readiness gates, or perform API 579/API 581/FFS/RBI calculations.
 
 Out of scope remains unchanged: new AI features, new NDT/calculation logic, API 579/API 581/FFS/RBI calculation implementation, report builder changes, object-storage feature changes, n8n workflow execution/editor controls, n8n credential/webhook secret editor, external CMMS integration, direct database editing, audit mutation, admin mutation beyond permission synchronization, and final engineering decision automation are not included.
+
+## RC3-I Hypercare / Go-Live Readiness Dashboard
+
+Status: Implemented as RC3-I package candidate and closed.
+
+RC3-I adds read-only go-live readiness visibility through `GET /api/v1/golive-readiness/overview` and `/golive-readiness`, protected by `golive_readiness.view`, with readiness gates for evidence, AI review, staging promotion, calculation/review, report issue, NDT, workflow/notification, audit/admin governance, and UAT documentation.
+
+## RC3-J Final UAT / Release Candidate Closure & Production Operations Readiness
+
+Status: Implemented as RC3-J documentation/test closure package.
+
+RC3-J closes the RC3 hardening series with final UAT, release-candidate, deployment, environment, backup/restore, smoke test, operational handover, and security/governance closure documentation. It is documentation/test/checklist only and intentionally adds no API route, no frontend page, no migration, no database table, no runtime behavior, no new engineering formulas, and no mutation controls.
+
+Final RC3 closure notes:
+
+- RC3-B through RC3-I feature and visibility packages remain the implemented runtime scope.
+- RC3-J provides final release-candidate readiness control artifacts and static tests.
+- Final production closure remains human-gated after UAT, deployment validation, backup/restore verification, smoke tests, and operational handover.
+- AIM remains the system of record; n8n must call AIM APIs only and must not write directly to PostgreSQL.
+- AI/n8n/service actors must not approve, reject, correct, promote, issue, calculate, close, or finalize engineering decisions.
+
+RC3-J formula boundary reminder: No API 579/API 581/FFS/RBI formula implementation may be invented.
