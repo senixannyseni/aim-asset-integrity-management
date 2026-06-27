@@ -285,6 +285,7 @@ export default function TankAssetRegisterPage() {
                       <th>Asset Name</th>
                       <th>Facility / Location</th>
                       <th>Service / Type</th>
+                      <th>Construction Year</th>
                       <th>Codes</th>
                       <th>Owner</th>
                       <th>Status</th>
@@ -300,6 +301,7 @@ export default function TankAssetRegisterPage() {
                         <td>{asset.asset_name}</td>
                         <td>{asset.facility}<br /><span className="muted-text">{asset.location}</span></td>
                         <td>{asset.service_fluid}<br /><span className="muted-text">{asset.tank_type}</span></td>
+                        <td>{asset.construction_year ?? '-'}</td>
                         <td>{asset.original_design_code} / {asset.current_assessment_code}<br /><span className="muted-text">Edition: {asset.code_edition}</span></td>
                         <td>{asset.owner}</td>
                         <td><span className="badge">{asset.operating_status}</span></td>
