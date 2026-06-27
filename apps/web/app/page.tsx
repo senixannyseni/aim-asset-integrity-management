@@ -5,6 +5,8 @@ const navigationItems = [
   { href: '/dashboard', label: 'Governance Dashboard', description: 'View read-only readiness, evidence, report, work-order, and governance summaries.' },
   { href: '/calculations', label: 'Calculations', description: 'Review deterministic calculation runs and engineering warnings.' },
   { href: '/evidence', label: 'Evidence', description: 'Open the evidence repository and linkage workspace.' },
+  { href: '/ndt-data-room', label: 'NDT Data Room', description: 'View read-only NDT method, component, CML/TML/Grid, and evidence linkage readiness.' },
+  { href: '/workflow-console', label: 'Workflow Console', description: 'View read-only n8n/workflow orchestration and notification status.' },
   { href: '/integrity-decisions', label: 'Integrity Decisions', description: 'Review integrity decisions and evidence gates.' },
   { href: '/reports', label: 'Reports', description: 'Review report readiness gates and issue controls.' },
   { href: '/work-orders', label: 'Work Orders', description: 'Manage internal AIM work-order fallback actions.' },

@@ -201,3 +201,21 @@ Implemented RC3-G controls:
 - n8n addendum confirming n8n must not write directly to PostgreSQL or compute/store workflow console state as final AIM data.
 
 Out of scope remains unchanged: n8n workflow execution, n8n workflow editor/builder, n8n credential/webhook secret editor, NDT visualization, hypercare dashboard, new AI features, new object-storage features, new report builder features, new calculations, direct database editing, audit mutation, admin mutation beyond permission synchronization, external CMMS integration, and final engineering decision automation are not included.
+
+## RC3-H NDT Data Room / Visualization Governance
+
+Status: Implemented as RC3-H package candidate.
+
+RC3-H adds read-only NDT measurement/readiness visualization while preserving AIM as the system of record. The NDT data room summarizes existing AIM NDT measurement records, evidence linkage metadata, inspection references, and governance warnings without running engineering calculations or changing final data.
+
+Implemented RC3-H controls:
+
+- `GET /api/v1/ndt-data-room/overview` protected by `ndt_data_room.view`;
+- frontend route `/ndt-data-room`;
+- read-only cards for NDT method summary, component coverage, CML/TML/Grid coverage, evidence linkage status, measurement readiness, latest measurements, and governance warnings;
+- service/AI/n8n/integration/workflow actor blocking for broad NDT data room visibility;
+- redaction/omission of token, secret, password, credential, api_key, authorization, bearer, signed URLs, presigned URLs, private keys, object keys, raw file contents, raw report contents, OCR full text, and unrestricted evidence download URLs;
+- no NDT data room mutation endpoints or mutation controls;
+- n8n addendum confirming n8n must not write directly to PostgreSQL, alter NDT data room state, verify/approve/delete NDT measurements, or perform API 579/API 581/FFS/RBI calculations.
+
+Out of scope remains unchanged: API 579/API 581/FFS/RBI calculation implementation, corrosion rate or remaining life formula expansion, hypercare dashboard, new AI features, object-storage changes, report builder changes, n8n workflow execution/editor controls, direct database editing, audit mutation, admin mutation beyond permission synchronization, external CMMS integration, and final engineering decision automation are not included.

@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A, RC3-B, and RC3-C finalized; RC3-D audit log governance visibility implemented**
+Sprint status: **RC3-A through RC3-H implemented as scoped RC3 hardening packages**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-D audit log governance visibility: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-H NDT data room visualization governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -453,3 +453,11 @@ RC3-G adds the read-only workflow console route `/workflow-console` and the API 
 The workflow console summarizes existing AIM workflow/orchestration state only, including workflow task summary, pending human follow-ups, notification delivery status, workflow failure/error summary, recent n8n-related workflow events, and n8n boundary reminders. Access is controlled by `workflow_console.view`.
 
 RC3-G does not execute or retry n8n workflows, create an n8n workflow editor/builder, manage n8n credentials, edit webhook secrets, write directly to PostgreSQL, add approval/promotion/report issue/calculation controls, mutate evidence/report artifacts, edit audit logs, add NDT visualization, add a hypercare dashboard, or create new engineering formulas. Secrets, signed URLs, tokens, credentials, webhook secrets, private keys, object keys, raw file contents, and raw report contents are not exposed by the workflow console API or UI.
+
+## RC3-H NDT Data Room / Visualization Governance
+
+RC3-H adds the read-only NDT data room route `/ndt-data-room` and the API endpoint `GET /api/v1/ndt-data-room/overview`.
+
+The NDT data room summarizes existing AIM NDT measurement records and evidence linkage only. It is protected by `ndt_data_room.view`, blocks AI/service/n8n/integration/workflow-style actors from broad visibility, and presents method, component, CML/TML/Grid coverage, evidence linkage status, measurement readiness, latest measurements, and governance warnings.
+
+RC3-H does not add API 579/API 581/FFS/RBI calculations, corrosion rate or remaining life formulas, NDT mutation controls, AI approval or staging promotion changes, object-storage changes, report builder changes, n8n workflow execution/editor controls, hypercare dashboard, direct database editing, audit mutation, or admin RBAC/settings changes beyond permission synchronization. Secrets, signed URLs, tokens, credentials, object keys, raw evidence/report contents, OCR full text, and unrestricted evidence download URLs are not exposed by the NDT data room API or UI.

@@ -24,6 +24,7 @@ import { auditLogsRouter } from "./routes/audit-logs.js";
 import { adminGovernanceRouter } from "./routes/admin-governance.js";
 import { governanceDashboardRouter } from "./routes/governance-dashboard.js";
 import { workflowConsoleRouter } from "./routes/workflow-console.js";
+import { ndtDataRoomRouter } from "./routes/ndt-data-room.js";
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
@@ -75,6 +76,7 @@ export function createApp() {
   app.use('/api/v1', adminGovernanceRouter);
   app.use('/api/v1', governanceDashboardRouter);
   app.use('/api/v1', workflowConsoleRouter);
+  app.use('/api/v1', ndtDataRoomRouter);
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === 'number'
       ? Number((error as { statusCode: number }).statusCode)
