@@ -520,6 +520,38 @@ paths:
       tags:
       - NDT Data Room
 
+
+  /api/v1/golive-readiness/overview:
+    get:
+      summary: Read-only hypercare / go-live readiness overview
+      description: Returns RBAC-controlled read-only go-live readiness gates, blockers, unresolved workflow errors, failed notifications, pending review queues, report issue blockers, evidence blockers, NDT evidence blockers, audit/admin readiness, workflow/notification readiness, and UAT readiness indicators from existing AIM state. Does not approve, promote, issue reports, mutate evidence/NDT/admin/audit state, execute n8n workflows, expose secrets, or perform API 579/API 581/FFS/RBI calculations. n8n must not write directly to PostgreSQL or compute/store go-live readiness state.
+      security:
+      - bearerAuth: []
+      x-permission-required: golive_readiness.view
+      x-read-only: true
+      x-hypercare-golive-readiness: true
+      x-source-of-truth-boundary: AIM PostgreSQL gate/status/error/review/audit/task metadata and governed AIM APIs only; no n8n-written go-live readiness snapshot table is used.
+      x-no-approval-no-mutation-boundary: No approve/reject/correct/promote/report issue/evidence mutation/NDT mutation/admin mutation/audit mutation/hypercare closure/readiness override controls are exposed.
+      x-no-calculation-boundary: No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life/MAWP/retirement-thickness/inspection-interval calculation is implemented.
+      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write directly to PostgreSQL.
+      x-redaction-required: true
+      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization, bearer, signed_url, presigned_url, webhook_secret, private_key, object_key, raw_file_contents, raw_report_contents, ocr_full_text, download_url
+      responses:
+        '200':
+          description: Hypercare / go-live readiness overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoliveReadinessOverviewEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+      tags:
+      - Go-Live Readiness
+
   /api/v1/audit-logs:
     get:
       summary: List redacted read-only audit log entries
@@ -4024,6 +4056,57 @@ components:
           format: uuid
           description: Required when closure_evidence_required is true.
 
+
+    GoliveReadinessOverviewEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GoliveReadinessOverview'
+    GoliveReadinessOverview:
+      type: object
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        permission_required:
+          type: string
+          example: golive_readiness.view
+        read_only:
+          type: boolean
+          example: true
+        overall_readiness_status:
+          type: string
+          enum: [ready, attention_required, blocked, not_available]
+        readiness_score_percent:
+          oneOf:
+          - type: integer
+          - type: string
+            enum: [not_available]
+        source_of_truth:
+          type: string
+        boundary_notice:
+          type: string
+          description: Read-only go-live readiness boundary. No approve/reject/correct/promote/calculate/report issue/delete/admin/n8n/hypercare closure/readiness override mutation controls are exposed.
+        no_calculation_notice:
+          type: string
+          description: No API 579, API 581, FFS, RBI, corrosion rate, remaining life, MAWP, retirement thickness, or inspection interval calculation is performed.
+        redaction_notice:
+          type: string
+          description: Secrets, signed_url, presigned_url, token, password, credential, webhook_secret, private_key, object_key, raw file contents, raw report contents, OCR full text, and unrestricted download URLs are not returned.
+        sections:
+          type: object
+          additionalProperties: true
+          description: Existing AIM readiness summaries for evidence, AI review, staging promotion, calculation/review, report gate, NDT, workflow/notification, audit/admin, UAT documentation, and recent blockers/warnings.
+        traceability_links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        prohibited_controls:
+          type: array
+          items:
+            type: string
+          description: Documents that the go-live readiness page exposes no approve/reject/correct/promote/calculate/report issue/delete/admin/n8n/hypercare closure/readiness override controls.
     NdtDataRoomOverviewEnvelope:
       type: object
       properties:

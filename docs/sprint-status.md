@@ -219,3 +219,21 @@ Implemented RC3-H controls:
 - n8n addendum confirming n8n must not write directly to PostgreSQL, alter NDT data room state, verify/approve/delete NDT measurements, or perform API 579/API 581/FFS/RBI calculations.
 
 Out of scope remains unchanged: API 579/API 581/FFS/RBI calculation implementation, corrosion rate or remaining life formula expansion, hypercare dashboard, new AI features, object-storage changes, report builder changes, n8n workflow execution/editor controls, direct database editing, audit mutation, admin mutation beyond permission synchronization, external CMMS integration, and final engineering decision automation are not included.
+
+## RC3-I Hypercare / Go-Live Readiness Dashboard
+
+Status: Implemented as RC3-I package candidate.
+
+RC3-I adds read-only go-live and hypercare readiness visibility while preserving AIM as the system of record. The go-live readiness dashboard summarizes existing AIM readiness state from evidence, AI review, staging promotion, calculation/review, report gates, NDT, workflow/notification, audit/admin, UAT documentation, and recent blocker/warning metadata without mutating any controlled records.
+
+Implemented RC3-I controls:
+
+- `GET /api/v1/golive-readiness/overview` protected by `golive_readiness.view`;
+- frontend route `/golive-readiness`;
+- read-only cards for overall readiness status, readiness gate checklist, evidence readiness, AI review readiness, staging promotion readiness, calculation/review readiness, report issue gate readiness, NDT readiness, workflow/notification readiness, audit/admin governance readiness, UAT documentation readiness, and recent blockers/warnings;
+- service/AI/n8n/integration/workflow actor blocking for broad go-live readiness visibility;
+- redaction/omission of token, secret, password, credential, api_key, authorization, bearer, signed URLs, presigned URLs, webhook secrets, private keys, object keys, raw file contents, raw report contents, OCR full text, and unrestricted evidence download URLs;
+- no go-live readiness mutation endpoints or mutation controls;
+- n8n addendum confirming n8n must not write directly to PostgreSQL, compute/store go-live readiness state as final AIM data, close hypercare blockers directly, override readiness gates, or perform API 579/API 581/FFS/RBI calculations.
+
+Out of scope remains unchanged: new AI features, new NDT/calculation logic, API 579/API 581/FFS/RBI calculation implementation, report builder changes, object-storage feature changes, n8n workflow execution/editor controls, n8n credential/webhook secret editor, external CMMS integration, direct database editing, audit mutation, admin mutation beyond permission synchronization, and final engineering decision automation are not included.
