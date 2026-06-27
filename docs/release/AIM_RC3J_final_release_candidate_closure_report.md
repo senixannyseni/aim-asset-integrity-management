@@ -88,3 +88,7 @@ RC3-J does not implement new AI extraction, AI staging promotion, NDT calculatio
 ## Formula Boundary Reminder
 
 No API 579/API 581/FFS/RBI formula implementation may be invented. RC3-J is documentation/test/checklist only.
+
+## Source-of-Truth Alignment Checklist
+
+RC3-J source-of-truth alignment is controlled through `docs/operations/source_of_truth_alignment_checklist.md`.

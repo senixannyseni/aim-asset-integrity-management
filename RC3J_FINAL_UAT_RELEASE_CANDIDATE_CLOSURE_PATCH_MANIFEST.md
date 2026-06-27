@@ -31,3 +31,7 @@ Documentation/test/checklist-only closure package for RC3-J.
 - No API 579/API 581/FFS/RBI calculation implementation.
 - No n8n execution/editor behavior.
 - No admin/audit mutation behavior.
+
+## Additional RC3-J Closure Artifact
+
+- `docs/operations/source_of_truth_alignment_checklist.md`
