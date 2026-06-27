@@ -183,3 +183,21 @@ Implemented RC3-F controls:
 - n8n addendum confirming n8n must not compute or store dashboard state directly in PostgreSQL.
 
 Out of scope remains unchanged: n8n console, NDT visualization, hypercare dashboard, new AI features, new object-storage features, new report builder features, new calculations, direct database editing, audit mutation, admin mutation, external CMMS integration, and final engineering decision automation are not included.
+
+## RC3-G n8n Workflow Console / Orchestration Visibility
+
+Status: Implemented as RC3-G package candidate.
+
+RC3-G adds read-only AIM-side workflow orchestration visibility while preserving AIM as the system of record and n8n as API-only orchestration. The workflow console summarizes existing AIM workflow tasks, notification logs, workflow events, error logs, and n8n-related governance/audit metadata without executing workflows or mutating final engineering records.
+
+Implemented RC3-G controls:
+
+- `GET /api/v1/workflow-console/overview` protected by `workflow_console.view`;
+- frontend route `/workflow-console`;
+- read-only cards for workflow task summary, pending human follow-ups, notification delivery status, workflow failure/error summary, recent workflow events, and n8n boundary reminders;
+- service/AI/n8n/integration/workflow actor blocking for broad workflow console visibility;
+- redaction of token, secret, password, credential, api_key, authorization, bearer, signed URLs, presigned URLs, webhook secrets, private keys, object keys, raw file contents, and raw report contents;
+- no workflow console mutation endpoints or mutation controls;
+- n8n addendum confirming n8n must not write directly to PostgreSQL or compute/store workflow console state as final AIM data.
+
+Out of scope remains unchanged: n8n workflow execution, n8n workflow editor/builder, n8n credential/webhook secret editor, NDT visualization, hypercare dashboard, new AI features, new object-storage features, new report builder features, new calculations, direct database editing, audit mutation, admin mutation beyond permission synchronization, external CMMS integration, and final engineering decision automation are not included.

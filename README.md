@@ -445,3 +445,11 @@ RC3-F adds the read-only governance dashboard route `/dashboard` and the API end
 The dashboard summarizes existing AIM state only, including evidence readiness, AI extraction review queue, staging promotion readiness, calculation/review readiness, report issue gates, work-order follow-up, and governance/audit warnings. Access is controlled by `dashboard.view`.
 
 RC3-F does not add dashboard mutation controls, n8n console, NDT visualization, hypercare dashboard, new AI extraction/staging features, object-storage expansion, report issue actions, admin changes, direct database editing, or new engineering calculations. Secrets, signed URLs, tokens, object-storage credentials, passwords, private keys, and raw evidence/report contents are not exposed by the dashboard API or UI.
+
+## RC3-G n8n Workflow Console / Orchestration Visibility
+
+RC3-G adds the read-only workflow console route `/workflow-console` and the API endpoint `GET /api/v1/workflow-console/overview`.
+
+The workflow console summarizes existing AIM workflow/orchestration state only, including workflow task summary, pending human follow-ups, notification delivery status, workflow failure/error summary, recent n8n-related workflow events, and n8n boundary reminders. Access is controlled by `workflow_console.view`.
+
+RC3-G does not execute or retry n8n workflows, create an n8n workflow editor/builder, manage n8n credentials, edit webhook secrets, write directly to PostgreSQL, add approval/promotion/report issue/calculation controls, mutate evidence/report artifacts, edit audit logs, add NDT visualization, add a hypercare dashboard, or create new engineering formulas. Secrets, signed URLs, tokens, credentials, webhook secrets, private keys, object keys, raw file contents, and raw report contents are not exposed by the workflow console API or UI.

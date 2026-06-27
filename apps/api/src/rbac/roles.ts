@@ -28,6 +28,7 @@ export const PERMISSIONS = [
   'system_settings.read',
   'system_settings.update',
   'dashboard.view',
+  'workflow_console.view',
   'asset.read',
   'asset.create',
   'asset.update',
@@ -453,6 +454,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   management: [
     ...readOnlyPermissions,
     'dashboard.view',
+    'workflow_console.view',
     'work_order.read',
     'work_order.update'
   ],
@@ -480,7 +482,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'asset.read',
     'evidence.read',
     'report.read',
-    'dashboard.view'
+    'dashboard.view',
+    'workflow_console.view'
   ],
   client_viewer: readOnlyPermissions,
   ai_agent: [
