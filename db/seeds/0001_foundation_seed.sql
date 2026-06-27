@@ -81,6 +81,7 @@ insert into permissions(permission_code, description) values
   ('auth.logout', 'Invalidate user session or refresh token'),
   ('auth.refresh', 'Refresh authenticated session token'),
   ('dashboard.view', 'View AIM dashboard and KPI summaries'),
+  ('workflow_console.view', 'View read-only AIM-side workflow orchestration console summaries and redacted workflow metadata'),
 
   ('user.read', 'Read AIM users'),
   ('user.manage', 'Create, update, disable, or manage AIM users'),
@@ -144,6 +145,13 @@ join permissions p on p.permission_code in (
   'admin_governance.manage_settings'
 )
 where r.role_code in ('admin', 'it_admin')
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code = 'workflow_console.view'
+where r.role_code in ('admin', 'it_admin', 'management')
 on conflict do nothing;
 
 

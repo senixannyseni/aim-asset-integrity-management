@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
-  version: 0.18.0
-  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-E admin governance console visibility and safe controls. AIM is the system of
+  version: 0.19.0
+  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-G n8n workflow console visibility and safe orchestration boundaries. AIM is the system of
     record; PostgreSQL stores final structured engineering data; object storage stores original evidence. n8n remains orchestration-only and must
     call AIM backend APIs only. AI extraction output is staging-only and requires human engineering review before promotion. This contract documents
     implemented auth, AI extraction/staging, evidence governance, approval, and report issue gates; it does not implement API 579/API 581, CMMS,
@@ -459,6 +459,35 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
       tags:
       - Governance Dashboard
+
+  /api/v1/workflow-console/overview:
+    get:
+      summary: Read-only n8n workflow console / orchestration visibility
+      description: Returns RBAC-controlled read-only workflow task, notification, failure/error, and recent n8n-related event summaries from existing AIM state. Does not execute n8n workflows, expose secrets, call n8n APIs, write directly to PostgreSQL, or mutate engineering records. n8n must not write directly to PostgreSQL.
+      security:
+      - bearerAuth: []
+      x-permission-required: workflow_console.view
+      x-read-only: true
+      x-workflow-console-visibility: true
+      x-source-of-truth-boundary: AIM PostgreSQL metadata and governed AIM APIs only; n8n must not compute or write workflow console state directly.
+      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write directly to PostgreSQL.
+      x-redaction-required: true
+      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization, bearer, signed_url, presigned_url, webhook_secret, private_key, object_key, raw_file_contents, raw_report_contents
+      responses:
+        '200':
+          description: Workflow console overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowConsoleOverviewEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+      tags:
+      - Workflow Console
 
   /api/v1/audit-logs:
     get:
@@ -3963,6 +3992,45 @@ components:
           type: string
           format: uuid
           description: Required when closure_evidence_required is true.
+    WorkflowConsoleOverviewEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkflowConsoleOverview'
+    WorkflowConsoleOverview:
+      type: object
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        permission_required:
+          type: string
+          example: workflow_console.view
+        read_only:
+          type: boolean
+          example: true
+        source_of_truth:
+          type: string
+        boundary_notice:
+          type: string
+          description: Read-only AIM-side workflow console boundary. No execute/retry/approve/reject/correct/promote/report issue/delete/admin mutation controls are exposed.
+        redaction_notice:
+          type: string
+          description: Secrets, webhook_secret, signed_url, presigned_url, token, password, credential, private_key, object_key, raw file contents, and raw report contents are not returned.
+        sections:
+          type: object
+          additionalProperties: true
+          description: Existing AIM workflow/orchestration summaries for workflow task summary, pending human follow-ups, notification delivery status, workflow failure/error summary, recent workflow events, and n8n boundary reminders.
+        traceability_links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        prohibited_controls:
+          type: array
+          items:
+            type: string
+          description: Documents that the workflow console exposes no execute/retry/approve/reject/correct/promote/report issue/delete/admin mutation controls.
     GovernanceDashboardOverviewEnvelope:
       type: object
       properties:
