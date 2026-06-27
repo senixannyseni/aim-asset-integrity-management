@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-I implemented as scoped RC3 hardening packages**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-I hypercare / go-live readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 ## Non-negotiable Architecture Boundary
 
@@ -469,3 +469,13 @@ RC3-I adds a read-only go-live readiness overview for readiness gates, blockers,
 The page and API are RBAC-controlled through `golive_readiness.view` and do not add approval, rejection, correction, promotion, report issue, calculation, admin, n8n execution, hypercare closure, or readiness override controls.
 
 RC3-I preserves the AIM governance boundary: AIM remains the system of record, n8n remains orchestration-only through AIM APIs, and AI/n8n/service actors cannot approve, promote, issue, calculate, or make final engineering decisions.
+
+## RC3-J Final UAT / Release Candidate Closure & Production Operations Readiness
+
+Status: Implemented as RC3-J documentation/test closure package.
+
+RC3-J adds final release-candidate closure artifacts only. It creates the RC3 UAT master execution index, production deployment checklist, environment validation checklist, backup/restore runbook, production smoke test checklist, operational handover checklist, security/governance closure checklist, and final release-candidate closure report.
+
+RC3-J does not add runtime features, backend APIs, frontend pages, database tables, migrations, business logic, AI behavior, n8n execution, calculation formulas, report builder behavior, admin mutation, audit mutation, or direct database editing. It preserves AIM as the system of record, n8n as API-only orchestration, AI staging-first review governance, mandatory evidence linkage, immutable audit visibility, and human engineering review/approval gates.
+
+RC3-J formula boundary reminder: No API 579/API 581/FFS/RBI formula implementation may be invented.
