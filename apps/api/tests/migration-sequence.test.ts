@@ -34,6 +34,7 @@ describe('database migration sequence', () => {
       '0022_audit_log_governance_visibility.sql',
       '0023_admin_governance_console.sql',
       '0024_workflow_console_visibility.sql',
+      '0025_ndt_data_room_visualization.sql',
     ]);
   });
 });
