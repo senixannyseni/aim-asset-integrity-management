@@ -35,6 +35,7 @@ describe('database migration sequence', () => {
       '0023_admin_governance_console.sql',
       '0024_workflow_console_visibility.sql',
       '0025_ndt_data_room_visualization.sql',
+      '0026_hypercare_golive_readiness.sql',
     ]);
   });
 });

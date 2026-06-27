@@ -83,6 +83,7 @@ insert into permissions(permission_code, description) values
   ('dashboard.view', 'View AIM dashboard and KPI summaries'),
   ('workflow_console.view', 'View read-only AIM-side workflow orchestration console summaries and redacted workflow metadata'),
   ('ndt_data_room.view', 'View read-only NDT data room summaries, measurement readiness, and evidence linkage visibility'),
+  ('golive_readiness.view', 'View read-only hypercare and go-live readiness summaries, blockers, gates, and UAT readiness indicators'),
 
   ('user.read', 'Read AIM users'),
   ('user.manage', 'Create, update, disable, or manage AIM users'),
@@ -159,6 +160,13 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code = 'ndt_data_room.view'
+where r.role_code in ('admin', 'data_entry', 'inspector', 'engineer', 'senior_engineer', 'lead_engineer', 'approver', 'qa_qc', 'management', 'it_admin', 'client_viewer')
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code = 'golive_readiness.view'
 where r.role_code in ('admin', 'data_entry', 'inspector', 'engineer', 'senior_engineer', 'lead_engineer', 'approver', 'qa_qc', 'management', 'it_admin', 'client_viewer')
 on conflict do nothing;
 

@@ -461,3 +461,11 @@ RC3-H adds the read-only NDT data room route `/ndt-data-room` and the API endpoi
 The NDT data room summarizes existing AIM NDT measurement records and evidence linkage only. It is protected by `ndt_data_room.view`, blocks AI/service/n8n/integration/workflow-style actors from broad visibility, and presents method, component, CML/TML/Grid coverage, evidence linkage status, measurement readiness, latest measurements, and governance warnings.
 
 RC3-H does not add API 579/API 581/FFS/RBI calculations, corrosion rate or remaining life formulas, NDT mutation controls, AI approval or staging promotion changes, object-storage changes, report builder changes, n8n workflow execution/editor controls, hypercare dashboard, direct database editing, audit mutation, or admin RBAC/settings changes beyond permission synchronization. Secrets, signed URLs, tokens, credentials, object keys, raw evidence/report contents, OCR full text, and unrestricted evidence download URLs are not exposed by the NDT data room API or UI.
+
+### RC3-I Hypercare / Go-Live Readiness Dashboard
+
+RC3-I adds a read-only go-live readiness overview for readiness gates, blockers, workflow/notification status, evidence readiness, AI review readiness, staging promotion readiness, calculation/review readiness, report issue gate readiness, NDT readiness, audit/admin governance readiness, and UAT documentation readiness.
+
+The page and API are RBAC-controlled through `golive_readiness.view` and do not add approval, rejection, correction, promotion, report issue, calculation, admin, n8n execution, hypercare closure, or readiness override controls.
+
+RC3-I preserves the AIM governance boundary: AIM remains the system of record, n8n remains orchestration-only through AIM APIs, and AI/n8n/service actors cannot approve, promote, issue, calculate, or make final engineering decisions.
