@@ -13,7 +13,7 @@ export async function checkDatabaseConnection(): Promise<{ ok: boolean; serverTi
   try {
     const result = await pool.query<{ now: string }>('select now()::text as now');
     return { ok: true, serverTime: result.rows[0]?.now };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Unknown database error' };
+  } catch {
+    return { ok: false, error: 'Database connectivity check failed.' };
   }
 }

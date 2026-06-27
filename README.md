@@ -1,8 +1,10 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish added**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+
+RC4-A adds Sprint 0 foundation polish only: dedicated health endpoint tests, Sprint 0 closure checklist documentation, historical clarification that Sprint 0 had no calculation runtime at that time, role evolution notes, and seed idempotency documentation. RC4-A does not change runtime engineering calculation behavior, does not add formulas, and does not change AI, n8n, approval, report, FFS, RBI, NDT, evidence, object-storage, or frontend behavior.
 
 ## Non-negotiable Architecture Boundary
 
@@ -22,9 +24,12 @@ This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J f
 
 - Monorepo structure: `apps/api`, `apps/web`, `packages/shared-types`, `packages/config`, `db/migrations`, `db/seeds`, `docs`.
 - PostgreSQL baseline schema.
-- RBAC roles: `admin`, `data_entry`, `inspector`, `engineer`, `senior_engineer`, `qa_qc`, `client_viewer`, `ai_agent`.
+- Original Sprint 0 RBAC roles: `admin`, `data_entry`, `inspector`, `engineer`, `senior_engineer`, `qa_qc`, `client_viewer`, `ai_agent`.
+- Later persisted governance roles now present: `lead_engineer`, `approver`, `management`, `it_admin`. Service-actor identifiers such as `n8n_service`, `integration_service`, `workflow_service`, and `system_service` are referenced where present by governance blockers/UAT controls; RC4-A does not add roles or permissions.
 - Health endpoints: `GET /health`, `GET /health/db`.
 - Idempotent seed data and CI-ready test commands.
+- RC4-A adds dedicated health endpoint test coverage and `docs/release/sprint0_foundation_closure_checklist.md`.
+- Historical note: Sprint 0's “No engineering calculation is implemented yet” criterion was true at Sprint 0 and is now historical. Later sprints intentionally added governed deterministic calculation modules; this is not a current defect.
 
 ### Sprint 2 — Tank Asset Register and Engineering Master Data
 
@@ -129,7 +134,7 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-Seed scripts are idempotent and can be re-run safely.
+Seed scripts are idempotent and can be re-run safely for core controlled records. Some harmless audit seed entries, such as `FOUNDATION_SEED_EXECUTED`, may append on repeated seed execution by design to preserve seed-run traceability. RC4-A documents this behavior and does not remove audit trail semantics.
 
 ## Frontend Routes
 
@@ -479,3 +484,21 @@ RC3-J adds final release-candidate closure artifacts only. It creates the RC3 UA
 RC3-J does not add runtime features, backend APIs, frontend pages, database tables, migrations, business logic, AI behavior, n8n execution, calculation formulas, report builder behavior, admin mutation, audit mutation, or direct database editing. It preserves AIM as the system of record, n8n as API-only orchestration, AI staging-first review governance, mandatory evidence linkage, immutable audit visibility, and human engineering review/approval gates.
 
 RC3-J formula boundary reminder: No API 579/API 581/FFS/RBI formula implementation may be invented.
+
+
+## RC4-A Sprint 0 Foundation Polish
+
+Status: Implemented as documentation/test polish package.
+
+RC4-A adds Sprint 0 foundation polish only:
+
+- dedicated health endpoint tests in `apps/api/tests/health.test.ts`;
+- safe redaction for database health failure output;
+- Sprint 0 closure checklist in `docs/release/sprint0_foundation_closure_checklist.md`;
+- documentation that Sprint 0's “no calculation yet” acceptance criterion was historical and superseded by later governed deterministic calculation modules;
+- role evolution documentation from original Sprint 0 roles to later persisted governance roles and referenced service-actor identifiers;
+- seed idempotency and append-only audit seed behavior documentation.
+
+RC4-A does not add API routes, frontend routes, database tables, migrations, formulas, calculation behavior, AI behavior, n8n behavior, approval behavior, report behavior, FFS/RBI behavior, NDT behavior, or evidence/object-storage behavior.
+
+Governance boundary reminder: AIM remains the system of record; n8n remains orchestration-only; AI/n8n/service actors cannot approve, promote, issue, calculate, close, or make final engineering decisions; evidence linkage and human review remain mandatory; no API/API-ASME/API 579/API 581/FFS/RBI formulas are introduced.

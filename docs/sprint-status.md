@@ -259,3 +259,22 @@ Final RC3 closure notes:
 - AI/n8n/service actors must not approve, reject, correct, promote, issue, calculate, close, or finalize engineering decisions.
 
 RC3-J formula boundary reminder: No API 579/API 581/FFS/RBI formula implementation may be invented.
+
+## RC4-A Sprint 0 Foundation Polish
+
+Status: Implemented as documentation/test polish package.
+
+RC4-A adds Sprint 0 foundation polish only. It does not reopen RC3 and does not change runtime engineering calculation behavior.
+
+Implemented RC4-A controls:
+
+- `apps/api/tests/health.test.ts` added for dedicated `GET /health` and `GET /health/db` coverage.
+- Database health failure output is safely redacted and does not expose connection strings, secrets, stack traces, or internal infrastructure details.
+- `docs/release/sprint0_foundation_closure_checklist.md` added.
+- Sprint 0's “No engineering calculation is implemented yet” criterion is documented as historical and superseded by later governed deterministic calculation modules.
+- Role evolution is documented: original Sprint 0 roles remain present, later governance roles such as `lead_engineer`, `approver`, `management`, and `it_admin` are present, and service-actor identifiers are documented only where already present in the repository.
+- Seed idempotency is documented, including conflict-safe seed inserts and harmless append-only audit seed trail behavior.
+
+RC4-A adds no formulas, no new API routes, no frontend routes, no migrations, no database tables, no AI behavior changes, no n8n behavior changes, no approval/report/FFS/RBI/NDT/evidence behavior changes, and no governance boundary weakening.
+
+AIM remains the system of record; PostgreSQL stores final structured engineering data; object storage stores original evidence files and report artifacts; n8n remains orchestration-only; AI extraction remains staging-first; AI/n8n/service actors cannot approve, promote, issue, calculate, or make final engineering decisions; human review and evidence linkage remain mandatory.
