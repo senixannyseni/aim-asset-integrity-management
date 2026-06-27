@@ -278,3 +278,22 @@ Implemented RC4-A controls:
 RC4-A adds no formulas, no new API routes, no frontend routes, no migrations, no database tables, no AI behavior changes, no n8n behavior changes, no approval/report/FFS/RBI/NDT/evidence behavior changes, and no governance boundary weakening.
 
 AIM remains the system of record; PostgreSQL stores final structured engineering data; object storage stores original evidence files and report artifacts; n8n remains orchestration-only; AI extraction remains staging-first; AI/n8n/service actors cannot approve, promote, issue, calculate, or make final engineering decisions; human review and evidence linkage remain mandatory.
+
+
+## RC4-B Tank Asset Register Frontend Completion
+
+Status: Implemented as frontend-focused completion package.
+
+RC4-B completes the Tank Asset Register and Engineering Master Data frontend without reopening RC3 or RC4-A.
+
+Implemented RC4-B controls:
+
+- `apps/web/app/assets/page.tsx` exists and provides asset list/table, create tank asset form, search/filter, operating status, inspection due date, safe related links, loading state, empty state, error state, and permission-denied state.
+- `apps/web/app/assets/[assetId]/page.tsx` exists and provides asset detail summary, edit form, tank geometry form, shell-course table editor, material master selector, related links, audit-log link, evidence link, NDT link, calculation link, report link, loading state, not-found state, error state, and permission-denied state.
+- Asset create/edit fields include `tank_tag`, `asset_name`, `facility`, `location`, `service_fluid`, `tank_type`, `construction_year`, `original_design_code`, `current_assessment_code`, `code_edition`, `owner`, `operating_status`, and `inspection_due_date`.
+- Geometry fields include `diameter`, `shell_height`, `number_of_courses`, `design_liquid_level`, `nominal_capacity`, `specific_gravity`, `design_temperature`, `design_pressure`, `vacuum_design_basis`, `bottom_type`, `roof_type`, and `foundation_type`.
+- Shell-course editor exposes `course_no`, `course_height`, `nominal_thickness`, `measured_min_thickness`, `material_id`/material specification, `joint_efficiency`, `corrosion_allowance`, and `coating_lining_status`.
+- Material selector loads active material options from the existing material master API.
+- Frontend validation clearly flags missing code edition, diameter, shell height, material, joint efficiency, invalid construction year, invalid inspection due date, invalid numeric ranges, and missing/ambiguous units where applicable.
+
+RC4-B adds no backend schema, no migrations, no new formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/FFS/RBI/NDT/evidence behavior changes, and no governance boundary weakening. Frontend validation is UX-only; backend validation remains authoritative.

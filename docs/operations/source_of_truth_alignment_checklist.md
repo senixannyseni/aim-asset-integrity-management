@@ -47,3 +47,26 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory.
+
+
+## RC4-B Source-of-Truth Alignment
+
+- [ ] RC4-B completes the Tank Asset Register frontend only.
+- [ ] `apps/web/app/assets/page.tsx` exists.
+- [ ] `apps/web/app/assets/[assetId]/page.tsx` exists.
+- [ ] Asset list/table, create tank asset form, search/filter, operating status, inspection due date, loading, empty, error, and permission-denied states are available.
+- [ ] Asset detail/edit, tank geometry input, shell-course editor, material selector, related links, audit-log link, evidence link, NDT link, calculation link, and report link are available.
+- [ ] Missing code edition, diameter, shell height, material, and joint efficiency are clearly flagged in the UI.
+- [ ] Frontend validation is UX-only and does not weaken backend validation.
+- [ ] Existing backend APIs are used; no duplicate asset data model is introduced.
+- [ ] No new API routes are introduced by RC4-B.
+- [ ] No new database tables are introduced by RC4-B.
+- [ ] No new database migration is introduced by RC4-B.
+- [ ] No new engineering formulas are introduced by RC4-B.
+- [ ] RC4-B does not change runtime engineering calculation behavior.
+- [ ] RC4-B does not change AI, n8n, approval, report, FFS, RBI, NDT, evidence, or object-storage behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory.

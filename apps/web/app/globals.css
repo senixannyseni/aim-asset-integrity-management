@@ -342,3 +342,8 @@ textarea {
   padding: 14px;
   white-space: pre-wrap;
 }
+
+.muted-text {
+  color: var(--gray);
+  font-size: 0.84rem;
+}
