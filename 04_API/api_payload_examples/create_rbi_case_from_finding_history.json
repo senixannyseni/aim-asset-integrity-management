@@ -1,0 +1,11 @@
+{
+  "rc4_package": "RC4-I",
+  "asset_id": "33333333-3333-4333-8333-333333333333",
+  "finding_id": "FND-2026-000001",
+  "minimum_occurrences": 2,
+  "component": "shell",
+  "damage_mechanism": "repeated_anomaly_screening",
+  "risk_category": "medium",
+  "recommended_interval": "engineer_review_required",
+  "inspection_plan_reference": "review_damage_mechanism_and_history"
+}

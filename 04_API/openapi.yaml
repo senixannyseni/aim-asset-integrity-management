@@ -666,7 +666,7 @@ paths:
         name: search
         schema:
           type: string
-        description: Searches safe fields only: event type, entity type, request ID, actor email, and actor full name.
+        description: "Searches safe fields only: event type, entity type, request ID, actor email, and actor full name."
       - in: query
         name: page
         schema:
@@ -1276,9 +1276,53 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Duplicate RBI trigger blocked for same calculation warning signature
       security:
       - bearerAuth: []
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/rbi/cases/from-finding-history:
+    post:
+      summary: Create RBI case from repeated findings/anomaly history
+      description: RC4-I creates an RBI interface case from RC4-H findings/anomaly history when repeated relevant active findings exist. Trigger only; no quantitative API RP 581 calculation.
+      x-permission-required: rbi.interface.create
+      x-audit-event-generated: RBI_CASE_CREATED_FROM_FINDING_HISTORY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset_id:
+                  type: string
+                  format: uuid
+                finding_id:
+                  type: string
+                  description: Seed finding UUID or finding_code.
+                minimum_occurrences:
+                  type: integer
+                  minimum: 2
+                  default: 2
+                component:
+                  type: string
+                damage_mechanism:
+                  type: string
+      responses:
+        '201':
+          description: RBI case created from repeated findings/anomaly history
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Duplicate RBI trigger blocked for same repeated-finding signature
+      security:
+      - bearerAuth: []
+      x-source-module: findings_anomaly_history
+      x-full-api-581-implemented: false
   /api/v1/rbi/cases/{caseId}:
     get:
       summary: Get RBI case detail
@@ -1337,6 +1381,102 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
       - bearerAuth: []
+  /api/v1/rbi/cases/{caseId}/review:
+    post:
+      summary: Record RBI case review action
+      description: RC4-I records human review workflow status and audit comment. Does not approve or finalize the RBI case.
+      x-permission-required: rbi.interface.review
+      x-audit-event-generated: RBI_CASE_REVIEWED
+      parameters:
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - under_review
+                  - data_required
+                  - assessment_in_progress
+                  - ready_for_review
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: RBI case review recorded
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+  /api/v1/rbi/cases/{caseId}/export:
+    post:
+      summary: Mark RBI case exported
+      description: RC4-I senior-engineer/admin finalization action. Export metadata only; does not implement quantitative API RP 581 calculations.
+      x-permission-required: rbi.interface.export
+      x-audit-event-generated: RBI_CASE_EXPORTED
+      parameters:
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: RBI case exported
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/rbi/cases/{caseId}/close:
+    post:
+      summary: Close RBI case
+      description: RC4-I senior-engineer/admin closure action. Closure requires comment/reason and does not approve calculations or issue reports.
+      x-permission-required: rbi.interface.approve
+      x-audit-event-generated: RBI_CASE_CLOSED
+      parameters:
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - closure_comment
+              properties:
+                closure_comment:
+                  type: string
+      responses:
+        '200':
+          description: RBI case closed
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
   /api/v1/rbi/cases/{caseId}/approve:
     post:
       summary: Approve RBI interface summary for export or inspection planning
@@ -3276,6 +3416,13 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+        finding_id:
+          type: string
+          description: Optional seed finding UUID/code for repeated-anomaly RBI trigger workflows.
+        minimum_occurrences:
+          type: integer
+          minimum: 2
+          default: 2
         system:
           type: string
         component:
