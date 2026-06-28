@@ -96,3 +96,9 @@ Approval request creation now treats `entity_type`/`entity_id` and `calculation_
 ## Final hotfix addendum: review context source of truth
 
 Approval records now store asset and calculation context from the linked completed engineering review, not from client-supplied request fields. Optional `asset_id` and `calculation_run_id` values in approval request payloads are treated only as cross-checks. This prevents context drift and keeps `review_id` as the canonical approval source of truth.
+
+## Review entity context source hotfix
+
+- Review creation stores asset/calculation context from the resolved reviewed entity, not client-provided override fields.
+- Request `asset_id` and `calculation_run_id` are optional cross-checks and are rejected on mismatch.
+- Finding review context is resolved from the `findings` table.

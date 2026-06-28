@@ -227,6 +227,10 @@ async function resolveEntityContext(client: Queryable, entityType: string, entit
     const result = await client.query<DbRow>('select asset_id, calculation_run_id from rbi_cases where id = $1', [entityId]);
     return { assetId: asString(result.rows[0]?.asset_id) ?? null, calculationRunId: asString(result.rows[0]?.calculation_run_id) ?? null };
   }
+  if (entityType === 'finding') {
+    const result = await client.query<DbRow>('select asset_id, calculation_run_id from findings where id = $1', [entityId]);
+    return { assetId: asString(result.rows[0]?.asset_id) ?? null, calculationRunId: asString(result.rows[0]?.calculation_run_id) ?? null };
+  }
   return { assetId: null, calculationRunId: null };
 }
 
@@ -350,9 +354,21 @@ engineeringReviewsRouter.post('/engineering/reviews', requirePermission('enginee
   try {
     await client.query('begin');
     const context = await resolveEntityContext(client, entityType, entityId);
-    if (!context.assetId && entityType !== 'finding') {
+    if (!context.assetId) {
       await client.query('rollback');
-      res.status(404).json({ error: { code: 'REVIEW_ENTITY_NOT_FOUND', message: 'Review target was not found.' } });
+      res.status(404).json({ error: { code: 'REVIEW_ENTITY_NOT_FOUND', message: 'Review target was not found or does not expose an asset context.' } });
+      return;
+    }
+    const requestedAssetId = uuidOrNull(req.body.asset_id ?? req.body.assetId);
+    if (requestedAssetId && requestedAssetId !== context.assetId) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'REVIEW_ENTITY_ASSET_CONTEXT_MISMATCH', message: 'Review asset_id must match the resolved review target asset context.' } });
+      return;
+    }
+    const requestedCalculationRunId = uuidOrNull(req.body.calculation_run_id ?? req.body.calculationRunId);
+    if (requestedCalculationRunId && requestedCalculationRunId !== context.calculationRunId) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'REVIEW_ENTITY_CALCULATION_CONTEXT_MISMATCH', message: 'Review calculation_run_id must match the resolved review target calculation context.' } });
       return;
     }
     const revisionResult = await client.query<{ next_revision: string }>(
@@ -376,8 +392,8 @@ engineeringReviewsRouter.post('/engineering/reviews', requirePermission('enginee
         reviewCode,
         entityType,
         entityId,
-        uuidOrNull(req.body.asset_id) ?? context.assetId,
-        uuidOrNull(req.body.calculation_run_id) ?? context.calculationRunId,
+        context.assetId,
+        context.calculationRunId,
         asString(req.body.review_type ?? req.body.reviewType) ?? 'engineering_review',
         actorUserId(req),
         uuidOrNull(req.body.assigned_engineer ?? req.body.assignedEngineer),

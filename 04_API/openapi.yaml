@@ -3515,6 +3515,14 @@ components:
         entity_id:
           type: string
           format: uuid
+        asset_id:
+          type: string
+          format: uuid
+          description: Optional asset-context cross-check; review stores the resolved target asset context, not a client-provided override.
+        calculation_run_id:
+          type: string
+          format: uuid
+          description: Optional calculation-context cross-check; review stores the resolved target calculation context, not a client-provided override.
         review_type:
           type: string
         review_status:

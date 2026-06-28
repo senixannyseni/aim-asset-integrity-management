@@ -85,3 +85,9 @@ Approval request creation now treats `entity_type`/`entity_id` and `calculation_
 ## Final traceability hotfix
 
 Approval request creation now persists `asset_id` and `calculation_run_id` from the linked completed engineering review, with client-supplied values used only as optional cross-checks. This prevents approval context drift and supports auditable approval snapshots.
+
+## Final context-source hardening
+
+- Engineering review creation now sources `asset_id` and `calculation_run_id` from the resolved review target context.
+- Client-supplied `asset_id` / `calculation_run_id` are only optional cross-checks and cannot override stored review context.
+- Finding reviews resolve their asset/calculation context from the `findings` table.

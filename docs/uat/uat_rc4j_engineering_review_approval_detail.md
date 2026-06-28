@@ -77,3 +77,10 @@ Approval request creation now treats `entity_type`/`entity_id` and `calculation_
 ## Additional UAT check: approval context source
 
 Create an approval request from a completed review that carries a linked calculation context. Confirm that the approval record stores the review's `asset_id` and `calculation_run_id`. Confirm that a mismatched request `asset_id` or `calculation_run_id` is rejected with an explicit context mismatch error.
+
+## Additional UAT: Review entity context source
+
+1. Create an engineering review for a calculation run while sending a mismatched `asset_id`. Expected: request rejected with `REVIEW_ENTITY_ASSET_CONTEXT_MISMATCH`.
+2. Create an engineering review for an asset while sending a `calculation_run_id`. Expected: request rejected with `REVIEW_ENTITY_CALCULATION_CONTEXT_MISMATCH`.
+3. Create an engineering review for a finding. Expected: review stores asset/calculation context resolved from the linked finding record.
+4. Submit approval request. Expected: approval context matches the linked engineering review and reviewed entity context.
