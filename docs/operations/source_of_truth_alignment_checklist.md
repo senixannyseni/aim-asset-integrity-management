@@ -239,3 +239,28 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory for engineering findings and anomalies.
+
+## RC4-I Source-of-Truth Alignment
+
+- [ ] RC4-I adds RBI workflow detail/guided UI/completion behavior only.
+- [ ] `/rbi` supports guided RBI case creation and no longer relies only on raw JSON payload entry.
+- [ ] `/rbi/[caseId]` exists and shows case summary, trigger source, risk drivers, evidence links, source findings, placeholders, and audit link.
+- [ ] RBI status update is non-final and remains separate from approve/export/close final actions.
+- [ ] RBI review action writes `RBI_CASE_REVIEWED` audit event.
+- [ ] RBI approve/export/close actions require human senior authority through backend RBAC.
+- [ ] RBI close requires comment/reason.
+- [ ] AI, n8n, and service actors cannot approve, export, close, or finalize RBI cases.
+- [ ] Calculation-warning RBI trigger blocks duplicate open cases for the same calculation-run / trigger-rule / warning-signature.
+- [ ] Repeated-anomaly RBI trigger uses RC4-H `findings` history and blocks duplicate open cases for the same asset / trigger-rule / finding-signature.
+- [ ] Repeated-anomaly trigger requires at least two relevant active findings.
+- [ ] Evidence links created from calculation/finding source rows pass same-asset validation.
+- [ ] Risk matrix UI is labelled qualitative/semi-quantitative placeholder only.
+- [ ] No quantitative API RP 581 probability/consequence formula is implemented.
+- [ ] No new database migration is introduced by RC4-I.
+- [ ] No deterministic calculation math is changed by RC4-I.
+- [ ] RC4-I does not issue reports, approve calculations, create final integrity decisions, or create FFS cases.
+- [ ] OpenAPI documents `from-finding-history`, `review`, `export`, and `close` RBI endpoints.
+- [ ] Data dictionary and ERD explain the new trigger signatures without adding table columns.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
