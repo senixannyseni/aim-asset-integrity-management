@@ -257,6 +257,313 @@ async function nextEvidenceCode(client: PoolClient): Promise<string> {
   return `EVD-${year}-${String(next).padStart(6, '0')}`;
 }
 
+
+type EvidenceTraceabilityModule = {
+  module_key: string;
+  module_label: string;
+  entity_type: EvidenceLinkEntityType;
+  table_name: string;
+  frontend_path: string;
+  required_for_issue: boolean;
+  total_records: number;
+  linked_records: number;
+  missing_records: number;
+  coverage_percent: number;
+  governance_note: string;
+};
+
+type EvidenceTraceabilityModuleConfig = {
+  moduleKey: string;
+  moduleLabel: string;
+  entityType: EvidenceLinkEntityType;
+  tableName: string;
+  frontendPath: string;
+  requiredForIssue: boolean;
+  assetColumn?: string;
+  inspectionColumn?: string;
+  directEvidencePredicate?: string;
+  extraJoin?: string;
+  inspectionPredicate?: string;
+  governanceNote: string;
+};
+
+const EVIDENCE_TRACEABILITY_MODULES: EvidenceTraceabilityModuleConfig[] = [
+  {
+    moduleKey: 'asset_register',
+    moduleLabel: 'Asset Register',
+    entityType: 'asset',
+    tableName: 'assets',
+    frontendPath: '/assets',
+    requiredForIssue: true,
+    assetColumn: 'id',
+    governanceNote: 'Asset-level evidence proves baseline tank identity and is traceability only, not approval.'
+  },
+  {
+    moduleKey: 'inspection_events',
+    moduleLabel: 'Inspection Events',
+    entityType: 'inspection_event',
+    tableName: 'inspection_events',
+    frontendPath: '/evidence',
+    requiredForIssue: true,
+    assetColumn: 'asset_id',
+    inspectionColumn: 'id',
+    governanceNote: 'Inspection evidence should support the inspection event used by NDT, calculations, findings, and reports.'
+  },
+  {
+    moduleKey: 'ndt_measurements',
+    moduleLabel: 'NDT Measurements',
+    entityType: 'ndt_measurement',
+    tableName: 'ndt_measurements',
+    frontendPath: '/ndt-data-room',
+    requiredForIssue: true,
+    assetColumn: 'asset_id',
+    inspectionColumn: 'inspection_event_id',
+    directEvidencePredicate: 'entity.evidence_file_id is not null',
+    governanceNote: 'NDT readings may be linked through normalized evidence_links or direct evidence_file_id references.'
+  },
+  {
+    moduleKey: 'findings',
+    moduleLabel: 'Findings / Anomalies',
+    entityType: 'finding',
+    tableName: 'findings',
+    frontendPath: '/findings',
+    requiredForIssue: true,
+    assetColumn: 'asset_id',
+    inspectionColumn: 'inspection_event_id',
+    directEvidencePredicate: 'entity.evidence_file_id is not null',
+    governanceNote: 'Findings should retain evidence support before downstream FFS/RBI/report/work-order decisions.'
+  },
+  {
+    moduleKey: 'calculation_runs',
+    moduleLabel: 'Calculation Runs',
+    entityType: 'calculation_run',
+    tableName: 'calculation_runs',
+    frontendPath: '/calculations',
+    requiredForIssue: true,
+    assetColumn: 'asset_id',
+    inspectionColumn: 'inspection_event_id',
+    directEvidencePredicate: 'exists (select 1 from calculation_inputs ci where ci.calculation_run_id = entity.id and ci.evidence_file_id is not null)',
+    governanceNote: 'Calculation evidence traceability is visibility only. Formulas remain deterministic and separately governed.'
+  },
+  {
+    moduleKey: 'integrity_decisions',
+    moduleLabel: 'Integrity Decisions',
+    entityType: 'integrity_decision',
+    tableName: 'integrity_decisions',
+    frontendPath: '/integrity-decisions',
+    requiredForIssue: true,
+    assetColumn: 'asset_id',
+    inspectionColumn: 'inspection_event_id',
+    governanceNote: 'Final integrity decision records must remain linked to supporting evidence, review, and calculation context.'
+  },
+  {
+    moduleKey: 'rbi_cases',
+    moduleLabel: 'RBI Cases',
+    entityType: 'rbi_case',
+    tableName: 'rbi_cases',
+    frontendPath: '/rbi',
+    requiredForIssue: false,
+    assetColumn: 'asset_id',
+    inspectionColumn: 'inspection_event_id',
+    governanceNote: 'RBI evidence traceability is interface/readiness visibility only and does not implement API RP 581 calculations.'
+  },
+  {
+    moduleKey: 'reports',
+    moduleLabel: 'Reports',
+    entityType: 'report',
+    tableName: 'reports',
+    frontendPath: '/reports',
+    requiredForIssue: true,
+    assetColumn: 'asset_id',
+    extraJoin: 'left join calculation_runs trace_calc on trace_calc.id = entity.calculation_run_id',
+    inspectionPredicate: 'trace_calc.inspection_event_id = $FILTER',
+    governanceNote: 'Issued reports should have report-level evidence links plus calculation/evidence-register traceability.'
+  },
+  {
+    moduleKey: 'internal_work_orders',
+    moduleLabel: 'Internal Work Orders',
+    entityType: 'internal_work_order',
+    tableName: 'internal_work_orders',
+    frontendPath: '/work-orders',
+    requiredForIssue: false,
+    assetColumn: 'asset_id',
+    governanceNote: 'Internal work orders remain AIM fallback records; external CMMS write integration is out of scope.'
+  }
+];
+
+function evidenceCoveragePercent(linkedRecords: number, totalRecords: number): number {
+  if (totalRecords === 0) return 100;
+  return Math.round((linkedRecords / totalRecords) * 1000) / 10;
+}
+
+function asCount(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && /^\d+$/.test(value)) return Number(value);
+  return 0;
+}
+
+function buildModuleWhereClause(
+  module: EvidenceTraceabilityModuleConfig,
+  assetId: string | null,
+  inspectionEventId: string | null,
+  values: unknown[]
+): string {
+  const filters: string[] = ['1 = 1'];
+  if (assetId && module.assetColumn) {
+    values.push(assetId);
+    filters.push(`entity.${module.assetColumn} = $${values.length}`);
+  }
+  if (inspectionEventId) {
+    if (module.inspectionColumn) {
+      values.push(inspectionEventId);
+      filters.push(`entity.${module.inspectionColumn} = $${values.length}`);
+    } else if (module.inspectionPredicate) {
+      values.push(inspectionEventId);
+      filters.push(module.inspectionPredicate.replace('$FILTER', `$${values.length}`));
+    }
+  }
+  return filters.join(' and ');
+}
+
+function buildEvidenceLinkedPredicate(module: EvidenceTraceabilityModuleConfig): string {
+  const normalizedLinkPredicate = `exists (
+    select 1 from evidence_links el
+    where el.linked_entity_type = $1 and el.linked_entity_id = entity.id
+  )`;
+  if (!module.directEvidencePredicate) return normalizedLinkPredicate;
+  return `(${normalizedLinkPredicate} or ${module.directEvidencePredicate})`;
+}
+
+async function buildEvidenceTraceabilityMatrix(params: {
+  assetId: string | null;
+  inspectionEventId: string | null;
+}): Promise<Record<string, unknown>> {
+  const coverageMatrix: EvidenceTraceabilityModule[] = [];
+
+  for (const module of EVIDENCE_TRACEABILITY_MODULES) {
+    const values: unknown[] = [module.entityType];
+    const whereClause = buildModuleWhereClause(module, params.assetId, params.inspectionEventId, values);
+    const linkedPredicate = buildEvidenceLinkedPredicate(module);
+    const result = await pool.query<{ total_records: string; linked_records: string }>(
+      `select
+        count(*)::text as total_records,
+        count(*) filter (where ${linkedPredicate})::text as linked_records
+       from ${module.tableName} entity
+       ${module.extraJoin ?? ''}
+       where ${whereClause}`,
+      values
+    );
+    const totalRecords = asCount(result.rows[0]?.total_records);
+    const linkedRecords = asCount(result.rows[0]?.linked_records);
+    const missingRecords = Math.max(totalRecords - linkedRecords, 0);
+    coverageMatrix.push({
+      module_key: module.moduleKey,
+      module_label: module.moduleLabel,
+      entity_type: module.entityType,
+      table_name: module.tableName,
+      frontend_path: module.frontendPath,
+      required_for_issue: module.requiredForIssue,
+      total_records: totalRecords,
+      linked_records: linkedRecords,
+      missing_records: missingRecords,
+      coverage_percent: evidenceCoveragePercent(linkedRecords, totalRecords),
+      governance_note: module.governanceNote
+    });
+  }
+
+  const linkValues: unknown[] = [];
+  const linkFilters = ['1 = 1'];
+  if (params.assetId) {
+    linkValues.push(params.assetId);
+    linkFilters.push(`ef.asset_id = $${linkValues.length}`);
+  }
+  if (params.inspectionEventId) {
+    linkValues.push(params.inspectionEventId);
+    linkFilters.push(`ef.inspection_event_id = $${linkValues.length}`);
+  }
+  const recentLinks = await pool.query<DbRow>(
+    `select
+       el.id as evidence_link_id,
+       el.evidence_file_id,
+       el.linked_entity_type,
+       el.linked_entity_id,
+       el.link_reason,
+       el.created_at,
+       ef.evidence_code,
+       ef.original_filename,
+       ef.asset_id,
+       ef.inspection_event_id,
+       ef.status as evidence_status
+     from evidence_links el
+     join evidence_files ef on ef.id = el.evidence_file_id
+     where ${linkFilters.join(' and ')}
+     order by el.created_at desc
+     limit 75`,
+    linkValues
+  );
+
+  const totalRecords = coverageMatrix.reduce((sum, module) => sum + module.total_records, 0);
+  const linkedRecords = coverageMatrix.reduce((sum, module) => sum + module.linked_records, 0);
+  const missingRecords = coverageMatrix.reduce((sum, module) => sum + module.missing_records, 0);
+  const requiredModules = coverageMatrix.filter((module) => module.required_for_issue);
+  const requiredModulesMissing = requiredModules.filter((module) => module.missing_records > 0);
+
+  return {
+    scope: {
+      asset_id: params.assetId,
+      inspection_event_id: params.inspectionEventId,
+      filter_note: 'Filters narrow existing AIM records only. This read-only matrix does not create, approve, delete, upload, download, or mutate evidence.'
+    },
+    summary: {
+      total_records: totalRecords,
+      linked_records: linkedRecords,
+      missing_records: missingRecords,
+      coverage_percent: evidenceCoveragePercent(linkedRecords, totalRecords),
+      module_count: coverageMatrix.length,
+      modules_with_missing_evidence: coverageMatrix.filter((module) => module.missing_records > 0).length,
+      required_module_count: requiredModules.length,
+      required_modules_with_missing_evidence: requiredModulesMissing.length,
+      ready_for_governance_review: requiredModulesMissing.length === 0
+    },
+    coverage_matrix: coverageMatrix,
+    missing_evidence: coverageMatrix
+      .filter((module) => module.missing_records > 0)
+      .map((module) => ({
+        module_key: module.module_key,
+        module_label: module.module_label,
+        entity_type: module.entity_type,
+        missing_records: module.missing_records,
+        required_for_issue: module.required_for_issue,
+        recommended_action: `Link evidence to ${module.entity_type} records through AIM evidence_links before relying on downstream review/report/work-order gates.`
+      })),
+    evidence_link_rows: recentLinks.rows.map((row) => ({
+      evidence_link_id: row.evidence_link_id,
+      evidence_file_id: row.evidence_file_id,
+      evidence_code: row.evidence_code,
+      original_filename: row.original_filename,
+      linked_entity_type: row.linked_entity_type,
+      linked_entity_id: row.linked_entity_id,
+      link_reason: row.link_reason,
+      asset_id: row.asset_id,
+      inspection_event_id: row.inspection_event_id,
+      evidence_status: row.evidence_status,
+      created_at: row.created_at
+    })),
+    traceability_links: coverageMatrix.map((module) => ({
+      label: module.module_label,
+      entity_type: module.entity_type,
+      href: module.frontend_path,
+      missing_records: module.missing_records
+    })),
+    governance_notes: [
+      'RC4-M is a read-only cross-module evidence coverage matrix.',
+      'The matrix does not upload, download, delete, approve, issue, close, or promote any engineering record.',
+      'Evidence coverage is not an engineering approval; human review and module-specific gates remain authoritative.',
+      'Object storage behavior is unchanged; original evidence files remain in object storage and PostgreSQL keeps final structured metadata.'
+    ]
+  };
+}
+
 evidenceRouter.get('/evidence', requirePermission('evidence.read'), async (req, res, next) => {
   try {
     const values: string[] = [];
@@ -280,6 +587,27 @@ evidenceRouter.get('/evidence', requirePermission('evidence.read'), async (req, 
     );
 
     res.json({ data: result.rows.map(mapEvidence) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+evidenceRouter.get('/evidence/traceability-matrix', requirePermission('evidence.read'), async (req, res, next) => {
+  const assetId = asString(req.query.asset_id) ?? null;
+  const inspectionEventId = asString(req.query.inspection_event_id ?? req.query.inspection_id) ?? null;
+  if (assetId && !isUuid(assetId)) {
+    controlledError(res, 400, 'TRACEABILITY_MATRIX_ASSET_ID_INVALID', 'asset_id must be a UUID when provided.');
+    return;
+  }
+  if (inspectionEventId && !isUuid(inspectionEventId)) {
+    controlledError(res, 400, 'TRACEABILITY_MATRIX_INSPECTION_ID_INVALID', 'inspection_event_id must be a UUID when provided.');
+    return;
+  }
+
+  try {
+    const matrix = await buildEvidenceTraceabilityMatrix({ assetId, inspectionEventId });
+    res.json({ data: matrix });
   } catch (error) {
     next(error);
   }

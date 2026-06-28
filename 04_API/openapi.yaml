@@ -242,6 +242,38 @@ paths:
       security:
       - bearerAuth: []
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/evidence/traceability-matrix:
+    get:
+      summary: Get cross-module evidence traceability matrix
+      description: Read-only RC4-M evidence coverage matrix across asset, inspection, NDT, finding, calculation, integrity decision, RBI, report, and internal work-order records. Does not upload, download, delete, approve, issue, close, or mutate evidence or engineering records.
+      x-permission-required: evidence.read
+      x-audit-event-generated: none
+      x-source-of-truth-boundary: AIM is the system of record. PostgreSQL stores final structured metadata and object storage stores original evidence files. This endpoint is read-only coverage visibility only.
+      parameters:
+      - in: query
+        name: asset_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: inspection_event_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Evidence traceability matrix
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/EvidenceTraceabilityMatrix'
+      security:
+      - bearerAuth: []
   /api/v1/evidence/{evidenceId}:
     get:
       summary: Get evidence metadata
@@ -3297,6 +3329,142 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
   schemas:
+    EvidenceTraceabilityMatrix:
+      type: object
+      required:
+      - scope
+      - summary
+      - coverage_matrix
+      - missing_evidence
+      - evidence_link_rows
+      - governance_notes
+      properties:
+        scope:
+          type: object
+          properties:
+            asset_id:
+              type: string
+              nullable: true
+            inspection_event_id:
+              type: string
+              nullable: true
+            filter_note:
+              type: string
+        summary:
+          type: object
+          properties:
+            total_records:
+              type: integer
+            linked_records:
+              type: integer
+            missing_records:
+              type: integer
+            coverage_percent:
+              type: number
+            module_count:
+              type: integer
+            modules_with_missing_evidence:
+              type: integer
+            required_module_count:
+              type: integer
+            required_modules_with_missing_evidence:
+              type: integer
+            ready_for_governance_review:
+              type: boolean
+        coverage_matrix:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceTraceabilityModuleCoverage'
+        missing_evidence:
+          type: array
+          items:
+            type: object
+            properties:
+              module_key:
+                type: string
+              module_label:
+                type: string
+              entity_type:
+                type: string
+              missing_records:
+                type: integer
+              required_for_issue:
+                type: boolean
+              recommended_action:
+                type: string
+        evidence_link_rows:
+          type: array
+          items:
+            type: object
+            properties:
+              evidence_link_id:
+                type: string
+              evidence_file_id:
+                type: string
+              evidence_code:
+                type: string
+              original_filename:
+                type: string
+              linked_entity_type:
+                type: string
+              linked_entity_id:
+                type: string
+              link_reason:
+                type: string
+              evidence_status:
+                type: string
+              created_at:
+                type: string
+        traceability_links:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              entity_type:
+                type: string
+              href:
+                type: string
+              missing_records:
+                type: integer
+        governance_notes:
+          type: array
+          items:
+            type: string
+    EvidenceTraceabilityModuleCoverage:
+      type: object
+      required:
+      - module_key
+      - module_label
+      - entity_type
+      - total_records
+      - linked_records
+      - missing_records
+      - coverage_percent
+      properties:
+        module_key:
+          type: string
+        module_label:
+          type: string
+        entity_type:
+          type: string
+        table_name:
+          type: string
+        frontend_path:
+          type: string
+        required_for_issue:
+          type: boolean
+        total_records:
+          type: integer
+        linked_records:
+          type: integer
+        missing_records:
+          type: integer
+        coverage_percent:
+          type: number
+        governance_note:
+          type: string
 
     AdminUserRoleChangeRequest:
       type: object

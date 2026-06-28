@@ -469,3 +469,17 @@ RC4-L closes the work order workflow UX gap after RC4-K:
 
 RC4-L does not add external CMMS writes, automatic work order closure, AI/n8n/service finalization, formulas, FFS/RBI logic, report issue changes, or direct n8n/database access.
 
+
+## RC4-M Evidence Traceability Matrix
+
+Status: Implemented as cross-module evidence coverage visibility package.
+
+RC4-M closes the evidence coverage visibility gap after RC4-L:
+
+- Added `/evidence-traceability` page with coverage summary, required-module blockers, coverage matrix, missing evidence indicators, recent evidence links, and governance notes.
+- Added `GET /api/v1/evidence/traceability-matrix` as a read-only cross-module evidence coverage endpoint.
+- Matrix covers asset, inspection, NDT, finding, calculation, integrity decision, RBI, report, and internal work-order records.
+- Optional `asset_id` and `inspection_event_id` filters narrow the evidence coverage scope.
+- Evidence repository and home page now link to the traceability matrix.
+
+RC4-M does not upload, download, delete, approve, issue, close, promote, mutate, or finalize any records. Evidence coverage is traceability/readiness visibility only; module-specific gates remain authoritative.

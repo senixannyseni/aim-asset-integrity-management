@@ -479,3 +479,14 @@ pre {
   gap: 0.5rem;
   align-items: center;
 }
+
+.callout {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin: 12px 0;
+  padding: 14px 16px;
+}
+
+.evidence-summary-cards article h2 {
+  font-size: 1.6rem;
+}

@@ -675,3 +675,17 @@ Implemented RC4-L controls:
 
 RC4-L does not add external CMMS/SAP/Maximo integration, automatic closure, AI/n8n/service finalization, engineering formulas, report issue changes, calculation changes, FFS/RBI quantitative logic, or direct n8n/database access.
 
+
+## RC4-M Evidence Traceability Matrix
+
+RC4-M adds a read-only cross-module evidence coverage matrix after RC4-L.
+
+Implemented RC4-M controls:
+
+- `/evidence-traceability` frontend page for evidence coverage summary, module coverage matrix, missing evidence indicators, recent normalized evidence links, and governance notes.
+- `GET /api/v1/evidence/traceability-matrix` endpoint protected by `evidence.read`.
+- Optional `asset_id` and `inspection_event_id` filters for scoped coverage review.
+- Coverage visibility across asset, inspection, NDT, finding, calculation, integrity decision, RBI, report, and internal work-order records.
+- Required-module missing evidence indicators to help engineers identify evidence linkage gaps before relying on downstream review/report/work-order gates.
+
+RC4-M is read-only. It does not upload, download, delete, approve, issue, close, promote, mutate, or finalize evidence or engineering records. It adds no object-storage behavior changes, no AI extraction changes, no formulas, no FFS/RBI quantitative logic, no external CMMS integration, and no direct n8n/database access.
