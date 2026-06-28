@@ -67,3 +67,7 @@ Additional review hardening applied after final static review:
 ## RC4-J DB Final-State Lock Hotfix
 
 Final-state immutability was hardened so approved, rejected, and locked review/approval records cannot be changed through generic status routes or direct database updates. Existing final records are backfilled to `locked_flag = true` in the RC4-J migration, and final transitions remain restricted to approval-record endpoints.
+
+## RC4-J Review Completion Gate Hotfix
+
+Review completion was hardened so new reviews/revisions cannot be created directly as `reviewed` or `submitted_for_approval`. Completion must pass through the structured checklist status workflow, and approval requests require both `review_status = reviewed` and a recorded `reviewed_at` timestamp.

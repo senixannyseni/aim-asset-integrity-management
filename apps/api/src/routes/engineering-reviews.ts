@@ -335,8 +335,8 @@ engineeringReviewsRouter.post('/engineering/reviews', requirePermission('enginee
     validationError(res, 'review_status', `review_status must be one of ${REVIEW_STATUSES.join(', ')}.`);
     return;
   }
-  if (['approved', 'rejected', 'locked'].includes(reviewStatus)) {
-    validationError(res, 'review_status', 'Use the approval workflow to approve, reject, or lock engineering results.', 'APPROVAL_WORKFLOW_REQUIRED');
+  if (['reviewed', 'submitted_for_approval', 'approved', 'rejected', 'locked'].includes(reviewStatus)) {
+    validationError(res, 'review_status', 'New reviews must start before completion. Use the status/checklist and approval-record workflow for reviewed, submitted_for_approval, approved, rejected, or locked status.', 'REVIEW_STATUS_TRANSITION_REQUIRED');
     return;
   }
 
@@ -589,9 +589,9 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', require
     );
     const nextRevision = Number(revisionResult.rows[0]?.next_revision ?? '1');
     const status = asString(req.body.review_status ?? req.body.status) ?? 'draft';
-    if (!isReviewStatus(status) || ['approved', 'rejected', 'locked'].includes(status)) {
+    if (!isReviewStatus(status) || ['reviewed', 'submitted_for_approval', 'approved', 'rejected', 'locked'].includes(status)) {
       await client.query('rollback');
-      validationError(res, 'review_status', 'New revision must start as draft, submitted_for_review, returned_for_revision, or reviewed.', 'REVISION_START_STATUS_INVALID');
+      validationError(res, 'review_status', 'New revision must start as draft, submitted_for_review, or returned_for_revision. Use status/checklist workflow to complete review.', 'REVISION_START_STATUS_INVALID');
       return;
     }
     const result = await client.query<DbRow>(
@@ -685,9 +685,16 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
       res.status(409).json({ error: { code: 'FINAL_REVIEW_STATE_LOCKED', message: 'Approved, rejected, or locked review records cannot be submitted again. Create a new revision.' } });
       return;
     }
-    if (review.review_status !== 'reviewed') {
+    const approvalChecklistBlockers = validateStructuredChecklistForReview(review.checklist_json);
+    if (review.review_status !== 'reviewed' || !review.reviewed_at || approvalChecklistBlockers.length > 0) {
       await client.query('rollback');
-      res.status(422).json({ error: { code: 'REVIEW_COMPLETION_REQUIRED', message: 'Approval request is blocked until the engineering review is marked reviewed through the structured checklist flow.' } });
+      res.status(422).json({
+        error: {
+          code: 'REVIEW_COMPLETION_REQUIRED',
+          message: 'Approval request is blocked until the engineering review is completed through the structured checklist status workflow.',
+          details: approvalChecklistBlockers.map((blocker) => ({ code: blocker, severity: 'blocking' }))
+        }
+      });
       return;
     }
 

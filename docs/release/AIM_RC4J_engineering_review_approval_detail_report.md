@@ -54,3 +54,7 @@ The approval request flow was hardened so approval records require a reviewed `r
 ## RC4-J DB Final-State Lock Hotfix
 
 Final-state immutability was hardened so approved, rejected, and locked review/approval records cannot be changed through generic status routes or direct database updates. Existing final records are backfilled to `locked_flag = true` in the RC4-J migration, and final transitions remain restricted to approval-record endpoints.
+
+## RC4-J Review Completion Gate Hotfix
+
+Review completion was hardened so new review and revision records cannot be created directly in `reviewed` or `submitted_for_approval` status. Approval requests now require a reviewed engineering review with `reviewed_at` recorded by the structured checklist status workflow, and the checklist is revalidated before approval request creation.

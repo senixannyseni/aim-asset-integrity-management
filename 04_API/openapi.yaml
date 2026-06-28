@@ -3516,15 +3516,11 @@ components:
           type: string
         review_status:
           type: string
+          description: Initial review status. Completion and approval states must be reached through status/checklist and approval-record workflow endpoints.
           enum:
           - draft
           - submitted_for_review
           - returned_for_revision
-          - reviewed
-          - submitted_for_approval
-          - approved
-          - rejected
-          - locked
         checklist:
           type: object
           additionalProperties:
@@ -3546,11 +3542,11 @@ components:
       properties:
         review_status:
           type: string
+          description: New revision start status. Reviewed/submitted_for_approval/final states must be reached through workflow gates.
           enum:
           - draft
           - submitted_for_review
           - returned_for_revision
-          - reviewed
         review_comment:
           type: string
         checklist:

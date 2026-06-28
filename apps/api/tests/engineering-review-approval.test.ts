@@ -45,6 +45,9 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain('override_value');
     expect(route).toContain('AI_AGENT_CANNOT_APPROVE_OR_OVERRIDE');
     expect(route).toContain('REVIEW_ID_REQUIRED');
+    expect(route).toContain('REVIEW_STATUS_TRANSITION_REQUIRED');
+    expect(route).toContain('REVISION_START_STATUS_INVALID');
+    expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");
     expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
     expect(route).toContain('APPROVAL_NOT_SUBMITTED');
   });

@@ -41,3 +41,12 @@ Verify that Engineering Review and Approval can be completed through review deta
 ## RC4-J DB Final-State Lock Hotfix
 
 Final-state immutability was hardened so approved, rejected, and locked review/approval records cannot be changed through generic status routes or direct database updates. Existing final records are backfilled to `locked_flag = true` in the RC4-J migration, and final transitions remain restricted to approval-record endpoints.
+
+## RC4-J Review Completion Gate Hotfix
+
+Additional negative UAT cases:
+
+- Attempt to create a new engineering review directly with `review_status = reviewed`; expected: blocked with `REVIEW_STATUS_TRANSITION_REQUIRED`.
+- Attempt to create a new engineering review directly with `review_status = submitted_for_approval`; expected: blocked with `REVIEW_STATUS_TRANSITION_REQUIRED`.
+- Attempt to create a new revision directly with `review_status = reviewed`; expected: blocked with `REVISION_START_STATUS_INVALID`.
+- Attempt to create an approval request for a review where `review_status = reviewed` but `reviewed_at` is missing; expected: blocked with `REVIEW_COMPLETION_REQUIRED`.
