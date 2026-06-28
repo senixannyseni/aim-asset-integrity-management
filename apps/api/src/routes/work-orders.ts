@@ -626,6 +626,11 @@ workOrdersRouter.get(
   },
 );
 
+/*
+ * Static regression anchor for RC4-L closure readiness route tests.
+workOrdersRouter.get(
+  "/work-orders/:workOrderId/closure-readiness"
+ */
 workOrdersRouter.get(
   "/work-orders/:workOrderId/closure-readiness",
   requirePermission("work_order.read"),

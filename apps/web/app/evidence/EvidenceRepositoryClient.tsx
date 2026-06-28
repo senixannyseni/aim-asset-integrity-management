@@ -122,6 +122,7 @@ export default function EvidenceRepositoryClient() {
         </div>
         <div className="action-row">
           <Link className="secondary-button" href="/assets">Assets</Link>
+          <Link className="secondary-button" href="/evidence-traceability">Traceability Matrix</Link>
           <Link className="secondary-button" href="/ndt">NDT Data Room</Link>
         </div>
       </header>
