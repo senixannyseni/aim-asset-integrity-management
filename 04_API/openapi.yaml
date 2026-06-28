@@ -857,13 +857,42 @@ paths:
       - bearerAuth: []
   /api/v1/formulas/records/{recordId}/approve:
     post:
-      summary: Approve and lock a Formula Registry version
+      summary: Approve, lock, and synchronize a Formula Registry version to executable formula_versions
       x-permission-required: formula.approve
-      x-role-restriction: admin or senior_engineer
-      x-audit-event-generated: FORMULA_APPROVED
+      x-role-restriction: human admin or senior_engineer; AI, n8n, and service actors cannot approve or sync formulas
+      x-audit-event-generated: FORMULA_APPROVED|FORMULA_SYNCED_TO_EXECUTABLE|FORMULA_SYNC_FAILED
       responses:
         '200':
-          description: Formula approved
+          description: Formula approved and executable formula_version synchronized
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+  /api/v1/formulas/records/{recordId}/sync-to-executable:
+    post:
+      summary: RC4-F synchronize an approved Formula Registry record to executable formula_versions
+      description: >-
+        Idempotently synchronizes an approved or locked Formula Registry record into formula_versions. Draft, under_review, rejected, retired,
+        deprecated, superseded, inactive, or otherwise unapproved records are blocked and cannot become executable. No formula math or API/API-ASME
+        clause content is introduced by this action.
+      x-permission-required: formula.approve
+      x-role-restriction: human admin or senior_engineer; AI, n8n, and service actors cannot approve or sync formulas
+      x-audit-event-generated: FORMULA_SYNCED_TO_EXECUTABLE|FORMULA_SYNC_FAILED
+      parameters:
+      - in: path
+        name: recordId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Approved registry record synchronized to executable formula_versions
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Formula Registry record is not approved or conflicts with an existing executable version
       security:
       - bearerAuth: []
       x-human-review-required: true
@@ -893,9 +922,9 @@ paths:
     post:
       summary: Run deterministic engineering calculation
       description: >-
-        Runs universal deterministic calculations only with an explicit approved formula version. Silent/default formula selection is blocked. API/API-ASME-dependent calculations must use approved Formula Registry metadata and are not hard-coded. Calculation outputs preserve input/output snapshots, warnings, evidence gates, and the disclaimer: Engineering review required before final use.
+        Runs universal deterministic calculations only with an explicit approved synchronized formula_versions record. Silent/default formula selection is blocked. API/API-ASME-dependent calculations must use approved Formula Registry metadata and are not hard-coded. Calculation outputs preserve input/output snapshots, warnings, evidence gates, and the disclaimer: Engineering review required before final use.
       x-permission-required: calculation.run
-      x-audit-event-generated: calculation.run_requested|calculation.completed|calculation.failed|calculation.warning_raised|calculation.final_use_blocked
+      x-audit-event-generated: calculation.run_requested|calculation.completed|calculation.failed|calculation.warning_raised|calculation.final_use_blocked|FORMULA_VERSION_EXECUTION_BLOCKED
       x-source-of-truth-boundary: AIM is the system of record. Calculation runs are persisted only by AIM backend services with versioned formula snapshots and audit logs.
       x-human-review-required: true
       x-evidence-link-required: true

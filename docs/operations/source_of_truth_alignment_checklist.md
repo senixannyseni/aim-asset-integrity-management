@@ -149,3 +149,35 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory.
+
+
+## RC4-F Source-of-Truth Alignment
+
+- [ ] RC4-F synchronizes approved Formula Registry records to executable `formula_versions` only.
+- [ ] Approved/locked human-governed Formula Registry records can synchronize to executable formula versions.
+- [ ] Draft Formula Registry records cannot synchronize.
+- [ ] Under-review Formula Registry records cannot synchronize.
+- [ ] Rejected Formula Registry records cannot synchronize.
+- [ ] Retired/deprecated Formula Registry records cannot synchronize.
+- [ ] Superseded/inactive Formula Registry records cannot synchronize.
+- [ ] Synchronization is idempotent and does not create duplicate executable `formula_versions` for the same approved registry/code/version.
+- [ ] Formula approval triggers synchronization within the same governed operation.
+- [ ] Explicit sync endpoint is restricted to human formula governors and uses `formula.approve` permission.
+- [ ] AI, n8n, and service actors cannot approve or sync formulas to executable state.
+- [ ] Sync success writes `FORMULA_SYNCED_TO_EXECUTABLE` audit logs.
+- [ ] Sync failure writes `FORMULA_SYNC_FAILED` audit logs.
+- [ ] Calculation execution checks `formula_versions`, not Formula Registry display state alone.
+- [ ] Calculation execution rejects missing, draft, under-review, rejected, retired, superseded, inactive, or otherwise unapproved formula versions.
+- [ ] Calculation run persists `formula_version_id` and `formula_version_snapshot_json`.
+- [ ] Formula Registry UI shows sync status and executable formula_version_id where safe.
+- [ ] No new database tables are introduced by RC4-F.
+- [ ] No new database migration is introduced by RC4-F.
+- [ ] No new engineering formulas are introduced by RC4-F.
+- [ ] RC4-F does not change deterministic formula math outputs.
+- [ ] RC4-F does not introduce API 579/API 581/FFS/RBI formulas or FFS/RBI trigger logic.
+- [ ] RC4-F does not change AI, n8n, approval outside formula approval, report, evidence upload, NDT import, or object-storage behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory.

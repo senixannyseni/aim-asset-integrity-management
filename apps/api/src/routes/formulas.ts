@@ -15,6 +15,9 @@ import {
   validateFormulaPayload,
   type ValidationIssue
 } from '../modules/formula-registry/validation.js';
+import {
+  syncApprovedFormulaRegistryToExecutable
+} from '../modules/formula-registry/executable-sync.js';
 
 export const formulasRouter = Router();
 
@@ -55,12 +58,18 @@ function isAdminOrSeniorEngineer(req: Request): boolean {
   return roles.includes('admin') || roles.includes('senior_engineer');
 }
 
+function isHumanFormulaGovernor(req: Request): boolean {
+  const roles = req.user?.roles ?? [];
+  const blockedActorRoles = new Set(['ai_agent', 'n8n_service', 'service_account']);
+  return isAdminOrSeniorEngineer(req) && roles.every((role) => !blockedActorRoles.has(role));
+}
+
 function requireAdminOrSeniorEngineer(req: Request, res: ApiResponse): boolean {
-  if (isAdminOrSeniorEngineer(req)) return true;
+  if (isHumanFormulaGovernor(req)) return true;
   res.status(403).json({
     error: {
       code: 'FORBIDDEN',
-      message: 'Formula Registry write actions are restricted to admin and senior_engineer roles.'
+      message: 'Formula Registry write and synchronization actions are restricted to human admin and senior_engineer roles. AI, n8n, and service actors cannot approve or sync formulas.'
     }
   });
   return false;
@@ -105,6 +114,14 @@ async function writeAudit(
 }
 
 function mapFormula(row: DbRow): Record<string, unknown> {
+  const productionUsable = isFormulaUsableInProduction({ status: row.status, locked_flag: row.locked_flag });
+  const executableFormulaVersionId = row.executable_formula_version_id ?? row.synced_formula_version_id ?? null;
+  const executableStatus = row.executable_formula_status ?? row.synced_formula_version_status ?? null;
+  const syncStatus = executableFormulaVersionId
+    ? 'synchronized_to_executable'
+    : productionUsable
+      ? 'approved_not_synchronized'
+      : `not_executable_${String(row.status ?? 'draft')}`;
   return {
     record_id: row.id,
     formula_id: row.formula_id ?? row.formula_code,
@@ -132,7 +149,11 @@ function mapFormula(row: DbRow): Record<string, unknown> {
     approval_date: row.approval_date,
     locked_flag: row.locked_flag,
     previous_formula_record_id: row.previous_formula_record_id,
-    production_usable: isFormulaUsableInProduction({ status: row.status, locked_flag: row.locked_flag }),
+    production_usable: productionUsable,
+    sync_status: syncStatus,
+    executable_formula_version_id: executableFormulaVersionId,
+    executable_formula_status: executableStatus,
+    last_synced_at: row.executable_formula_updated_at ?? row.synced_formula_version_updated_at ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -180,26 +201,79 @@ async function getFormulaByRecordId(client: Queryable, recordId: string): Promis
   return result.rows[0];
 }
 
+async function getFormulaByRecordIdWithSync(client: Queryable, recordId: string): Promise<DbRow | undefined> {
+  const result = await client.query<DbRow>(
+    `select
+       fr.*,
+       fv.id as executable_formula_version_id,
+       fv.formula_status as executable_formula_status,
+       fv.updated_at as executable_formula_updated_at
+     from formula_registry fr
+     left join formula_versions fv
+       on fv.formula_registry_id = fr.id
+      and fv.formula_code = coalesce(fr.formula_id, fr.formula_code)
+      and fv.version = fr.version
+     where fr.id = $1`,
+    [recordId]
+  );
+  return result.rows[0];
+}
+
+function mapFormulaVersion(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    formula_version_id: row.id,
+    formula_registry_id: row.formula_registry_id,
+    formula_code: row.formula_code,
+    formula_name: row.formula_name,
+    version: row.version,
+    formula_status: row.formula_status,
+    deterministic_flag: row.deterministic_flag,
+    formula_expression_source: row.formula_expression_source,
+    approved_by: row.approved_by,
+    approved_at: row.approved_at,
+    updated_at: row.updated_at
+  };
+}
+
+async function auditFormulaSyncFailure(client: PoolClient, req: Request, recordId: string, formula: DbRow | undefined, error: unknown): Promise<void> {
+  const message = error instanceof Error ? error.message : 'Formula sync failed.';
+  await writeAudit(client, req, 'FORMULA_SYNC_FAILED', 'formula_registry', recordId, formula ? mapFormula(formula) : null, null, {
+    module: 'formula_registry',
+    sync_target: 'formula_versions',
+    reason: message,
+    code: typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'FORMULA_SYNC_FAILED'
+  });
+}
+
 formulasRouter.get('/formulas', requirePermission('formula.read'), async (req, res, next) => {
   try {
     const status = asString(req.query.status);
     const search = asString(req.query.search);
     const values: unknown[] = [];
-    const clauses: string[] = ['formula_id is not null'];
+    const clauses: string[] = ['fr.formula_id is not null'];
 
     if (status) {
       values.push(status);
-      clauses.push(`status = $${values.length}`);
+      clauses.push(`fr.status = $${values.length}`);
     }
     if (search) {
       values.push(`%${search.toLowerCase()}%`);
-      clauses.push(`(lower(formula_id) like $${values.length} or lower(formula_name) like $${values.length} or lower(code_basis) like $${values.length})`);
+      clauses.push(`(lower(fr.formula_id) like $${values.length} or lower(fr.formula_name) like $${values.length} or lower(fr.code_basis) like $${values.length})`);
     }
 
     const result = await pool.query<DbRow>(
-      `select * from formula_registry
+      `select
+         fr.*,
+         fv.id as executable_formula_version_id,
+         fv.formula_status as executable_formula_status,
+         fv.updated_at as executable_formula_updated_at
+       from formula_registry fr
+       left join formula_versions fv
+         on fv.formula_registry_id = fr.id
+        and fv.formula_code = coalesce(fr.formula_id, fr.formula_code)
+        and fv.version = fr.version
        where ${clauses.join(' and ')}
-       order by formula_id, created_at desc`,
+       order by fr.formula_id, fr.created_at desc`,
       values
     );
     res.json({ data: result.rows.map(mapFormula) });
@@ -319,7 +393,18 @@ formulasRouter.get('/formulas/:formulaId/versions', requirePermission('formula.r
       return;
     }
     const result = await pool.query<DbRow>(
-      `select * from formula_registry where formula_id = $1 order by created_at desc`,
+      `select
+         fr.*,
+         fv.id as executable_formula_version_id,
+         fv.formula_status as executable_formula_status,
+         fv.updated_at as executable_formula_updated_at
+       from formula_registry fr
+       left join formula_versions fv
+         on fv.formula_registry_id = fr.id
+        and fv.formula_code = coalesce(fr.formula_id, fr.formula_code)
+        and fv.version = fr.version
+       where fr.formula_id = $1
+       order by fr.created_at desc`,
       [formulaId]
     );
     res.json({ data: result.rows.map(mapFormula) });
@@ -361,7 +446,7 @@ formulasRouter.get('/formulas/records/:recordId', requirePermission('formula.rea
       res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'Missing recordId.' } });
       return;
     }
-    const formula = await getFormulaByRecordId(pool, recordId);
+    const formula = await getFormulaByRecordIdWithSync(pool, recordId);
     if (!formula) {
       res.status(404).json({ error: { code: 'FORMULA_NOT_FOUND', message: 'Formula record not found.' } });
       return;
@@ -519,17 +604,18 @@ formulasRouter.post('/formulas/records/:recordId/approve', requirePermission('fo
     return;
   }
   const client = await pool.connect();
+  let before: DbRow | undefined;
   try {
     await client.query('begin');
-    const before = await getFormulaByRecordId(client, recordId);
+    before = await getFormulaByRecordId(client, recordId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'FORMULA_NOT_FOUND', message: 'Formula record not found.' } });
       return;
     }
-    if (before.status === 'deprecated') {
+    if (['deprecated', 'retired', 'rejected', 'superseded'].includes(String(before.status))) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'FORMULA_DEPRECATED', message: 'Deprecated formulas cannot be approved.' } });
+      res.status(409).json({ error: { code: 'FORMULA_NOT_APPROVABLE', message: 'Deprecated, retired, rejected, or superseded formulas cannot be approved or synchronized.' } });
       return;
     }
     const result = await client.query<DbRow>(
@@ -540,13 +626,108 @@ formulasRouter.post('/formulas/records/:recordId/approve', requirePermission('fo
       [recordId, actorUserId(req)]
     );
     const after = result.rows[0];
-    const auditLogId = await writeAudit(client, req, 'FORMULA_APPROVED', 'formula_registry', recordId, mapFormula(before), mapFormula(after ?? {}), {
-      module: 'formula_registry'
+    if (!after) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'FORMULA_NOT_FOUND', message: 'Formula record not found.' } });
+      return;
+    }
+    const syncResult = await syncApprovedFormulaRegistryToExecutable(client, after, actorUserId(req));
+    const auditLogId = await writeAudit(client, req, 'FORMULA_APPROVED', 'formula_registry', recordId, mapFormula(before), mapFormula(after), {
+      module: 'formula_registry',
+      synchronization_required: true,
+      sync_target: 'formula_versions'
+    });
+    const syncAuditLogId = await writeAudit(client, req, 'FORMULA_SYNCED_TO_EXECUTABLE', 'formula_versions', String(syncResult.formula_version.id ?? ''), null, mapFormulaVersion(syncResult.formula_version), {
+      module: 'formula_registry',
+      registry_id: recordId,
+      formula_id: after.formula_id ?? after.formula_code,
+      version: after.version,
+      sync_status: syncResult.sync_status,
+      source_operation: 'formula_registry_approval'
     });
     await client.query('commit');
-    res.json({ data: mapFormula(after ?? {}), auditLogId });
+    res.json({
+      data: {
+        ...mapFormula(after),
+        sync_status: 'synchronized_to_executable',
+        executable_formula_version_id: syncResult.formula_version.id,
+        executable_formula_status: syncResult.formula_version.formula_status,
+        last_synced_at: syncResult.formula_version.updated_at ?? syncResult.formula_version.created_at
+      },
+      formula_version: mapFormulaVersion(syncResult.formula_version),
+      auditLogId,
+      syncAuditLogId
+    });
   } catch (error) {
     await client.query('rollback');
+    const failureClient = await pool.connect();
+    try {
+      await failureClient.query('begin');
+      await auditFormulaSyncFailure(failureClient, req, recordId, before, error);
+      await failureClient.query('commit');
+    } catch {
+      await failureClient.query('rollback');
+    } finally {
+      failureClient.release();
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+formulasRouter.post('/formulas/records/:recordId/sync-to-executable', requirePermission('formula.approve'), async (req, res, next) => {
+  if (!requireAdminOrSeniorEngineer(req, res)) return;
+  const recordId = req.params.recordId;
+  if (!recordId) {
+    res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'Missing recordId.' } });
+    return;
+  }
+  const client = await pool.connect();
+  let formula: DbRow | undefined;
+  try {
+    await client.query('begin');
+    formula = await getFormulaByRecordId(client, recordId);
+    if (!formula) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'FORMULA_NOT_FOUND', message: 'Formula record not found.' } });
+      return;
+    }
+    const syncResult = await syncApprovedFormulaRegistryToExecutable(client, formula, actorUserId(req));
+    const syncAuditLogId = await writeAudit(client, req, 'FORMULA_SYNCED_TO_EXECUTABLE', 'formula_versions', String(syncResult.formula_version.id ?? ''), null, mapFormulaVersion(syncResult.formula_version), {
+      module: 'formula_registry',
+      registry_id: recordId,
+      formula_id: formula.formula_id ?? formula.formula_code,
+      version: formula.version,
+      sync_status: syncResult.sync_status,
+      source_operation: 'manual_sync_to_executable'
+    });
+    await client.query('commit');
+    res.json({
+      data: {
+        formula: mapFormula({
+          ...formula,
+          executable_formula_version_id: syncResult.formula_version.id,
+          executable_formula_status: syncResult.formula_version.formula_status,
+          executable_formula_updated_at: syncResult.formula_version.updated_at ?? syncResult.formula_version.created_at
+        }),
+        formula_version: mapFormulaVersion(syncResult.formula_version),
+        sync_status: syncResult.sync_status
+      },
+      auditLogId: syncAuditLogId
+    });
+  } catch (error) {
+    await client.query('rollback');
+    const failureClient = await pool.connect();
+    try {
+      await failureClient.query('begin');
+      await auditFormulaSyncFailure(failureClient, req, recordId, formula, error);
+      await failureClient.query('commit');
+    } catch {
+      await failureClient.query('rollback');
+    } finally {
+      failureClient.release();
+    }
     next(error);
   } finally {
     client.release();
