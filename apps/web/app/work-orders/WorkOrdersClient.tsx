@@ -107,7 +107,7 @@ export default function WorkOrdersClient() {
     <main>
       <p>Phase 2.5 / RC2</p>
       <h1>Internal Work Orders</h1>
-      <p>Internal AIM work order fallback is the MVP path. External CMMS references remain rejected.</p>
+      <p>Internal AIM work order fallback is the MVP path. External CMMS references remain rejected. RC4-L adds detail-level closure readiness before close.</p>
       <nav><Link href="/login">Login</Link> | <Link href="/reports">Reports</Link> | <Link href="/integrity-decisions">Integrity Decisions</Link></nav>
 
       <section>
@@ -139,7 +139,7 @@ export default function WorkOrdersClient() {
                 <td>{order.external_cmms_reference ? `Unexpected: ${order.external_cmms_reference}` : 'internal AIM only'}</td>
                 <td>
                   <button type="button" onClick={() => setSelected(order as unknown as Record<string, unknown>)}>View Gates</button>
-                  <button type="button" disabled={order.status === 'closed'} onClick={() => closeOrder(order.work_order_id)}>Close</button>
+                  <Link href={`/work-orders/${order.work_order_id}`}>Closure readiness</Link>
                 </td>
               </tr>
             ))}

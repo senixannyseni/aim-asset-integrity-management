@@ -453,3 +453,19 @@ RC4-K closes the report workflow UX gap after RC4-J:
 - Existing `POST /api/v1/reports/{reportId}/issue` remains the only authoritative report issue action and continues to write gate/audit/error records.
 
 RC4-K does not add formulas, report content formula expansion, automatic report approval/issue, AI/n8n/service finalization, external CMMS integration, or direct n8n/database access.
+
+## RC4-L Work Order Detail and Closure Readiness
+
+Status: Implemented as internal work-order detail UX and closure-readiness preview package.
+
+RC4-L closes the work order workflow UX gap after RC4-K:
+
+- Added `/work-orders/[workOrderId]` detail page with closure readiness gates, evidence links, source traceability, update/close actions, and audit timeline.
+- Added `GET /api/v1/work-orders/{workOrderId}/closure-readiness` as a read-only closure gate preview.
+- The close endpoint uses the same gate model and remains the authoritative mutation path.
+- Closure requires a completion note and conditional closure evidence.
+- Closed work orders are locked from update/re-close.
+- External CMMS integration remains explicitly out of scope.
+
+RC4-L does not add external CMMS writes, automatic work order closure, AI/n8n/service finalization, formulas, FFS/RBI logic, report issue changes, or direct n8n/database access.
+

@@ -2664,12 +2664,44 @@ paths:
       responses:
         '200':
           description: Internal work order updated
+  /api/v1/work-orders/{workOrderId}/closure-readiness:
+    get:
+      tags:
+      - Work Orders
+      summary: Preview internal work order closure readiness gates
+      description: Read-only closure readiness preview for an internal AIM work order. This endpoint does not close the work order, does not mutate gate state, and does not call external SAP/Maximo/CMMS.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.read
+      x-audit-event-generated: none
+      x-human-review-required: true
+      x-evidence-link-required: conditional
+      x-source-of-truth-boundary: AIM internal work order fallback only. Closure preview is read-only and no external CMMS write occurs.
+      parameters:
+      - in: path
+        name: workOrderId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Work order closure readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InternalWorkOrderClosureReadiness'
+        '404':
+          description: Internal work order not found
   /api/v1/work-orders/{workOrderId}/close:
     post:
       tags:
       - Work Orders
       summary: Close internal AIM work order with completion note and required closure evidence
-      description: Close an internal work order. completion_note is required. If closure_evidence_required is true, closure_evidence_link_id or existing closure evidence must be present. The action is audit logged and remains internal AIM fallback only.
+      description: Close an internal work order. completion_note is required. The same closure-readiness gates are enforced authoritatively. If closure_evidence_required is true, closure_evidence_link_id or existing linked closure evidence must be present. The action is audit logged and remains internal AIM fallback only.
       security:
       - bearerAuth: []
       x-permission-required: work_order.close
@@ -4590,6 +4622,126 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReportGateChecklistItem'
+        linked_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalWorkOrderEvidenceLink'
+        audit_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalWorkOrderAuditEvent'
+        source_traceability:
+          type: object
+          additionalProperties: true
+    InternalWorkOrderClosureReadiness:
+      type: object
+      properties:
+        work_order:
+          $ref: '#/components/schemas/InternalWorkOrder'
+        ready_to_close:
+          type: boolean
+        ready_to_close_after_completion_note:
+          type: boolean
+          description: True when the only remaining blocking gate is completion_note_present.
+        completion_note_required:
+          type: boolean
+        closure_evidence_required:
+          type: boolean
+        blocking_gate_count:
+          type: integer
+        blocking_gate_count_excluding_completion_note:
+          type: integer
+        external_cmms_integration_implemented:
+          type: boolean
+          description: Always false for MVP. AIM internal fallback remains the system of record.
+        gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalWorkOrderClosureGate'
+        blocking_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalWorkOrderClosureGate'
+        linked_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalWorkOrderEvidenceLink'
+        audit_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalWorkOrderAuditEvent'
+        source_traceability:
+          type: object
+          additionalProperties: true
+    InternalWorkOrderClosureGate:
+      type: object
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - work_order_exists
+          - not_already_closed
+          - completion_note_present
+          - closure_evidence_present
+          - external_cmms_not_integrated
+          - source_traceability_present
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    InternalWorkOrderEvidenceLink:
+      type: object
+      properties:
+        evidence_link_id:
+          type: string
+          format: uuid
+        evidence_file_id:
+          type: string
+          format: uuid
+        evidence_code:
+          type: string
+        original_filename:
+          type: string
+        link_reason:
+          type: string
+        checksum_sha256:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    InternalWorkOrderAuditEvent:
+      type: object
+      properties:
+        audit_log_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        actor_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        actor_role_codes:
+          type: array
+          items:
+            type: string
+        request_id:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
     InternalWorkOrderCreateRequest:
       type: object
       required:
