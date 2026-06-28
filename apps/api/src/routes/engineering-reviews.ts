@@ -712,7 +712,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
       return;
     }
     const requestedEntityType = asString(req.body.entity_type ?? req.body.entityType);
-    const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId ?? req.body.calculation_run_id ?? req.body.calculationRunId);
+    const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId);
     if ((requestedEntityType && requestedEntityType !== entityType) || (requestedEntityId && requestedEntityId !== entityId)) {
       await client.query('rollback');
       res.status(409).json({ error: { code: 'APPROVAL_REVIEW_ENTITY_MISMATCH', message: 'Approval request entity must match the reviewed engineering review entity.' } });
@@ -723,6 +723,13 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
     if (!context.assetId && entityType !== 'finding') {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'APPROVAL_ENTITY_NOT_FOUND', message: 'Approval target was not found.' } });
+      return;
+    }
+    const expectedCalculationRunId = context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null);
+    const requestedCalculationRunId = uuidOrNull(req.body.calculation_run_id ?? req.body.calculationRunId);
+    if (requestedCalculationRunId && requestedCalculationRunId !== expectedCalculationRunId) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'APPROVAL_REVIEW_CALCULATION_CONTEXT_MISMATCH', message: 'Approval request calculation_run_id must match the linked reviewed engineering review calculation context.' } });
       return;
     }
     const approvalCode = `APR-${Date.now()}`;
@@ -742,7 +749,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
         entityType,
         entityId,
         uuidOrNull(req.body.asset_id) ?? context.assetId,
-        uuidOrNull(req.body.calculation_run_id) ?? context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null),
+        expectedCalculationRunId,
         asString(req.body.approval_type ?? req.body.approvalType) ?? 'final_result',
         actorUserId(req),
         asString(req.body.approval_comment ?? req.body.comment) ?? null,

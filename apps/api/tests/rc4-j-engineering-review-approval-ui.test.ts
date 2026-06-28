@@ -59,6 +59,9 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");
     expect(route).toContain('ENGINEERING_REVIEW_REVISION_CREATED');
     expect(route).toContain('JSON.stringify(normalizeChecklist(review.checklist_json))');
+    expect(route).toContain('APPROVAL_REVIEW_CALCULATION_CONTEXT_MISMATCH');
+    expect(route).toContain('const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId);');
+    expect(route).toContain('const expectedCalculationRunId = context.calculationRunId ?? (entityType === \'calculation_run\' ? entityId : null);');
     expect(route).not.toContain('isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json)');
     expect(route).toContain('for update');
     expect(route).toContain('parent_comment_id');

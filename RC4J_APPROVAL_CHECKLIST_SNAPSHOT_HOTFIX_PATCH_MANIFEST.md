@@ -20,3 +20,8 @@ Final RC4-J traceability cleanup for approval request creation.
 - apps/web/app/reviews/[reviewId]/EngineeringReviewDetailClient.tsx
 - docs/release/AIM_RC4J_engineering_review_approval_detail_report.md
 - docs/uat/uat_rc4j_engineering_review_approval_detail.md
+
+
+## RC4-J approval context cross-check hotfix
+
+Approval request creation now treats `entity_type`/`entity_id` and `calculation_run_id` as separate optional cross-checks. `calculation_run_id` is treated as a calculation-context cross-check only; it is no longer used as a fallback `entity_id`. The approval record stores the calculation context resolved from the linked reviewed engineering review, preventing valid non-calculation reviews from being rejected and preventing client-supplied calculation context drift.

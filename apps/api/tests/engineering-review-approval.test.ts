@@ -52,6 +52,9 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain('APPROVAL_NOT_SUBMITTED');
     expect(route).toContain('REVIEW_MUTATION_STATE_LOCKED');
     expect(route).toContain('JSON.stringify(normalizeChecklist(review.checklist_json))');
+    expect(route).toContain('APPROVAL_REVIEW_CALCULATION_CONTEXT_MISMATCH');
+    expect(route).toContain('const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId);');
+    expect(route).toContain('const expectedCalculationRunId = context.calculationRunId ?? (entityType === \'calculation_run\' ? entityId : null);');
     expect(route).not.toContain('isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json)');
     expect(route).toContain('for update');
   });

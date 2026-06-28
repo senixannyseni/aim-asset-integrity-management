@@ -75,3 +75,8 @@ Final review hardening blocks generic status/comment mutation once a review has 
 
 ### RC4-J Approval Checklist Snapshot Hotfix
 Approval request creation now always snapshots the linked reviewed checklist from `engineering_reviews.checklist_json`. Client-supplied checklist payloads are ignored/removed from the create contract so approval records cannot diverge from the reviewed basis.
+
+
+## RC4-J approval context cross-check hotfix
+
+Approval request creation now treats `entity_type`/`entity_id` and `calculation_run_id` as separate optional cross-checks. `calculation_run_id` is treated as a calculation-context cross-check only; it is no longer used as a fallback `entity_id`. The approval record stores the calculation context resolved from the linked reviewed engineering review, preventing valid non-calculation reviews from being rejected and preventing client-supplied calculation context drift.

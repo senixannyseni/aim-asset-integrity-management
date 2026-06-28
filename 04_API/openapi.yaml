@@ -3450,6 +3450,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
         finding_id:
           type: string
           description: Optional seed finding UUID/code for repeated-anomaly RBI trigger workflows.
@@ -3570,7 +3571,7 @@ components:
       type: object
       required:
       - review_id
-      description: Approval requests must reference a completed engineering review. entity_type/entity_id are optional cross-check fields and must match the linked review when provided. Approval records store the linked review checklist snapshot; clients cannot override that snapshot.
+      description: Approval requests must reference a completed engineering review. entity_type/entity_id are optional cross-check fields and must match the linked review when provided. calculation_run_id is an optional calculation-context cross-check and must match the linked review calculation context when supplied. Approval records store the linked review checklist snapshot; clients cannot override that snapshot.
       properties:
         review_id:
           type: string
@@ -3585,6 +3586,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
         approval_type:
           type: string
           enum:
@@ -3600,6 +3602,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
         report_title:
           type: string
         output_formats:
@@ -3633,6 +3636,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
         input_snapshot_hash:
           type: string
         traceability:
