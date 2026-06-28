@@ -54,6 +54,13 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain('JSON.stringify(normalizeChecklist(review.checklist_json))');
     expect(route).toContain('APPROVAL_REVIEW_ASSET_CONTEXT_MISMATCH');
     expect(route).toContain('APPROVAL_REVIEW_CALCULATION_CONTEXT_MISMATCH');
+    expect(route).toContain('REVIEW_ENTITY_ASSET_CONTEXT_MISMATCH');
+    expect(route).toContain('REVIEW_ENTITY_CALCULATION_CONTEXT_MISMATCH');
+    expect(route).toContain("if (entityType === 'finding')");
+    expect(route).toContain('context.assetId,');
+    expect(route).toContain('context.calculationRunId,');
+    expect(route).not.toContain('uuidOrNull(req.body.asset_id) ?? context.assetId');
+    expect(route).not.toContain('uuidOrNull(req.body.calculation_run_id) ?? context.calculationRunId');
     expect(route).toContain('const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId);');
     expect(route).toContain('const linkedReviewCalculationRunId = uuidOrNull(review.calculation_run_id);');
     expect(route).toContain("const expectedCalculationRunId = linkedReviewCalculationRunId ?? context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null);");
