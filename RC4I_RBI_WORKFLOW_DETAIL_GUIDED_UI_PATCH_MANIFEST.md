@@ -133,3 +133,9 @@ Checklist:
 - [ ] Confirm close without comment is rejected.
 - [ ] Confirm AI/service actor cannot approve/export/close.
 - [ ] Confirm no untracked ZIP/package files are committed.
+
+
+## Final State Lock Follow-up
+
+- Added `RBI_FINAL_STATE_LOCKED` guard so approved/exported/closed RBI cases cannot be mutated through generic status or review routes.
+- Kept `/review` as the only route that can record review readiness and `/status` as mutable pre-review workflow state only.

@@ -1100,3 +1100,8 @@ RC4-E expands field-level documentation for frontend validation-by-asset, valida
 | calculation_run_id | Calculation Run | findings | uuid | optional | Must reference same-asset calculation run when supplied | Calculation inputs remain evidence-gated separately | PostgreSQL `findings` | `/calculations/{calculationRunId}`, findings detail | Does not approve calculation. |
 | validation_run_id | Validation Run | findings | uuid | optional | References validation run where available | Evidence linkage remains separate | PostgreSQL `findings` | `/validation/history` | Validation flags but does not approve. |
 | closure_reason | Closure Reason | findings | text | conditional | Required when closing/resolving | Critical findings require evidence | PostgreSQL `findings` | Finding detail closure panel | Human-governed closure note. |
+
+
+## RC4-I final-state lock hotfix
+
+Approved, exported, and closed RBI cases are locked from generic `/status` and `/review` mutation. Further engineering changes must use a new/revision case path rather than mutating the final disposition record. The `/review` endpoint remains the only route that can mark `ready_for_review`; `/status` is limited to mutable pre-review workflow states.

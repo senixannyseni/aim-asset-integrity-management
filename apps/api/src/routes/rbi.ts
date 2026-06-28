@@ -774,6 +774,9 @@ function hasApprovedRbiCase(caseRow: DbRow): boolean {
     (caseRow.status === "approved" || caseRow.status === "exported");
 }
 
+function isFinalRbiStatus(status: unknown): boolean {
+  return ["approved", "exported", "closed"].includes(String(status ?? ""));
+}
 
 function sourceFindingRows(rows: DbRow[]): Record<string, unknown>[] {
   return rows.map((row) => ({
@@ -1430,6 +1433,18 @@ rbiRouter.post(
           });
         return;
       }
+      if (isFinalRbiStatus(before.status)) {
+        await client.query("rollback");
+        res.status(400).json({
+          error: {
+            code: "RBI_FINAL_STATE_LOCKED",
+            message:
+              "RBI cases with approved, exported, or closed status are locked from review/status mutation. Create a new revision case for further changes.",
+          },
+        });
+        return;
+      }
+
       const reviewer = await resolveUserId(client, req);
       const result = await client.query<DbRow>(
         `update rbi_cases
@@ -1522,6 +1537,18 @@ rbiRouter.patch(
           });
         return;
       }
+      if (isFinalRbiStatus(before.status)) {
+        await client.query("rollback");
+        res.status(400).json({
+          error: {
+            code: "RBI_FINAL_STATE_LOCKED",
+            message:
+              "RBI cases with approved, exported, or closed status are locked from generic status mutation. Create a new revision case for further changes.",
+          },
+        });
+        return;
+      }
+
       const actor = await resolveUserId(client, req);
       const result = await client.query<DbRow>(
         `update rbi_cases

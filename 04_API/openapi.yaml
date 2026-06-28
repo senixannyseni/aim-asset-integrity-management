@@ -1344,7 +1344,7 @@ paths:
   /api/v1/rbi/cases/{caseId}/status:
     patch:
       summary: Update RBI workflow status
-      description: Updates non-final RBI interface workflow status. Use approval endpoint for approved/exported/closed states.
+      description: Updates mutable non-final RBI interface workflow status only. Use the review endpoint to mark ready_for_review, and use dedicated approve/export/close endpoints for final disposition states. Existing approved/exported/closed cases are locked from review/status mutation.
       x-permission-required: rbi.interface.update
       x-audit-event-generated: RBI_CASE_STATUS_UPDATED
       parameters:
@@ -1369,7 +1369,6 @@ paths:
                   - under_review
                   - data_required
                   - assessment_in_progress
-                  - ready_for_review
       responses:
         '200':
           description: RBI case status updated
@@ -1384,7 +1383,7 @@ paths:
   /api/v1/rbi/cases/{caseId}/review:
     post:
       summary: Record RBI case review action
-      description: RC4-I records human review workflow status and audit comment. Does not approve or finalize the RBI case.
+      description: RC4-I records human review workflow status and audit comment. Does not approve or finalize the RBI case. Existing approved/exported/closed cases are locked from review/status mutation.
       x-permission-required: rbi.interface.review
       x-audit-event-generated: RBI_CASE_REVIEWED
       parameters:

@@ -115,3 +115,8 @@ pnpm -r lint
 ## Release Decision
 
 RC4-I is ready for code review and UAT execution after applying the changed files and running the validation commands in the developer environment.
+
+
+## RC4-I final-state lock hotfix
+
+Approved, exported, and closed RBI cases are locked from generic `/status` and `/review` mutation. Further engineering changes must use a new/revision case path rather than mutating the final disposition record. The `/review` endpoint remains the only route that can mark `ready_for_review`; `/status` is limited to mutable pre-review workflow states.
