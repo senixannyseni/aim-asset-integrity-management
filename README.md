@@ -676,7 +676,7 @@ Implemented RC4-L controls:
 RC4-L does not add external CMMS/SAP/Maximo integration, automatic closure, AI/n8n/service finalization, engineering formulas, report issue changes, calculation changes, FFS/RBI quantitative logic, or direct n8n/database access.
 
 
-## RC4-M Evidence Traceability Matrix
+## RC4-M Evidence Traceability Matrix; RC4-N Integrity Decision Detail and Decision Readiness
 
 RC4-M adds a read-only cross-module evidence coverage matrix after RC4-L.
 
@@ -689,3 +689,16 @@ Implemented RC4-M controls:
 - Required-module missing evidence indicators to help engineers identify evidence linkage gaps before relying on downstream review/report/work-order gates.
 
 RC4-M is read-only. It does not upload, download, delete, approve, issue, close, promote, mutate, or finalize evidence or engineering records. It adds no object-storage behavior changes, no AI extraction changes, no formulas, no FFS/RBI quantitative logic, no external CMMS integration, and no direct n8n/database access.
+
+## RC4-N Integrity Decision Detail and Decision Readiness
+
+RC4-N adds a governed integrity decision detail and decision-readiness workflow after RC4-M.
+
+Implemented RC4-N controls:
+
+- `/integrity-decisions/[decisionId]` detail page with status, readiness gates, direct evidence, source/downstream traceability, and audit timeline.
+- `GET /api/v1/integrity-decisions/{decisionId}/readiness` read-only decision-readiness preview.
+- Readiness gates for approved calculation linkage, calculation review, direct decision evidence, human review/approval traceability, decision approval, source traceability, and AI/n8n finalization boundaries.
+- Permission-aware direct evidence linking and senior-human approval actions on the detail page while backend RBAC remains authoritative.
+
+RC4-N does not add formulas, quantitative API 579/API 581 logic, automatic report issue, work-order automation, AI/n8n/service finalization, object-storage changes, migrations, or direct n8n/database access.

@@ -128,9 +128,9 @@ export default function IntegrityDecisionsClient() {
     <main>
       <p>Phase 2.5 / RC2</p>
       <h1>Integrity Decisions</h1>
-      <p>Human-created integrity decisions require an approved calculation and direct evidence link before senior approval. Missing evidence returns INTEGRITY_DECISION_EVIDENCE_REQUIRED.</p>
+      <p>Human-created integrity decisions require an approved calculation and direct evidence link before senior approval. Missing evidence returns INTEGRITY_DECISION_EVIDENCE_REQUIRED. RC4-N adds detail-level decision readiness before report/work-order downstream use.</p>
       <nav>
-        <Link href="/login">Login</Link> | <Link href="/evidence">Evidence</Link> | <Link href="/reports">Reports</Link> | <Link href="/work-orders">Work Orders</Link>
+        <Link href="/login">Login</Link> | <Link href="/evidence">Evidence</Link> | <Link href="/reports">Reports</Link> | <Link href="/work-orders">Work Orders</Link> | <Link href="/evidence-traceability">Evidence Traceability</Link>
       </nav>
 
       <section>
@@ -177,7 +177,7 @@ export default function IntegrityDecisionsClient() {
                   <td>{decision.integrity_status}</td>
                   <td>{hasEvidence ? `linked (${decision.evidence_count})` : 'missing direct evidence'}</td>
                   <td>
-                    <button type="button" onClick={() => setSelected(decision as unknown as Record<string, unknown>)}>View</button>
+                    <Link href={`/integrity-decisions/${decision.integrity_decision_id}`}>Decision readiness</Link> <button type="button" onClick={() => setSelected(decision as unknown as Record<string, unknown>)}>View</button>
                     <button type="button" onClick={() => linkEvidence(decision.integrity_decision_id)}>Link Evidence</button>
                     <button type="button" disabled={!hasEvidence || decision.decision_status === 'approved'} onClick={() => approveDecision(decision.integrity_decision_id)}>Approve</button>
                   </td>

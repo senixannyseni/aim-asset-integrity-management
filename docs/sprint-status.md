@@ -483,3 +483,17 @@ RC4-M closes the evidence coverage visibility gap after RC4-L:
 - Evidence repository and home page now link to the traceability matrix.
 
 RC4-M does not upload, download, delete, approve, issue, close, promote, mutate, or finalize any records. Evidence coverage is traceability/readiness visibility only; module-specific gates remain authoritative.
+
+
+## RC4-N Integrity Decision Detail and Decision Readiness
+
+Status: Implemented as integrity decision detail UX and read-only readiness preview package.
+
+RC4-N closes the integrity decision detail UX gap after RC4-M:
+
+- Added `/integrity-decisions/[decisionId]` detail page with status, readiness gates, direct evidence, source/downstream traceability, and audit timeline.
+- Added `GET /api/v1/integrity-decisions/{decisionId}/readiness` as a read-only decision-readiness preview.
+- Readiness preview reports `ready_for_downstream_use`, blocking gates, direct evidence counts, linked calculation/review/approval/report/work-order context, and audit events.
+- Detail page actions for direct evidence linkage and senior-human approval are permission-aware while backend RBAC remains authoritative.
+
+RC4-N does not add formulas, report issue automation, work-order automation, AI/n8n/service finalization, object-storage changes, migrations, or direct n8n/database access.
