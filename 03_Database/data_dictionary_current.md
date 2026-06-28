@@ -1105,3 +1105,19 @@ RC4-E expands field-level documentation for frontend validation-by-asset, valida
 ## RC4-I final-state lock hotfix
 
 Approved, exported, and closed RBI cases are locked from generic `/status` and `/review` mutation. Further engineering changes must use a new/revision case path rather than mutating the final disposition record. The `/review` endpoint remains the only route that can mark `ready_for_review`; `/status` is limited to mutable pre-review workflow states.
+
+## RC4-J Engineering Review and Approval Detail Addendum
+
+RC4-J extends the Sprint 9 engineering review and approval workflow without adding new tables.
+
+Updated behavior:
+
+- `engineering_reviews.checklist_json` stores structured gate items such as `{ status, comment }`.
+- Review status `reviewed` requires a structured checklist with all blocking items `pass` or `not_applicable`.
+- `engineering_reviews.comments_json` may include `comment_id`, `parent_comment_id`, `thread_id`, author metadata, and timestamp.
+- `engineering_reviews.supersedes_review_id` is used by the new revision endpoint to preserve lineage when locked records require follow-up.
+- `approval_records` approval creation requires a completed reviewed review when `review_id` is supplied.
+- `approval_records.override_json`, `affected_field`, `original_value_json`, `override_value_json`, `reason`, and `evidence_links` are required for controlled override approval.
+- DB permission grants align `approval_record.approve` and `approval_record.reject` with admin, senior_engineer, lead_engineer, and approver roles.
+
+No direct AI finalization, direct n8n PostgreSQL writes, new formulas, or report issue behavior changes are introduced.

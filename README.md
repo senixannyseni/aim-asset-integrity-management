@@ -628,3 +628,21 @@ Changed areas:
 - `04_API/openapi.yaml`, data dictionary, ERD, UAT, release, and source-of-truth docs are aligned to the new RBI workflow behavior.
 
 RC4-I introduces no API RP 581 quantitative formulas, no new deterministic calculation math, no report issuance automation, no final integrity decision automation, no direct n8n/database access, and no AI approval path.
+
+## RC4-J Engineering Review and Approval Detail
+
+RC4-J completes the product-facing Engineering Review and Approval workflow on top of the corrected RC4-I base.
+
+Implemented RC4-J controls:
+
+- `/reviews/[reviewId]` detail page for structured checklist, threaded comments, approval/rejection/override actions, revision creation, and audit trail.
+- `/reviews` list is now permission-aware and links review records to detail workflow.
+- Structured checklist gates must pass or be marked not applicable before a review can be marked `reviewed`.
+- Approval requests require a completed `reviewed` engineering review.
+- Rejection requires a human reason/comment.
+- Controlled override approval requires affected field, original value, override value, reason, and evidence reference.
+- Locked records are not mutated; new revision creation is available through `/api/v1/engineering/reviews/{reviewId}/revision`.
+- Calculation detail page replaces raw JSON-only review/audit display with a readable review, approval, and audit timeline.
+- DB-backed RBAC is aligned for admin, senior_engineer, lead_engineer, and approver final approval authority; AI agents remain blocked.
+
+RC4-J adds no formulas, no API 579/API 581 quantitative logic, no report issue changes, no direct n8n/database access, and no AI finalization.

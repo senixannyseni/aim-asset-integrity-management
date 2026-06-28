@@ -619,7 +619,7 @@ join permissions p on p.permission_code in (
   'engineering_review.read','engineering_review.create','engineering_review.update','engineering_review.comment',
   'approval_record.read','approval_record.create'
 )
-where r.role_code in ('engineer','senior_engineer','qa_qc')
+where r.role_code in ('engineer','senior_engineer','lead_engineer','qa_qc')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
@@ -628,14 +628,14 @@ from roles r
 join permissions p on p.permission_code in (
   'engineering_review.approve','engineering_review.override','approval_record.approve','approval_record.reject'
 )
-where r.role_code in ('admin','senior_engineer','lead_engineer')
+where r.role_code in ('admin','senior_engineer','lead_engineer','approver')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in ('engineering_review.read','approval_record.read')
-where r.role_code = 'client_viewer'
+where r.role_code in ('client_viewer','approver')
 on conflict do nothing;
 
 -- ai_agent intentionally receives no engineering review, approval, override, reject, or lock permissions.
@@ -655,7 +655,7 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in ('report.read','report.generate','report.review')
-where r.role_code in ('engineer','senior_engineer','qa_qc')
+where r.role_code in ('engineer','senior_engineer','lead_engineer','qa_qc')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
