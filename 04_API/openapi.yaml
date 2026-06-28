@@ -1761,6 +1761,37 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RejectionActionRequest'
+  /api/v1/engineering/calculations/{runId}/readiness:
+    get:
+      summary: Preview calculation run formula traceability readiness
+      description: Read-only RC4-O calculation run readiness preview for formula version snapshot, input/output hashes, evidence linkage, engineering review, approval, downstream integrity decision/report/work-order traceability, and AI/n8n finalization boundaries.
+      tags:
+      - Calculations
+      x-permission-required: calculation.read
+      x-audit-event-generated: none
+      x-human-review-required: true
+      x-read-only: true
+      parameters:
+      - in: path
+        name: runId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Calculation run formula traceability readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CalculationRunReadiness'
+        '404':
+          description: Calculation run not found
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. RC4-O readiness is read-only and does not approve, reject, lock, mutate, recalculate, or finalize calculation runs.
   /api/v1/engineering/calculations/{runId}:
     get:
       summary: Get calculation detail with inputs, outputs, engineering reviews, approvals, and audit trail
@@ -4692,6 +4723,90 @@ components:
           - unresolved_critical_warnings_absent
           - workflow_errors_resolved
           - approver_comment_present
+    CalculationRunReadiness:
+      type: object
+      description: Read-only RC4-O calculation run formula traceability readiness preview. Calculation approval, engineering review, and downstream decision/report/work-order workflows remain authoritative mutation paths.
+      properties:
+        calculation_run_id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+        formula_version_id:
+          type: string
+          format: uuid
+        formula_registry_id:
+          type: string
+          format: uuid
+        ready_for_final_use:
+          type: boolean
+        ready_for_downstream_decision:
+          type: boolean
+        gate_summary:
+          type: object
+          additionalProperties: true
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalculationRunReadinessGate'
+        formula_traceability:
+          type: object
+          additionalProperties: true
+        input_output_traceability:
+          type: object
+          additionalProperties: true
+        linked_evidence:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        linked_context:
+          type: object
+          additionalProperties: true
+        audit_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        governance_notes:
+          type: array
+          items:
+            type: string
+    CalculationRunReadinessGate:
+      type: object
+      description: Calculation run readiness gate for formula version snapshot, deterministic output, evidence linkage, review, approval, downstream traceability, and AI/n8n finalization boundaries.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - calculation_run_recorded
+          - approved_formula_version_snapshot_present
+          - deterministic_output_snapshot_present
+          - validation_not_blocked
+          - input_or_direct_evidence_linked
+          - engineering_review_completed
+          - approval_for_final_use_present
+          - downstream_integrity_decision_trace_visible
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - warning
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
     IntegrityDecisionReadiness:
       type: object
       description: Read-only RC4-N integrity decision readiness preview. Approval, report issue, and work-order creation endpoints remain authoritative.
