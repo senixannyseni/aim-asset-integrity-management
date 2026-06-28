@@ -716,3 +716,15 @@ Implemented RC4-O controls:
 
 RC4-O does not add formulas, recalculate existing outputs, approve/reject/lock calculation runs, issue reports, create integrity decisions, create work orders, change object storage, implement API 579/API 581 quantitative logic, enable AI/n8n/service finalization, or bypass human engineering review.
 
+
+
+### RC4-P NDT Measurement Detail + Inspection Traceability Readiness
+
+RC4-P adds a read-only NDT measurement readiness workflow:
+
+- `GET /api/v1/ndt/measurements/{measurementId}/readiness`
+- enhanced `/ndt/[measurementId]` detail page
+- inspection context, evidence linkage, finding/anomaly trace, calculation input usage, human review/approval trace, and audit timeline
+- readiness gates for evidence, validation, review status, downstream traceability, and AI/n8n finalization boundaries
+
+RC4-P does not add formulas, does not calculate corrosion rate/remaining life/FFS/RBI/API 579/API 581 outputs, does not approve or reject NDT data, does not mutate object storage, and does not allow AI/n8n/service actors to finalize engineering records.

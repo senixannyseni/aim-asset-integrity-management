@@ -478,6 +478,7 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
       <div>
         <p className="eyebrow">RC4-D</p>
         <h1>{assetScoped ? 'Asset NDT Measurements' : 'NDT Data Room'}</h1>
+        <p className="muted-text">RC4-P adds measurement detail inspection traceability readiness through each measurement detail link.</p>
         <p>{assetScoped ? `NDT measurements filtered to ${selectedAsset?.tank_tag ?? fixedAssetId}.` : 'Manual entry, CSV bulk import preview, evidence linkage visibility, and measurement detail access.'}</p>
       </div>
       <div className="action-row">
@@ -536,7 +537,7 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
         <div className="panel-heading row-between">
           <div>
             <h2>NDT Measurements</h2>
-            <p>Stored measurements only. Status badges display existing validation/reviewer values; no API/ASME calculations are performed.</p>
+            <p>Stored measurements only. Status badges display existing validation/reviewer values; no API/ASME calculations are performed. Open a measurement for Inspection Traceability Readiness.</p>
           </div>
           <div className="action-row"><button className="secondary-button" type="button" onClick={exportCsv}>Export CSV</button></div>
         </div>
