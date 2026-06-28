@@ -404,6 +404,76 @@ paths:
           description: Validation result snapshot
       security:
       - bearerAuth: []
+  /api/v1/engineering/validation-history:
+    get:
+      summary: List read-only validation run history
+      x-permission-required: validation.read
+      parameters:
+      - in: query
+        name: asset_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+      - in: query
+        name: severity
+        schema:
+          type: string
+      - in: query
+        name: entity_type
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Validation run history list
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/engineering/validation-history/{validationRunId}:
+    get:
+      summary: Get read-only validation run history detail
+      x-permission-required: validation.read
+      parameters:
+      - in: path
+        name: validationRunId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Validation run history detail
+        '404':
+          description: Validation run not found
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
+  /api/v1/assets/{assetId}/validation:
+    get:
+      summary: Get latest asset-specific validation state and history
+      x-permission-required: validation.read
+      parameters:
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Asset-specific validation state and run history
+        '404':
+          description: Asset not found
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
   /api/v1/workflow-events:
     post:
       summary: Receive n8n workflow event through AIM API
