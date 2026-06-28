@@ -1,6 +1,6 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
@@ -534,3 +534,19 @@ RC4-C completes the Evidence Repository upload/detail frontend using existing AI
 Evidence UI now uses `POST /api/v1/evidence/upload-url`, browser upload to the returned signed PUT URL or controlled upload instruction, and `POST /api/v1/evidence/complete-upload`. Signed URLs and raw object keys are not displayed. Preview is blocked for infected, blocked, quarantined, scan-failed, deleted, or delete-requested evidence and otherwise uses audited backend URL issuance. Frontend validation is UX-only; backend validation, object-storage policy, RBAC, malware status, audit logging, and evidence persistence remain authoritative.
 
 RC4-C introduces no new engineering formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/FFS/RBI/NDT behavior changes, and no backend schema changes.
+
+## RC4-D NDT Bulk Import UX and Measurement Detail Page
+
+Status: Implemented as frontend-focused NDT completion package.
+
+RC4-D completes the NDT bulk import and measurement detail frontend using existing AIM backend APIs. It adds/updates:
+
+- `apps/web/app/ndt/page.tsx` and the NDT data-room client for NDT list/table, manual NDT entry, CSV bulk import preview, row-level validation, component/course/grid/method/asset/evidence filters, evidence-linked and missing-evidence markers, critical missing-evidence warnings, display-only CML/TML grid view, UT/MFL/method grouping, and safe CSV export.
+- `apps/web/app/ndt/[measurementId]/page.tsx` for measurement metadata, asset/inspection context, component/course/grid/elevation/orientation, measured thickness with normalized unit label, method, confidence, extraction source, reviewer status, validation status, evidence gate, direct/linked evidence visibility, missing-evidence state, calculation input link, and audit-log link.
+- `apps/web/app/assets/[assetId]/ndt/page.tsx` for asset-scoped NDT measurements with asset context, asset-prefilled manual entry, CSV bulk import with asset fallback, filters, evidence markers, and detail links.
+- Manual UAT coverage in `docs/uat/uat_rc4d_ndt_bulk_import_measurement_detail.md` and release report in `docs/release/AIM_RC4D_ndt_bulk_import_measurement_detail_report.md`.
+
+NDT manual entry remains available. NDT bulk import supports CSV preview and row-level validation before commit through the existing `POST /api/v1/ndt/measurements/bulk-import` API. XLSX file selection is surfaced for workflow visibility, but no heavy XLSX parser dependency is added; users should convert XLSX workbooks to CSV unless a future approved parser dependency is introduced. NDT visualizations are display-only and use only stored measurement values, existing validation statuses, and existing evidence gate outputs.
+
+RC4-D introduces no new engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculations, no FFS/RBI trigger logic, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/evidence upload behavior changes, no backend schema changes, and no new backend API routes. Frontend validation is UX-only; backend validation, RBAC, audit logging, evidence linkage, and persistence remain authoritative.
+

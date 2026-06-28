@@ -96,3 +96,30 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory.
+
+## RC4-D Source-of-Truth Alignment
+
+- [ ] RC4-D completes the NDT bulk import and measurement detail frontend only.
+- [ ] `apps/web/app/ndt/page.tsx` exists.
+- [ ] `apps/web/app/ndt/[measurementId]/page.tsx` exists.
+- [ ] `apps/web/app/assets/[assetId]/ndt/page.tsx` exists.
+- [ ] NDT list/table, manual entry, bulk import panel, row preview, row-level validation, import summary, filters, and CSV export are available.
+- [ ] Asset-scoped NDT page filters measurements to the selected asset and pre-fills/validates asset context for manual entry and bulk import.
+- [ ] NDT measurement detail shows metadata, asset link, inspection/event reference, component/course/grid/elevation/orientation, measured thickness with unit, method, confidence, extraction source, reviewer status, validation status, evidence linkage, missing-evidence state, calculation input link, and audit link.
+- [ ] NDT visualization is display-only and uses stored measurement values, existing validation statuses, and existing evidence gate outputs only.
+- [ ] Evidence links route to `/evidence/{evidenceFileId}` and do not expose raw object keys, signed URLs, tokens, secrets, or raw evidence contents.
+- [ ] Frontend validation is UX-only and does not weaken backend validation.
+- [ ] Existing backend APIs are used; no duplicate NDT data model is introduced.
+- [ ] No new API routes are introduced by RC4-D.
+- [ ] No new database tables are introduced by RC4-D.
+- [ ] No new database migration is introduced by RC4-D.
+- [ ] No new engineering formulas are introduced by RC4-D.
+- [ ] RC4-D does not change runtime engineering calculation behavior.
+- [ ] RC4-D does not introduce API 579/API 581/FFS/RBI formulas or FFS/RBI trigger logic.
+- [ ] RC4-D does not change AI, n8n, approval, report, evidence upload, or object-storage backend behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory.
+
