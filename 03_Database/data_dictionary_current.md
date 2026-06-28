@@ -52,8 +52,8 @@ Completed implementation state covered by this dictionary:
 | calculation_outputs | Sprint 6 implemented | engineer / senior_engineer | Field-level deterministic outputs and engineering warnings. |
 | ffs_trigger_rules | Sprint 7 implemented | senior_engineer | Configured trigger rules for FFS case creation. Trigger only; no fitness declaration. |
 | ffs_cases | Sprint 7 implemented | engineer / senior_engineer | FFS trigger workflow cases requiring engineer review and senior engineer/admin final disposition approval. |
-| rbi_trigger_rules | Sprint 8 implemented | senior_engineer | Configured RBI interface trigger rules mapped to deterministic calculation warnings and engineering review. No quantitative API RP 581 rules. |
-| rbi_cases | Sprint 8 implemented | engineer / senior_engineer | RBI interface workflow cases with qualitative/semi-quantitative placeholder inputs, risk category, recommended interval, inspection plan reference, reviewer, approver, and calculation/evidence links. |
+| rbi_trigger_rules | Sprint 8 implemented | senior_engineer / lead_engineer | Configured RBI interface trigger rules mapped to deterministic calculation warnings and engineering review. No quantitative API RP 581 rules. |
+| rbi_cases | Sprint 8 implemented | engineer / senior_engineer / lead_engineer | RBI interface workflow cases with qualitative/semi-quantitative placeholder inputs, risk category, recommended interval, inspection plan reference, reviewer, approver, and calculation/evidence links. |
 | audit_logs | Implemented | admin / qa_qc | Audit trail for critical create/update/delete/review/approval/governance actions. |
 
 Supporting baseline tables also exist in the clean-clone schema and are used as references or future integration points: `inspection_events`, `engineering_reviews`, and `approval_records`. Sprint 6 promotes `calculation_runs`, `calculation_inputs`, and `calculation_outputs` from supporting schema to implemented deterministic calculation traceability tables. Sprint 7 promotes `ffs_cases` to an implemented FFS trigger workflow governance table and adds `ffs_trigger_rules`. Sprint 8 promotes `rbi_cases` to an implemented RBI interface workflow table and adds `rbi_trigger_rules`.
@@ -671,9 +671,9 @@ RBAC seed data is aligned with `apps/api/src/rbac/roles.ts` through Sprint 8. De
 | calculation_basis_note | text | yes |  | States quantitative API RP 581 rules are not implemented unless Formula Registry provides approved rules. |
 | status | text | yes | allowed statuses | Workflow status: open, under_review, data_required, assessment_in_progress, ready_for_review, approved, exported, closed. |
 | reviewer | uuid | no | FK users(id) | Reviewer. |
-| approver | uuid | no | FK users(id) | Senior engineer/admin approver. |
+| approver | uuid | no | FK users(id) | Senior engineer/lead engineer/admin approver. |
 | reviewed_at | timestamptz | no |  | Review timestamp. |
-| approved_at | timestamptz | no |  | Approval/export timestamp. |
+| approved_at | timestamptz | no |  | Approval timestamp only; export and close must not backfill approval time. |
 | created_by | uuid | no | FK users(id) | Creator. |
 | updated_by | uuid | no | FK users(id) | Last updater. |
 | created_at | timestamptz | yes | default now() | Creation timestamp. |
@@ -700,6 +700,11 @@ RC4-I does not add new database columns. It uses the existing `rbi_cases`, `rbi_
 - `/api/v1/rbi/cases/from-calculation` now stores `input_placeholders.source_warning_signature` and blocks duplicate open RBI cases for the same calculation-run / trigger-rule / warning-signature combination.
 - `/api/v1/rbi/cases/from-finding-history` uses RC4-H `findings` rows as the repeated-anomaly source, stores `input_placeholders.source_finding_signature`, stores source finding snapshots, and blocks duplicate open RBI cases for the same repeated-finding signature.
 - RBI review, approve, export, and close actions update existing workflow fields and write audit logs; closure requires a comment/reason.
+- RC4-I hardening aligns DB seed/migration RBI finalization permissions with backend/static RBAC for `lead_engineer`.
+- Approval now requires recorded human review plus `ready_for_review` status; export and close require a previously approved RBI case.
+- `/approve` approves only. Export and close must use their dedicated endpoints so export permission and closure-comment gates cannot be bypassed.
+- `approved_at` is populated only by actual approval, not by export or close.
+- RBI case lookup uses separate UUID/text parameters and asset-scoped creation validates `asset_id` as UUID before database lookup.
 - `finding_history` is a trigger source only. It does not automatically approve engineering data, calculations, reports, FFS cases, or final integrity decisions.
 - Risk matrix display remains qualitative/semi-quantitative placeholder metadata unless future licensed Formula Registry rules are supplied and approved.
 

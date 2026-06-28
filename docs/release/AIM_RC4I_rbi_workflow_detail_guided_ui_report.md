@@ -13,7 +13,7 @@ RC4-I implements Future Fix items 51–57 for the RBI workflow:
 3. Frontend actions for status update, review, approve, export, and close with RBAC-aware visibility.
 4. Repeated-anomaly trigger connection to the real RC4-H findings/anomaly history module.
 5. Duplicate-prevention logic for repeated RBI triggers from the same calculation warning signature and same finding-history signature.
-6. Integration/static regression coverage for calculation warning → RBI case → review → senior approval/export/close workflow.
+6. Integration/static regression coverage for calculation warning → RBI case → review → senior/lead-engineer approval/export/close workflow.
 7. Richer placeholder/semi-quantitative risk matrix visualization.
 
 ## Changed Files
@@ -67,7 +67,7 @@ Existing approval endpoint remains:
 
 - `POST /api/v1/rbi/cases/{caseId}/approve`
 
-Close requires a comment/reason. AI actors are blocked from approve/export/close/finalization. Senior authority is enforced in the backend.
+Close requires a comment/reason. AI actors are blocked from approve/export/close/finalization. Senior/lead-engineer/admin finalization authority is enforced in the backend. Approval requires recorded human review and `ready_for_review` status. Export and close require prior approval, and `/approve` cannot be used to export or close a case.
 
 ## Frontend Controls
 
@@ -89,6 +89,17 @@ RC4-I does **not** implement:
 - FFS case creation;
 - direct n8n/database writes;
 - AI approval or service actor finalization.
+
+## RC4-I hardening follow-up
+
+The second RC4-I cleanup patch hardens finalization gates and DB-backed RBAC alignment:
+
+- `lead_engineer` receives the same RBI approve/export DB seed and migration permissions already reflected in static RBAC.
+- `/approve` approves only and rejects `status=exported` or `status=closed`.
+- `/export` requires prior approval and `rbi.interface.export`.
+- `/close` requires prior approval plus closure comment/reason.
+- `approved_at` is written only for actual approval, not export or close.
+- RBI case UUID/text lookup and asset UUID validation are hardened to avoid DB type errors.
 
 ## Validation
 

@@ -1422,8 +1422,8 @@ paths:
       - bearerAuth: []
   /api/v1/rbi/cases/{caseId}/export:
     post:
-      summary: Mark RBI case exported
-      description: RC4-I senior-engineer/admin finalization action. Export metadata only; does not implement quantitative API RP 581 calculations.
+      summary: Mark approved RBI case exported
+      description: RC4-I senior-engineer/lead-engineer/admin export action. Export requires a previously approved RBI case and export permission. Export metadata only; does not implement quantitative API RP 581 calculations.
       x-permission-required: rbi.interface.export
       x-audit-event-generated: RBI_CASE_EXPORTED
       parameters:
@@ -1435,6 +1435,8 @@ paths:
       responses:
         '200':
           description: RBI case exported
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1444,8 +1446,8 @@ paths:
       x-human-review-required: true
   /api/v1/rbi/cases/{caseId}/close:
     post:
-      summary: Close RBI case
-      description: RC4-I senior-engineer/admin closure action. Closure requires comment/reason and does not approve calculations or issue reports.
+      summary: Close approved or exported RBI case
+      description: RC4-I senior-engineer/lead-engineer/admin closure action. Closure requires a previously approved or exported RBI case plus comment/reason and does not approve calculations or issue reports.
       x-permission-required: rbi.interface.approve
       x-audit-event-generated: RBI_CASE_CLOSED
       parameters:
@@ -1479,8 +1481,8 @@ paths:
       x-human-review-required: true
   /api/v1/rbi/cases/{caseId}/approve:
     post:
-      summary: Approve RBI interface summary for export or inspection planning
-      description: Requires senior_engineer/admin authority. AI agents cannot approve, export, close, or finalize RBI cases.
+      summary: Approve reviewed RBI interface summary
+      description: Requires senior_engineer/lead_engineer/admin authority, recorded human review, and ready_for_review status. AI agents cannot approve, export, close, or finalize RBI cases. This endpoint approves only; use the dedicated export and close endpoints for later disposition states.
       x-permission-required: rbi.interface.approve
       x-audit-event-generated: RBI_CASE_APPROVED
       parameters:
@@ -1500,11 +1502,12 @@ paths:
                   type: string
                   enum:
                   - approved
-                  - exported
-                  - closed
+                  description: Optional; if supplied, must be approved. Export and close are separate endpoints.
       responses:
         '200':
           description: RBI case approved
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
