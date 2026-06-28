@@ -70,3 +70,29 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory.
+
+
+## RC4-C Source-of-Truth Alignment
+
+- [ ] RC4-C completes the Evidence Repository upload/detail frontend only.
+- [ ] `apps/web/app/evidence/page.tsx` exists.
+- [ ] `apps/web/app/evidence/[evidenceId]/page.tsx` exists.
+- [ ] Evidence list/table, metadata summary, asset filter, inspection/event filter, method/component/location display, upload status, malware scan status, checksum, loading, empty, error, and permission-denied states are available.
+- [ ] Evidence upload UI uses the existing object-storage upload-url and complete-upload flow.
+- [ ] File picker, file name, file size, MIME type, extension, client-side validation feedback, upload progress, upload status, checksum, and complete-upload confirmation are available.
+- [ ] Evidence detail page shows metadata, object-storage status, upload status, malware status, checksum, file size, MIME type, asset/inspection context, linkage, safe preview, and audit link.
+- [ ] Preview/open/download is blocked for infected, blocked, quarantined, scan-failed, deleted, or delete-requested evidence.
+- [ ] Raw object keys, signed URLs, tokens, and secrets are not displayed.
+- [ ] Frontend validation is UX-only and does not weaken backend validation.
+- [ ] Existing backend APIs are used; no duplicate evidence object-storage logic is introduced.
+- [ ] No new API routes are introduced by RC4-C.
+- [ ] No new database tables are introduced by RC4-C.
+- [ ] No new database migration is introduced by RC4-C.
+- [ ] No new engineering formulas are introduced by RC4-C.
+- [ ] RC4-C does not change runtime engineering calculation behavior.
+- [ ] RC4-C does not change AI, n8n, approval, report, FFS, RBI, NDT, or object-storage backend behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory.
