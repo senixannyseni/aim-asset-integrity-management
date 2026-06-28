@@ -1,13 +1,8 @@
-import {
-  Router,
-  type NextFunction,
-  type Request,
-  type Response,
-} from "express";
-import type { PoolClient } from "pg";
-import { pool } from "../db/client.js";
-import { requirePermission } from "../middleware/rbac.js";
-import type { Role } from "../rbac/roles.js";
+import { Router, type Request, type Response } from 'express';
+import type { PoolClient } from 'pg';
+import { pool } from '../db/client.js';
+import { requirePermission } from '../middleware/rbac.js';
+import type { Role } from '../rbac/roles.js';
 
 export const rbiRouter = Router();
 
@@ -15,24 +10,21 @@ type DbRow = Record<string, unknown>;
 type ApiResponse = Response<Record<string, unknown>>;
 
 type Queryable = {
-  query: <T extends DbRow = DbRow>(
-    text: string,
-    values?: unknown[],
-  ) => Promise<{ rows: T[]; rowCount: number | null }>;
+  query: <T extends DbRow = DbRow>(text: string, values?: unknown[]) => Promise<{ rows: T[]; rowCount: number | null }>;
 };
 
 const RBI_STATUSES = [
-  "open",
-  "under_review",
-  "data_required",
-  "assessment_in_progress",
-  "ready_for_review",
-  "approved",
-  "exported",
-  "closed",
+  'open',
+  'under_review',
+  'data_required',
+  'assessment_in_progress',
+  'ready_for_review',
+  'approved',
+  'exported',
+  'closed'
 ] as const;
 
-type RbiStatus = (typeof RBI_STATUSES)[number];
+type RbiStatus = typeof RBI_STATUSES[number];
 
 type RbiEvidenceLinkInput = {
   evidence_file_id: string;
@@ -64,27 +56,25 @@ type RbiCaseInput = {
   status?: RbiStatus;
 };
 
-type NormalizedRbiCaseInput = Omit<RbiCaseInput, "assetId" | "status"> & {
+type NormalizedRbiCaseInput = Omit<RbiCaseInput, 'assetId' | 'status'> & {
   assetId: string | undefined;
   status: string;
 };
 
 const TRIGGER_WARNING_CODES = new Set([
-  "HIGH_CORROSION_RATE",
-  "LOW_REMAINING_LIFE",
-  "RBI_TRIGGER_CANDIDATE",
-  "REPEATED_ANOMALY",
-  "MISSING_EVIDENCE",
+  'HIGH_CORROSION_RATE',
+  'LOW_REMAINING_LIFE',
+  'RBI_TRIGGER_CANDIDATE',
+  'REPEATED_ANOMALY',
+  'MISSING_EVIDENCE'
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : undefined;
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function asArray(value: unknown): unknown[] {
@@ -92,12 +82,7 @@ function asArray(value: unknown): unknown[] {
 }
 
 function isUuid(value: string | undefined | null): value is string {
-  return (
-    typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    )
-  );
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function uuidOrNull(value: unknown): string | null {
@@ -107,7 +92,7 @@ function uuidOrNull(value: unknown): string | null {
 
 function actorUserId(req: Request): string | null {
   const id = req.user?.id;
-  if (!id || id === "00000000-0000-0000-0000-000000000000") return null;
+  if (!id || id === '00000000-0000-0000-0000-000000000000') return null;
   return id;
 }
 
@@ -117,35 +102,29 @@ function actorRoles(req: Request): Role[] {
 
 function hasSeniorAuthority(req: Request): boolean {
   const roles = actorRoles(req);
-  return roles.includes("admin") || roles.includes("senior_engineer");
+  return roles.includes('admin') || roles.includes('senior_engineer');
 }
 
 function rejectAiApproval(req: Request, res: ApiResponse): boolean {
-  if (actorRoles(req).includes("ai_agent")) {
+  if (actorRoles(req).includes('ai_agent')) {
     res.status(403).json({
       error: {
-        code: "AI_AGENT_CANNOT_APPROVE_RBI",
-        message:
-          "AI agents may not approve, export, close, or finalize RBI cases.",
-      },
+        code: 'AI_AGENT_CANNOT_APPROVE_RBI',
+        message: 'AI agents may not approve, export, close, or finalize RBI cases.'
+      }
     });
     return true;
   }
   return false;
 }
 
-function validationError(
-  res: ApiResponse,
-  field: string,
-  message: string,
-  code = "VALIDATION_FAILED",
-): void {
+function validationError(res: ApiResponse, field: string, message: string, code = 'VALIDATION_FAILED'): void {
   res.status(400).json({
     error: {
       code,
-      message: "Request validation failed.",
-      details: [{ field, message, severity: "error" }],
-    },
+      message: 'Request validation failed.',
+      details: [{ field, message, severity: 'error' }]
+    }
   });
 }
 
@@ -155,55 +134,34 @@ function normalizeEvidenceLinks(raw: unknown): RbiEvidenceLinkInput[] {
   return items.flatMap((item) => {
     if (!isPlainObject(item)) return [];
 
-    const evidenceFileId = asString(
-      item.evidence_file_id ?? item.evidenceFileId,
-    );
+    const evidenceFileId = asString(item.evidence_file_id ?? item.evidenceFileId);
     if (!evidenceFileId) return [];
 
     return [
       {
         evidence_file_id: evidenceFileId,
-        source_entity_type:
-          asString(item.source_entity_type ?? item.sourceEntityType) ?? null,
-        source_entity_id:
-          asString(item.source_entity_id ?? item.sourceEntityId) ?? null,
-        source_calculation_run_id:
-          asString(
-            item.source_calculation_run_id ?? item.sourceCalculationRunId,
-          ) ?? null,
-      },
+        source_entity_type: asString(item.source_entity_type ?? item.sourceEntityType) ?? null,
+        source_entity_id: asString(item.source_entity_id ?? item.sourceEntityId) ?? null,
+        source_calculation_run_id: asString(item.source_calculation_run_id ?? item.sourceCalculationRunId) ?? null
+      }
     ];
   });
 }
 
-async function loadCalculationRunByIdentifier(
-  client: PoolClient,
-  identifier: string,
-): Promise<DbRow | undefined> {
+
+async function loadCalculationRunByIdentifier(client: PoolClient, identifier: string): Promise<DbRow | undefined> {
   const result = isUuid(identifier)
-    ? await client.query<DbRow>(
-        "select * from calculation_runs where id = $1::uuid limit 1",
-        [identifier],
-      )
-    : await client.query<DbRow>(
-        "select * from calculation_runs where run_id = $1 limit 1",
-        [identifier],
-      );
+    ? await client.query<DbRow>('select * from calculation_runs where id = $1::uuid limit 1', [identifier])
+    : await client.query<DbRow>('select * from calculation_runs where run_id = $1 limit 1', [identifier]);
   return result.rows[0];
 }
 
-async function resolveUserId(
-  client: Queryable,
-  req: Request,
-): Promise<string | null> {
+async function resolveUserId(client: Queryable, req: Request): Promise<string | null> {
   const explicit = actorUserId(req);
   if (explicit) return explicit;
   const email = req.user?.email;
   if (!email) return null;
-  const result = await client.query<{ id: string }>(
-    "select id from users where email = $1 and status = $2 limit 1",
-    [email, "active"],
-  );
+  const result = await client.query<{ id: string }>('select id from users where email = $1 and status = $2 limit 1', [email, 'active']);
   return result.rows[0]?.id ?? null;
 }
 
@@ -215,7 +173,7 @@ async function writeAudit(
   entityId: string | null,
   before: unknown,
   after: unknown,
-  metadata: Record<string, unknown> = {},
+  metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
@@ -236,11 +194,11 @@ async function writeAudit(
       actorRoles(req),
       entityType,
       entityId,
-      req.header("x-request-id") ?? null,
+      req.header('x-request-id') ?? null,
       JSON.stringify(before ?? null),
       JSON.stringify(after ?? null),
-      JSON.stringify(metadata),
-    ],
+      JSON.stringify(metadata)
+    ]
   );
   return result.rows[0]?.id;
 }
@@ -274,18 +232,12 @@ function mapRbiCase(row: DbRow | undefined): Record<string, unknown> | null {
     reviewed_at: row.reviewed_at,
     approved_at: row.approved_at,
     created_at: row.created_at,
-    updated_at: row.updated_at,
+    updated_at: row.updated_at
   };
 }
 
-async function assetExists(
-  client: Queryable,
-  assetId: string,
-): Promise<boolean> {
-  const result = await client.query(
-    "select id from assets where id = $1 and deleted_at is null limit 1",
-    [assetId],
-  );
+async function assetExists(client: Queryable, assetId: string): Promise<boolean> {
+  const result = await client.query('select id from assets where id = $1 and deleted_at is null limit 1', [assetId]);
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -298,7 +250,7 @@ function evidenceIdsFromLinks(links: RbiEvidenceLinkInput[]): string[] {
 async function validateEvidenceFilesForAsset(
   client: Queryable,
   assetId: string,
-  evidenceFileIds: string[],
+  evidenceFileIds: string[]
 ): Promise<{ ok: true } | { ok: false; invalidIds: string[] }> {
   if (evidenceFileIds.length === 0) return { ok: true };
   const uniqueIds = [...new Set(evidenceFileIds)];
@@ -308,7 +260,7 @@ async function validateEvidenceFilesForAsset(
      where id = any($1::uuid[])
        and asset_id = $2
        and status not in ('deleted','rejected')`,
-    [uniqueIds, assetId],
+    [uniqueIds, assetId]
   );
   const valid = new Set(result.rows.map((row) => row.id));
   const invalidIds = uniqueIds.filter((id) => !valid.has(id));
@@ -318,15 +270,14 @@ async function validateEvidenceFilesForAsset(
 function crossAssetEvidenceError(res: ApiResponse, invalidIds: string[]): void {
   res.status(400).json({
     error: {
-      code: "CROSS_ASSET_EVIDENCE_LINK_BLOCKED",
-      message:
-        "RBI case evidence must belong to the same asset as the RBI case.",
+      code: 'CROSS_ASSET_EVIDENCE_LINK_BLOCKED',
+      message: 'RBI case evidence must belong to the same asset as the RBI case.',
       details: invalidIds.map((id) => ({
-        field: "evidence_links.evidence_file_id",
+        field: 'evidence_links.evidence_file_id',
         message: `Evidence file ${id} does not belong to the RBI case asset or is not active.`,
-        severity: "blocking",
-      })),
-    },
+        severity: 'blocking'
+      }))
+    }
   });
 }
 
@@ -334,7 +285,7 @@ async function createEvidenceLinks(
   client: PoolClient,
   req: Request,
   rbiCaseId: string,
-  evidenceFileIds: string[],
+  evidenceFileIds: string[]
 ): Promise<void> {
   const linkedBy = await resolveUserId(client, req);
   for (const evidenceFileId of evidenceFileIds) {
@@ -342,7 +293,7 @@ async function createEvidenceLinks(
       `insert into evidence_links(evidence_file_id, linked_entity_type, linked_entity_id, link_reason, linked_by)
        values ($1, 'rbi_case', $2, 'RBI interface supporting evidence', $3)
        on conflict do nothing`,
-      [evidenceFileId, rbiCaseId, linkedBy],
+      [evidenceFileId, rbiCaseId, linkedBy]
     );
   }
 }
@@ -351,48 +302,22 @@ function nextCaseCode(): string {
   return `RBI-${Date.now()}`;
 }
 
-function defaultInputPlaceholders(
-  body: Record<string, unknown>,
-): Record<string, unknown> {
-  const supplied = isPlainObject(body.input_placeholders)
-    ? body.input_placeholders
-    : {};
+function defaultInputPlaceholders(body: Record<string, unknown>): Record<string, unknown> {
+  const supplied = isPlainObject(body.input_placeholders) ? body.input_placeholders : {};
   return {
-    consequence_of_failure:
-      supplied.consequence_of_failure ??
-      body.consequence_of_failure ??
-      "placeholder_required",
-    probability_of_failure:
-      supplied.probability_of_failure ??
-      body.probability_of_failure ??
-      "placeholder_required",
-    damage_mechanism:
-      supplied.damage_mechanism ??
-      body.damage_mechanism ??
-      "engineering_review_required",
-    inspection_effectiveness:
-      supplied.inspection_effectiveness ??
-      body.inspection_effectiveness ??
-      "placeholder_required",
-    fluid_service:
-      supplied.fluid_service ?? body.fluid_service ?? "placeholder_required",
-    inventory: supplied.inventory ?? body.inventory ?? "placeholder_required",
-    operating_severity:
-      supplied.operating_severity ??
-      body.operating_severity ??
-      "placeholder_required",
-    mitigation_controls:
-      supplied.mitigation_controls ??
-      body.mitigation_controls ??
-      "placeholder_required",
-    calculation_basis:
-      "qualitative_or_semi_quantitative_placeholder_only_no_api_581_rules",
+    consequence_of_failure: supplied.consequence_of_failure ?? body.consequence_of_failure ?? 'placeholder_required',
+    probability_of_failure: supplied.probability_of_failure ?? body.probability_of_failure ?? 'placeholder_required',
+    damage_mechanism: supplied.damage_mechanism ?? body.damage_mechanism ?? 'engineering_review_required',
+    inspection_effectiveness: supplied.inspection_effectiveness ?? body.inspection_effectiveness ?? 'placeholder_required',
+    fluid_service: supplied.fluid_service ?? body.fluid_service ?? 'placeholder_required',
+    inventory: supplied.inventory ?? body.inventory ?? 'placeholder_required',
+    operating_severity: supplied.operating_severity ?? body.operating_severity ?? 'placeholder_required',
+    mitigation_controls: supplied.mitigation_controls ?? body.mitigation_controls ?? 'placeholder_required',
+    calculation_basis: 'qualitative_or_semi_quantitative_placeholder_only_no_api_581_rules'
   };
 }
 
-function normalizeManualBody(
-  body: Record<string, unknown>,
-): NormalizedRbiCaseInput {
+function normalizeManualBody(body: Record<string, unknown>): NormalizedRbiCaseInput {
   const placeholders = defaultInputPlaceholders(body);
   const rawEvidenceLinks = Array.isArray(body.evidence_links)
     ? body.evidence_links
@@ -402,18 +327,10 @@ function normalizeManualBody(
   const evidenceLinks: RbiEvidenceLinkInput[] = rawEvidenceLinks
     .filter(isPlainObject)
     .map((link) => ({
-      evidence_file_id:
-        uuidOrNull(link.evidence_file_id ?? link.evidenceFileId) ?? "",
-      source_entity_type:
-        asString(link.source_entity_type ?? link.sourceEntityType) ?? null,
-      source_entity_id:
-        uuidOrNull(link.source_entity_id ?? link.sourceEntityId) ??
-        asString(link.source_entity_id ?? link.sourceEntityId) ??
-        null,
-      source_calculation_run_id:
-        uuidOrNull(
-          link.source_calculation_run_id ?? link.sourceCalculationRunId,
-        ) ?? null,
+      evidence_file_id: uuidOrNull(link.evidence_file_id ?? link.evidenceFileId) ?? '',
+      source_entity_type: asString(link.source_entity_type ?? link.sourceEntityType) ?? null,
+      source_entity_id: uuidOrNull(link.source_entity_id ?? link.sourceEntityId) ?? asString(link.source_entity_id ?? link.sourceEntityId) ?? null,
+      source_calculation_run_id: uuidOrNull(link.source_calculation_run_id ?? link.sourceCalculationRunId) ?? null
     }))
     .filter((link) => Boolean(link.evidence_file_id));
 
@@ -421,50 +338,32 @@ function normalizeManualBody(
     assetId: asString(body.asset_id),
     inspectionEventId: uuidOrNull(body.inspection_event_id),
     calculationRunId: uuidOrNull(body.calculation_run_id),
-    system: asString(body.system) ?? "tank_integrity",
-    component: asString(body.component) ?? "unknown_component",
-    damageMechanism:
-      asString(body.damage_mechanism) ??
-      String(placeholders.damage_mechanism ?? "engineering_review_required"),
-    probabilityDriver:
-      asString(body.probability_driver) ?? "engineering_review_placeholder",
-    consequenceDriver:
-      asString(body.consequence_driver) ?? "consequence_placeholder_required",
-    riskCategory: asString(body.risk_category) ?? "screening_required",
-    recommendedInterval:
-      asString(body.recommended_interval) ?? "engineer_review_required",
-    inspectionPlanReference:
-      asString(body.inspection_plan_reference) ?? "not_assigned",
+    system: asString(body.system) ?? 'tank_integrity',
+    component: asString(body.component) ?? 'unknown_component',
+    damageMechanism: asString(body.damage_mechanism) ?? String(placeholders.damage_mechanism ?? 'engineering_review_required'),
+    probabilityDriver: asString(body.probability_driver) ?? 'engineering_review_placeholder',
+    consequenceDriver: asString(body.consequence_driver) ?? 'consequence_placeholder_required',
+    riskCategory: asString(body.risk_category) ?? 'screening_required',
+    recommendedInterval: asString(body.recommended_interval) ?? 'engineer_review_required',
+    inspectionPlanReference: asString(body.inspection_plan_reference) ?? 'not_assigned',
     evidenceLinks,
-    status: asString(body.status) ?? "open",
+    status: asString(body.status) ?? 'open',
     reviewer: uuidOrNull(body.reviewer),
     approver: uuidOrNull(body.approver),
-    triggerSource: asString(body.trigger_source) ?? "engineering_review",
-    triggerReason:
-      asString(body.trigger_reason) ??
-      "Manual RBI interface case created for engineering review.",
-    triggerRuleId:
-      asString(body.trigger_rule_id) ?? "RBI-TRIG-ENGINEERING-REVIEW",
-    inputPlaceholders: placeholders,
+    triggerSource: asString(body.trigger_source) ?? 'engineering_review',
+    triggerReason: asString(body.trigger_reason) ?? 'Manual RBI interface case created for engineering review.',
+    triggerRuleId: asString(body.trigger_rule_id) ?? 'RBI-TRIG-ENGINEERING-REVIEW',
+    inputPlaceholders: placeholders
   };
 }
 
 function isStatus(value: string | undefined): value is RbiStatus {
-  return (
-    value !== undefined && (RBI_STATUSES as readonly string[]).includes(value)
-  );
+  return value !== undefined && (RBI_STATUSES as readonly string[]).includes(value);
 }
 
-async function loadTriggerRule(
-  client: Queryable,
-  ruleId: string | undefined,
-  warningCode?: string,
-): Promise<DbRow | undefined> {
+async function loadTriggerRule(client: Queryable, ruleId: string | undefined, warningCode?: string): Promise<DbRow | undefined> {
   if (ruleId) {
-    const byId = await client.query<DbRow>(
-      "select * from rbi_trigger_rules where rule_id = $1 and active_flag = true",
-      [ruleId],
-    );
+    const byId = await client.query<DbRow>('select * from rbi_trigger_rules where rule_id = $1 and active_flag = true', [ruleId]);
     if (byId.rows[0]) return byId.rows[0];
   }
   if (warningCode) {
@@ -473,7 +372,7 @@ async function loadTriggerRule(
        where active_flag = true and $1 = any(warning_codes)
        order by rule_id
        limit 1`,
-      [warningCode],
+      [warningCode]
     );
     return byWarning.rows[0];
   }
@@ -483,7 +382,7 @@ async function loadTriggerRule(
 async function insertRbiCase(
   client: PoolClient,
   req: Request,
-  data: RbiCaseInput,
+  data: RbiCaseInput
 ): Promise<DbRow> {
   const actor = await resolveUserId(client, req);
   const result = await client.query<DbRow>(
@@ -540,895 +439,287 @@ async function insertRbiCase(
       data.triggerRuleId,
       data.reviewer ?? null,
       data.approver ?? null,
-      data.status ?? "open",
-      actor,
-    ],
+      data.status ?? 'open',
+      actor
+    ]
   );
   const row = result.rows[0];
-  if (!row) throw new Error("RBI_CASE_INSERT_FAILED");
-  await createEvidenceLinks(
-    client,
-    req,
-    String(row.id),
-    evidenceIdsFromLinks(data.evidenceLinks),
-  );
+  if (!row) throw new Error('RBI_CASE_INSERT_FAILED');
+  await createEvidenceLinks(client, req, String(row.id), evidenceIdsFromLinks(data.evidenceLinks));
   return row;
 }
 
-rbiRouter.get(
-  "/rbi/cases",
-  requirePermission("rbi.interface.read"),
-  async (req, res, next) => {
-    try {
-      const values: unknown[] = [];
-      const where: string[] = [];
-      const assetId = asString(req.query.asset_id);
-      const status = asString(req.query.status);
-      if (assetId) {
-        values.push(assetId);
-        where.push(`asset_id = $${values.length}`);
-      }
-      if (status) {
-        values.push(status);
-        where.push(`status = $${values.length}`);
-      }
-      const result = await pool.query<DbRow>(
-        `select * from rbi_cases
-       ${where.length > 0 ? `where ${where.join(" and ")}` : ""}
+rbiRouter.get('/rbi/cases', requirePermission('rbi.interface.read'), async (req, res, next) => {
+  try {
+    const values: unknown[] = [];
+    const where: string[] = [];
+    const assetId = asString(req.query.asset_id);
+    const status = asString(req.query.status);
+    if (assetId) {
+      values.push(assetId);
+      where.push(`asset_id = $${values.length}`);
+    }
+    if (status) {
+      values.push(status);
+      where.push(`status = $${values.length}`);
+    }
+    const result = await pool.query<DbRow>(
+      `select * from rbi_cases
+       ${where.length > 0 ? `where ${where.join(' and ')}` : ''}
        order by created_at desc
        limit 100`,
-        values,
-      );
-      res.json({ data: result.rows.map(mapRbiCase) });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+      values
+    );
+    res.json({ data: result.rows.map(mapRbiCase) });
+  } catch (error) {
+    next(error);
+  }
+});
 
-rbiRouter.get(
-  "/rbi/cases/:caseId",
-  requirePermission("rbi.interface.read"),
-  async (req, res, next) => {
-    try {
-      const caseId = req.params.caseId;
-      if (!caseId) {
-        validationError(res, "caseId", "caseId is required.");
-        return;
-      }
-      const row = await loadRbiCase(pool, caseId);
-      if (!row) {
-        res
-          .status(404)
-          .json({
-            error: {
-              code: "RBI_CASE_NOT_FOUND",
-              message: "RBI case not found.",
-            },
-          });
-        return;
-      }
-      res.json({ data: mapRbiCase(row) });
-    } catch (error) {
-      next(error);
+rbiRouter.get('/rbi/cases/:caseId', requirePermission('rbi.interface.read'), async (req, res, next) => {
+  try {
+    const caseId = req.params.caseId;
+    if (!caseId) {
+      validationError(res, 'caseId', 'caseId is required.');
+      return;
     }
-  },
-);
+    const result = await pool.query<DbRow>('select * from rbi_cases where id = $1 or case_id = $1 limit 1', [caseId]);
+    const row = result.rows[0];
+    if (!row) {
+      res.status(404).json({ error: { code: 'RBI_CASE_NOT_FOUND', message: 'RBI case not found.' } });
+      return;
+    }
+    res.json({ data: mapRbiCase(row) });
+  } catch (error) {
+    next(error);
+  }
+});
 
 rbiRouter.post('/rbi/cases', requirePermission('rbi.interface.create'), async (req, res, next) => {
-    if (!isPlainObject(req.body)) {
-      validationError(res, "body", "JSON object body is required.");
-      return;
-    }
-    const normalized = normalizeManualBody(req.body);
-    if (!normalized.assetId) {
-      validationError(res, "asset_id", "asset_id is required.");
-      return;
-    }
-    if (!isStatus(normalized.status)) {
-      validationError(
-        res,
-        "status",
-        `status must be one of ${RBI_STATUSES.join(", ")}.`,
-      );
-      return;
-    }
-    if (["approved", "exported", "closed"].includes(normalized.status)) {
-      validationError(
-        res,
-        "status",
-        "Use the RBI approval endpoint for approved/exported/closed workflow states.",
-        "RBI_APPROVAL_ENDPOINT_REQUIRED",
-      );
-      return;
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      if (!(await assetExists(client, normalized.assetId))) {
-        await client.query("rollback");
-        res
-          .status(404)
-          .json({
-            error: { code: "ASSET_NOT_FOUND", message: "Asset not found." },
-          });
-        return;
-      }
-      const evidenceIds = evidenceIdsFromLinks(normalized.evidenceLinks);
-      const evidenceValidation = await validateEvidenceFilesForAsset(
-        client,
-        normalized.assetId,
-        evidenceIds,
-      );
-      if (!evidenceValidation.ok) {
-        await client.query("rollback");
-        crossAssetEvidenceError(res, evidenceValidation.invalidIds);
-        return;
-      }
-      const caseInput: RbiCaseInput = {
-        ...normalized,
-        assetId: normalized.assetId,
-        status: normalized.status,
-      };
-      const created = await insertRbiCase(client, req, caseInput);
-      const auditLogId = await writeAudit(
-        client,
-        req,
-        "RBI_CASE_CREATED",
-        "rbi_case",
-        String(created.id),
-        null,
-        mapRbiCase(created),
-        {
-          module: "rbi_interface_trigger_workflow",
-          manual_create: true,
-          quantitative_api_581_not_implemented: true,
-        },
-      );
-      await client.query("commit");
-      res.status(201).json({ data: mapRbiCase(created), auditLogId });
-    } catch (error) {
-      await client.query("rollback");
-      next(error);
-    } finally {
-      client.release();
-    }
-  },
-);
-
-function warningCodesFromRows(rows: DbRow[]): string[] {
-  return rows
-    .map((row) => asString(row.warning_code))
-    .filter((code): code is string =>
-      Boolean(code && TRIGGER_WARNING_CODES.has(code)),
-    );
-}
-
-function riskCategoryFromWarnings(
-  warningCodes: string[],
-  rule: DbRow | undefined,
-): string {
-  if (rule && asString(rule.default_risk_category))
-    return String(rule.default_risk_category);
-  if (warningCodes.includes("LOW_REMAINING_LIFE")) return "high";
-  if (warningCodes.includes("HIGH_CORROSION_RATE")) return "medium_high";
-  if (warningCodes.includes("REPEATED_ANOMALY")) return "medium";
-  return "screening_required";
-}
-
-function warningSignature(warningCodes: string[]): string {
-  return [...new Set(warningCodes)].sort().join("|");
-}
-
-function findingSignature(findings: DbRow[]): string {
-  return findings
-    .map((finding) => String(finding.id ?? finding.finding_code ?? ""))
-    .filter(Boolean)
-    .sort()
-    .join("|");
-}
-
-async function loadRbiCase(
-  client: Queryable,
-  caseId: string,
-): Promise<DbRow | undefined> {
-  const result = isUuid(caseId)
-    ? await client.query<DbRow>(
-        "select * from rbi_cases where id = $1::uuid or case_id = $1 limit 1",
-        [caseId],
-      )
-    : await client.query<DbRow>(
-        "select * from rbi_cases where case_id = $1 limit 1",
-        [caseId],
-      );
-  return result.rows[0];
-}
-
-
-function sourceFindingRows(rows: DbRow[]): Record<string, unknown>[] {
-  return rows.map((row) => ({
-    finding_id: row.id,
-    finding_code: row.finding_code,
-    title: row.title,
-    finding_type: row.finding_type,
-    component: row.component,
-    severity: row.severity,
-    status: row.status,
-    evidence_file_id: row.evidence_file_id,
-    calculation_run_id: row.calculation_run_id,
-    created_at: row.created_at,
-  }));
-}
-
-async function duplicateRbiTrigger(
-  client: Queryable,
-  options: {
-    assetId?: string;
-    calculationRunId?: string;
-    triggerSource: string;
-    triggerRuleId: string;
-    signatureKey: string;
-    signature: string;
-  },
-): Promise<DbRow | undefined> {
-  const values: unknown[] = [
-    options.triggerSource,
-    options.triggerRuleId,
-    options.signature,
-    options.signatureKey,
-  ];
-  const where = [
-    "trigger_source = $1",
-    "trigger_rule_id = $2",
-    `coalesce(input_placeholders ->> $4, '') = $3`,
-    "status <> 'closed'",
-  ];
-  if (options.calculationRunId) {
-    values.push(options.calculationRunId);
-    where.push(`calculation_run_id = $${values.length}::uuid`);
-  }
-  if (options.assetId) {
-    values.push(options.assetId);
-    where.push(`asset_id = $${values.length}::uuid`);
-  }
-  const result = await client.query<DbRow>(
-    `select * from rbi_cases where ${where.join(" and ")} order by created_at desc limit 1`,
-    values,
-  );
-  return result.rows[0];
-}
-
-function duplicateTriggerResponse(
-  res: ApiResponse,
-  duplicate: DbRow,
-  message: string,
-): void {
-  res.status(409).json({
-    error: {
-      code: "RBI_DUPLICATE_TRIGGER_BLOCKED",
-      message,
-      existing_case: mapRbiCase(duplicate),
-    },
-  });
-}
-
-async function finalizeRbiCase(
-  req: Request,
-  res: ApiResponse,
-  next: NextFunction,
-  finalStatus: "approved" | "exported" | "closed",
-  eventType: string,
-  options: { requireComment?: boolean } = {},
-): Promise<void> {
-  if (rejectAiApproval(req, res)) return;
-  if (!hasSeniorAuthority(req)) {
-    res.status(403).json({
-      error: {
-        code: "RBI_FINALIZATION_REQUIRES_SENIOR_ENGINEER",
-        message:
-          "RBI approval, export, and close actions require senior_engineer or admin role.",
-      },
-    });
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
     return;
   }
-
-  const caseId = req.params.caseId;
-  if (!caseId) {
-    validationError(res, "caseId", "caseId is required.");
+  const normalized = normalizeManualBody(req.body);
+  if (!normalized.assetId) {
+    validationError(res, 'asset_id', 'asset_id is required.');
     return;
   }
-  const body = isPlainObject(req.body) ? req.body : {};
-  const comment = asString(
-    body.comment ?? body.approval_comment ?? body.closure_comment,
-  );
-  if (options.requireComment && !comment) {
-    validationError(
-      res,
-      "comment",
-      "A comment or closure reason is required for this RBI finalization action.",
-    );
+  if (!isStatus(normalized.status)) {
+    validationError(res, 'status', `status must be one of ${RBI_STATUSES.join(', ')}.`);
+    return;
+  }
+  if (['approved', 'exported', 'closed'].includes(normalized.status)) {
+    validationError(res, 'status', 'Use the RBI approval endpoint for approved/exported/closed workflow states.', 'RBI_APPROVAL_ENDPOINT_REQUIRED');
     return;
   }
 
   const client = await pool.connect();
   try {
-    await client.query("begin");
-    const before = await loadRbiCase(client, caseId);
-    if (!before) {
-      await client.query("rollback");
-      res
-        .status(404)
-        .json({
-          error: { code: "RBI_CASE_NOT_FOUND", message: "RBI case not found." },
-        });
+    await client.query('begin');
+    if (!(await assetExists(client, normalized.assetId))) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'ASSET_NOT_FOUND', message: 'Asset not found.' } });
       return;
     }
-    const approver = await resolveUserId(client, req);
-    const result = await client.query<DbRow>(
-      `update rbi_cases
-       set status = $2,
-           approver = $3,
-           approved_at = coalesce(approved_at, now()),
-           updated_by = $3,
-           updated_at = now()
-       where id = $1
-       returning *`,
-      [before.id, finalStatus, approver],
-    );
-    const updated = result.rows[0];
-    const auditLogId = await writeAudit(
-      client,
-      req,
-      eventType,
-      "rbi_case",
-      String(updated?.id ?? before.id),
-      mapRbiCase(before),
-      mapRbiCase(updated),
-      {
-        module: "rbi_interface_detail_workflow",
-        final_status: finalStatus,
-        comment: comment ?? null,
-        quantitative_api_581_not_implemented: true,
-      },
-    );
-    await client.query("commit");
-    res.json({ data: mapRbiCase(updated), auditLogId });
+    const evidenceIds = evidenceIdsFromLinks(normalized.evidenceLinks);
+    const evidenceValidation = await validateEvidenceFilesForAsset(client, normalized.assetId, evidenceIds);
+    if (!evidenceValidation.ok) {
+      await client.query('rollback');
+      crossAssetEvidenceError(res, evidenceValidation.invalidIds);
+      return;
+    }
+    const caseInput: RbiCaseInput = {
+      ...normalized,
+      assetId: normalized.assetId,
+      status: normalized.status
+    };
+    const created = await insertRbiCase(client, req, caseInput);
+    const auditLogId = await writeAudit(client, req, 'RBI_CASE_CREATED', 'rbi_case', String(created.id), null, mapRbiCase(created), {
+      module: 'rbi_interface_trigger_workflow',
+      manual_create: true,
+      quantitative_api_581_not_implemented: true
+    });
+    await client.query('commit');
+    res.status(201).json({ data: mapRbiCase(created), auditLogId });
   } catch (error) {
-    await client.query("rollback");
+    await client.query('rollback');
     next(error);
   } finally {
     client.release();
   }
+});
+
+function warningCodesFromRows(rows: DbRow[]): string[] {
+  return rows
+    .map((row) => asString(row.warning_code))
+    .filter((code): code is string => Boolean(code && TRIGGER_WARNING_CODES.has(code)));
+}
+
+function riskCategoryFromWarnings(warningCodes: string[], rule: DbRow | undefined): string {
+  if (rule && asString(rule.default_risk_category)) return String(rule.default_risk_category);
+  if (warningCodes.includes('LOW_REMAINING_LIFE')) return 'high';
+  if (warningCodes.includes('HIGH_CORROSION_RATE')) return 'medium_high';
+  if (warningCodes.includes('REPEATED_ANOMALY')) return 'medium';
+  return 'screening_required';
 }
 
 rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.create'), async (req, res, next) => {
-    if (!isPlainObject(req.body)) {
-      validationError(res, "body", "JSON object body is required.");
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+  const calculationRunId = asString(req.body.calculation_run_id);
+  if (!calculationRunId) {
+    validationError(res, 'calculation_run_id', 'calculation_run_id is required.');
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const run = await loadCalculationRunByIdentifier(client, calculationRunId);
+    if (!run) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'CALCULATION_RUN_NOT_FOUND', message: 'Calculation run not found.' } });
       return;
     }
-    const calculationRunId = asString(req.body.calculation_run_id);
-    if (!calculationRunId) {
-      validationError(
-        res,
-        "calculation_run_id",
-        "calculation_run_id is required.",
-      );
+
+    const runAssetId = asString(run.asset_id);
+    if (!runAssetId) {
+      await client.query('rollback');
+      res.status(400).json({
+        error: {
+          code: 'CALCULATION_RUN_ASSET_REQUIRED',
+          message: 'Calculation run must have asset_id before creating an RBI case.'
+        }
+      });
       return;
     }
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      const run = await loadCalculationRunByIdentifier(
-        client,
-        calculationRunId,
-      );
-      if (!run) {
-        await client.query("rollback");
-        res
-          .status(404)
-          .json({
-            error: {
-              code: "CALCULATION_RUN_NOT_FOUND",
-              message: "Calculation run not found.",
-            },
-          });
-        return;
-      }
 
-      const runAssetId = asString(run.asset_id);
-      if (!runAssetId) {
-        await client.query("rollback");
-        res.status(400).json({
-          error: {
-            code: "CALCULATION_RUN_ASSET_REQUIRED",
-            message:
-              "Calculation run must have asset_id before creating an RBI case.",
-          },
-        });
-        return;
-      }
-
-      const outputResult = await client.query<DbRow>(
-        `select * from calculation_outputs
+    const outputResult = await client.query<DbRow>(
+      `select * from calculation_outputs
        where calculation_run_id = $1
          and warning_code is not null
        order by warning_code asc, id asc`,
-        [run.id],
-      );
-      const warningCodes = warningCodesFromRows(outputResult.rows);
-      if (warningCodes.length === 0) {
-        await client.query("rollback");
-        res.status(400).json({
-          error: {
-            code: "NO_RBI_TRIGGER_WARNING_FOUND",
-            message:
-              "Calculation run does not contain configured RBI trigger warnings.",
-          },
-        });
-        return;
-      }
-      const primaryWarning = warningCodes.includes("RBI_TRIGGER_CANDIDATE")
-        ? "RBI_TRIGGER_CANDIDATE"
-        : warningCodes[0];
-      const rule = await loadTriggerRule(
-        client,
-        asString(req.body.trigger_rule_id),
-        primaryWarning,
-      );
-      const triggerRuleId =
-        asString(rule?.rule_id) ?? "RBI-TRIG-ENGINEERING-REVIEW";
-      const sourceWarningSignature = warningSignature(warningCodes);
-      const duplicate = await duplicateRbiTrigger(client, {
-        assetId: runAssetId,
-        calculationRunId: String(run.id),
-        triggerSource: "calculation_warning",
-        triggerRuleId,
-        signatureKey: "source_warning_signature",
-        signature: sourceWarningSignature,
+      [run.id]
+    );
+    const warningCodes = warningCodesFromRows(outputResult.rows);
+    if (warningCodes.length === 0) {
+      await client.query('rollback');
+      res.status(400).json({
+        error: {
+          code: 'NO_RBI_TRIGGER_WARNING_FOUND',
+          message: 'Calculation run does not contain configured RBI trigger warnings.'
+        }
       });
-      if (duplicate) {
-        await client.query("rollback");
-        duplicateTriggerResponse(
-          res,
-          duplicate,
-          "An open RBI case already exists for this calculation warning signature.",
-        );
-        return;
-      }
-      const inputResult = await client.query<DbRow>(
-        `select source_entity_type, source_entity_id, evidence_file_id
+      return;
+    }
+    const primaryWarning = warningCodes.includes('RBI_TRIGGER_CANDIDATE') ? 'RBI_TRIGGER_CANDIDATE' : warningCodes[0];
+    const rule = await loadTriggerRule(client, asString(req.body.trigger_rule_id), primaryWarning);
+    const inputResult = await client.query<DbRow>(
+      `select source_entity_type, source_entity_id, evidence_file_id
        from calculation_inputs
        where calculation_run_id = $1
          and (source_entity_id is not null or evidence_file_id is not null)
        order by created_at
        limit 25`,
-        [run.id],
-      );
-      const evidenceLinks: RbiEvidenceLinkInput[] = inputResult.rows.flatMap(
-        (row) => {
-          const evidenceFileId = uuidOrNull(row.evidence_file_id);
-          if (!evidenceFileId) return [];
+      [run.id]
+    );
+    const evidenceLinks: RbiEvidenceLinkInput[] = inputResult.rows.flatMap((row) => {
+  const evidenceFileId = uuidOrNull(row.evidence_file_id);
+  if (!evidenceFileId) return [];
 
-          return [
-            {
-              evidence_file_id: evidenceFileId,
-              source_entity_type: asString(row.source_entity_type) ?? null,
-              source_entity_id:
-                uuidOrNull(row.source_entity_id) ??
-                asString(row.source_entity_id) ??
-                null,
-              source_calculation_run_id: String(run.id),
-            },
-          ];
-        },
-      );
-      const evidenceValidation = await validateEvidenceFilesForAsset(
-        client,
-        runAssetId,
-        evidenceIdsFromLinks(evidenceLinks),
-      );
-      if (!evidenceValidation.ok) {
-        await client.query("rollback");
-        crossAssetEvidenceError(res, evidenceValidation.invalidIds);
-        return;
-      }
-
-      const created = await insertRbiCase(client, req, {
-        assetId: runAssetId,
-        inspectionEventId: uuidOrNull(run.inspection_event_id),
-        calculationRunId: String(run.id),
-        system: asString(req.body.system) ?? "tank_integrity",
-        component: asString(req.body.component) ?? "shell",
-        damageMechanism:
-          asString(req.body.damage_mechanism) ?? "corrosion_screening",
-        probabilityDriver:
-          asString(rule?.probability_driver) ?? "calculation_warning_screening",
-        consequenceDriver:
-          asString(rule?.consequence_driver) ??
-          "consequence_placeholder_required",
-        riskCategory: riskCategoryFromWarnings(warningCodes, rule),
-        recommendedInterval:
-          asString(rule?.recommended_interval) ?? "engineer_review_required",
-        inspectionPlanReference:
-          asString(rule?.inspection_plan_reference) ??
-          "update_inspection_plan_after_rbi_review",
-        evidenceLinks,
-        inputPlaceholders: {
-          consequence_of_failure: "placeholder_required",
-          probability_of_failure: warningCodes,
-          damage_mechanism:
-            asString(req.body.damage_mechanism) ?? "corrosion_screening",
-          inspection_effectiveness: "placeholder_required",
-          fluid_service: "from_asset_or_user_input_required",
-          inventory: "placeholder_required",
-          operating_severity: "placeholder_required",
-          mitigation_controls: "placeholder_required",
-          calculation_basis:
-            "qualitative_placeholder_only_from_calculation_warning",
-          source_calculation_run_id: run.id,
-          source_warning_codes: warningCodes,
-          source_warning_signature: sourceWarningSignature,
-          source_measurements: inputResult.rows,
-        },
-        triggerSource: "calculation_warning",
-        triggerReason: `RBI trigger candidate from calculation warnings: ${warningCodes.join(", ")}`,
-        triggerRuleId,
-        status: "open",
-      });
-      const auditLogId = await writeAudit(
-        client,
-        req,
-        "RBI_CASE_CREATED_FROM_CALCULATION",
-        "rbi_case",
-        String(created.id),
-        null,
-        mapRbiCase(created),
-        {
-          module: "rbi_interface_trigger_workflow",
-          calculation_run_id: run.id,
-          warning_codes: warningCodes,
-          quantitative_api_581_not_implemented: true,
-        },
-      );
-      await client.query("commit");
-      res.status(201).json({ data: mapRbiCase(created), auditLogId });
-    } catch (error) {
-      await client.query("rollback");
-      next(error);
-    } finally {
-      client.release();
+  return [
+    {
+      evidence_file_id: evidenceFileId,
+      source_entity_type: asString(row.source_entity_type) ?? null,
+      source_entity_id: uuidOrNull(row.source_entity_id) ?? asString(row.source_entity_id) ?? null,
+      source_calculation_run_id: String(run.id)
     }
-  },
-);
+  ];
+});
 
-rbiRouter.post(
-  "/rbi/cases/from-finding-history",
-  requirePermission("rbi.interface.create"),
-  async (req, res, next) => {
-    if (!isPlainObject(req.body)) {
-      validationError(res, "body", "JSON object body is required.");
+    const created = await insertRbiCase(client, req, {
+      assetId: runAssetId,
+      inspectionEventId: uuidOrNull(run.inspection_event_id),
+      calculationRunId: String(run.id),
+      system: asString(req.body.system) ?? 'tank_integrity',
+      component: asString(req.body.component) ?? 'shell',
+      damageMechanism: asString(req.body.damage_mechanism) ?? 'corrosion_screening',
+      probabilityDriver: asString(rule?.probability_driver) ?? 'calculation_warning_screening',
+      consequenceDriver: asString(rule?.consequence_driver) ?? 'consequence_placeholder_required',
+      riskCategory: riskCategoryFromWarnings(warningCodes, rule),
+      recommendedInterval: asString(rule?.recommended_interval) ?? 'engineer_review_required',
+      inspectionPlanReference: asString(rule?.inspection_plan_reference) ?? 'update_inspection_plan_after_rbi_review',
+      evidenceLinks,
+      inputPlaceholders: {
+        consequence_of_failure: 'placeholder_required',
+        probability_of_failure: warningCodes,
+        damage_mechanism: asString(req.body.damage_mechanism) ?? 'corrosion_screening',
+        inspection_effectiveness: 'placeholder_required',
+        fluid_service: 'from_asset_or_user_input_required',
+        inventory: 'placeholder_required',
+        operating_severity: 'placeholder_required',
+        mitigation_controls: 'placeholder_required',
+        calculation_basis: 'qualitative_placeholder_only_from_calculation_warning',
+        source_calculation_run_id: run.id,
+        source_warning_codes: warningCodes,
+        source_measurements: inputResult.rows
+      },
+      triggerSource: 'calculation_warning',
+      triggerReason: `RBI trigger candidate from calculation warnings: ${warningCodes.join(', ')}`,
+      triggerRuleId: asString(rule?.rule_id) ?? 'RBI-TRIG-ENGINEERING-REVIEW',
+      status: 'open'
+    });
+    const auditLogId = await writeAudit(client, req, 'RBI_CASE_CREATED_FROM_CALCULATION', 'rbi_case', String(created.id), null, mapRbiCase(created), {
+      module: 'rbi_interface_trigger_workflow',
+      calculation_run_id: run.id,
+      warning_codes: warningCodes,
+      quantitative_api_581_not_implemented: true
+    });
+    await client.query('commit');
+    res.status(201).json({ data: mapRbiCase(created), auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+rbiRouter.patch('/rbi/cases/:caseId/status', requirePermission('rbi.interface.update'), async (req, res, next) => {
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+  const caseId = req.params.caseId;
+  const nextStatus = asString(req.body.status);
+  if (!caseId || !nextStatus || !isStatus(nextStatus)) {
+    validationError(res, 'status', `status must be one of ${RBI_STATUSES.join(', ')}.`);
+    return;
+  }
+  if (['approved', 'exported', 'closed'].includes(nextStatus)) {
+    res.status(400).json({
+      error: {
+        code: 'RBI_APPROVAL_ENDPOINT_REQUIRED',
+        message: 'Use the RBI approval endpoint for approved/exported/closed disposition states.'
+      }
+    });
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const beforeResult = await client.query<DbRow>('select * from rbi_cases where id = $1 or case_id = $1 limit 1', [caseId]);
+    const before = beforeResult.rows[0];
+    if (!before) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'RBI_CASE_NOT_FOUND', message: 'RBI case not found.' } });
       return;
     }
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      const findingId = asString(req.body.finding_id);
-      const requestedAssetId = asString(req.body.asset_id);
-      let assetId = requestedAssetId;
-      let component = asString(req.body.component) ?? null;
-
-      if (findingId) {
-        const findingResult = isUuid(findingId)
-          ? await client.query<DbRow>(
-              "select * from findings where id = $1 limit 1",
-              [findingId],
-            )
-          : await client.query<DbRow>(
-              "select * from findings where finding_code = $1 limit 1",
-              [findingId],
-            );
-        const finding = findingResult.rows[0];
-        if (!finding) {
-          await client.query("rollback");
-          res
-            .status(404)
-            .json({
-              error: {
-                code: "FINDING_NOT_FOUND",
-                message: "Finding not found for RBI repeated-anomaly trigger.",
-              },
-            });
-          return;
-        }
-        assetId = asString(finding.asset_id) ?? assetId;
-        component = component ?? asString(finding.component) ?? null;
-      }
-
-      if (!assetId) {
-        await client.query("rollback");
-        validationError(
-          res,
-          "asset_id",
-          "asset_id or finding_id is required for repeated-anomaly RBI trigger creation.",
-        );
-        return;
-      }
-      if (!(await assetExists(client, assetId))) {
-        await client.query("rollback");
-        res
-          .status(404)
-          .json({
-            error: { code: "ASSET_NOT_FOUND", message: "Asset not found." },
-          });
-        return;
-      }
-
-      const minimumOccurrences = Math.max(
-        2,
-        Math.min(10, Number(req.body.minimum_occurrences ?? 2) || 2),
-      );
-      const findingsResult = await client.query<DbRow>(
-        `select id, finding_code, title, finding_type, component, severity, status, evidence_file_id, calculation_run_id, created_at
-       from findings
-       where asset_id = $1
-         and status not in ('closed','rejected_duplicate')
-         and ($2::text is null or component = $2)
-         and (
-           status = 'linked_to_rbi_candidate'
-           or severity in ('medium','high','critical')
-           or finding_type in ('corrosion','wall_loss','pitting','crack','deformation','settlement')
-         )
-       order by created_at desc
-       limit 25`,
-        [assetId, component],
-      );
-      if (findingsResult.rows.length < minimumOccurrences) {
-        await client.query("rollback");
-        res.status(400).json({
-          error: {
-            code: "NO_REPEATED_FINDING_HISTORY",
-            message: `At least ${minimumOccurrences} relevant active findings are required before creating a repeated-anomaly RBI case. RC4-I requires at least two relevant active findings minimum.`,
-          },
-        });
-        return;
-      }
-
-      const sourceFindingSignature = findingSignature(findingsResult.rows);
-      const duplicate = await duplicateRbiTrigger(client, {
-        assetId,
-        triggerSource: "finding_history",
-        triggerRuleId: "RBI-TRIG-REPEATED-ANOMALY",
-        signatureKey: "source_finding_signature",
-        signature: sourceFindingSignature,
-      });
-      if (duplicate) {
-        await client.query("rollback");
-        duplicateTriggerResponse(
-          res,
-          duplicate,
-          "An open RBI case already exists for this repeated-anomaly finding history signature.",
-        );
-        return;
-      }
-
-      const evidenceLinks: RbiEvidenceLinkInput[] = findingsResult.rows.flatMap(
-        (finding) => {
-          const evidenceFileId = uuidOrNull(finding.evidence_file_id);
-          if (!evidenceFileId) return [];
-          return [
-            {
-              evidence_file_id: evidenceFileId,
-              source_entity_type: "finding",
-              source_entity_id: String(finding.id),
-              source_calculation_run_id: uuidOrNull(finding.calculation_run_id),
-            },
-          ];
-        },
-      );
-      const evidenceValidation = await validateEvidenceFilesForAsset(
-        client,
-        assetId,
-        evidenceIdsFromLinks(evidenceLinks),
-      );
-      if (!evidenceValidation.ok) {
-        await client.query("rollback");
-        crossAssetEvidenceError(res, evidenceValidation.invalidIds);
-        return;
-      }
-
-      const created = await insertRbiCase(client, req, {
-        assetId,
-        inspectionEventId: uuidOrNull(req.body.inspection_event_id),
-        calculationRunId: null,
-        system: asString(req.body.system) ?? "tank_integrity",
-        component: component ?? "component_from_finding_history",
-        damageMechanism:
-          asString(req.body.damage_mechanism) ?? "repeated_anomaly_screening",
-        probabilityDriver: "repeated_anomaly_screening",
-        consequenceDriver:
-          asString(req.body.consequence_driver) ??
-          "consequence_placeholder_required",
-        riskCategory: asString(req.body.risk_category) ?? "medium",
-        recommendedInterval:
-          asString(req.body.recommended_interval) ?? "engineer_review_required",
-        inspectionPlanReference:
-          asString(req.body.inspection_plan_reference) ??
-          "review_damage_mechanism_and_history",
-        evidenceLinks,
-        inputPlaceholders: {
-          consequence_of_failure: "placeholder_required",
-          probability_of_failure: "repeated_anomaly_history",
-          damage_mechanism:
-            asString(req.body.damage_mechanism) ?? "repeated_anomaly_screening",
-          inspection_effectiveness: "placeholder_required",
-          fluid_service: "from_asset_or_user_input_required",
-          inventory: "placeholder_required",
-          operating_severity: "placeholder_required",
-          mitigation_controls: "placeholder_required",
-          calculation_basis:
-            "qualitative_placeholder_only_from_finding_history",
-          source_module: "findings_anomaly_history",
-          repeated_anomaly_count: findingsResult.rows.length,
-          source_finding_signature: sourceFindingSignature,
-          source_findings: sourceFindingRows(findingsResult.rows),
-        },
-        triggerSource: "finding_history",
-        triggerReason: `Repeated anomaly trigger from findings history: ${findingsResult.rows.length} relevant active findings.`,
-        triggerRuleId: "RBI-TRIG-REPEATED-ANOMALY",
-        status: "open",
-      });
-      const auditLogId = await writeAudit(
-        client,
-        req,
-        "RBI_CASE_CREATED_FROM_FINDING_HISTORY",
-        "rbi_case",
-        String(created.id),
-        null,
-        mapRbiCase(created),
-        {
-          module: "rbi_interface_repeated_anomaly_trigger",
-          source_module: "findings_anomaly_history",
-          finding_count: findingsResult.rows.length,
-          quantitative_api_581_not_implemented: true,
-        },
-      );
-      await client.query("commit");
-      res.status(201).json({ data: mapRbiCase(created), auditLogId });
-    } catch (error) {
-      await client.query("rollback");
-      next(error);
-    } finally {
-      client.release();
-    }
-  },
-);
-
-rbiRouter.post(
-  "/rbi/cases/:caseId/review",
-  requirePermission("rbi.interface.review"),
-  async (req, res, next) => {
-    if (!isPlainObject(req.body)) {
-      validationError(res, "body", "JSON object body is required.");
-      return;
-    }
-    const caseId = req.params.caseId;
-    const requestedStatus = asString(req.body.status) ?? "ready_for_review";
-    const allowedReviewStatuses = [
-      "under_review",
-      "data_required",
-      "assessment_in_progress",
-      "ready_for_review",
-    ];
-    if (!caseId || !allowedReviewStatuses.includes(requestedStatus)) {
-      validationError(
-        res,
-        "status",
-        `review status must be one of ${allowedReviewStatuses.join(", ")}.`,
-      );
-      return;
-    }
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      const before = await loadRbiCase(client, caseId);
-      if (!before) {
-        await client.query("rollback");
-        res
-          .status(404)
-          .json({
-            error: {
-              code: "RBI_CASE_NOT_FOUND",
-              message: "RBI case not found.",
-            },
-          });
-        return;
-      }
-      const reviewer = await resolveUserId(client, req);
-      const result = await client.query<DbRow>(
-        `update rbi_cases
-       set status = $2,
-           reviewer = $3,
-           reviewed_at = now(),
-           updated_by = $3,
-           updated_at = now()
-       where id = $1
-       returning *`,
-        [before.id, requestedStatus, reviewer],
-      );
-      const updated = result.rows[0];
-      const auditLogId = await writeAudit(
-        client,
-        req,
-        "RBI_CASE_REVIEWED",
-        "rbi_case",
-        String(updated?.id ?? before.id),
-        mapRbiCase(before),
-        mapRbiCase(updated),
-        {
-          module: "rbi_interface_detail_workflow",
-          review_comment: asString(req.body.comment) ?? null,
-          quantitative_api_581_not_implemented: true,
-        },
-      );
-      await client.query("commit");
-      res.json({ data: mapRbiCase(updated), auditLogId });
-    } catch (error) {
-      await client.query("rollback");
-      next(error);
-    } finally {
-      client.release();
-    }
-  },
-);
-
-rbiRouter.patch(
-  "/rbi/cases/:caseId/status",
-  requirePermission("rbi.interface.update"),
-  async (req, res, next) => {
-    if (!isPlainObject(req.body)) {
-      validationError(res, "body", "JSON object body is required.");
-      return;
-    }
-    const caseId = req.params.caseId;
-    const nextStatus = asString(req.body.status);
-    if (!caseId || !nextStatus || !isStatus(nextStatus)) {
-      validationError(
-        res,
-        "status",
-        `status must be one of ${RBI_STATUSES.join(", ")}.`,
-      );
-      return;
-    }
-    if (["approved", "exported", "closed"].includes(nextStatus)) {
-      res.status(400).json({
-        error: {
-          code: "RBI_APPROVAL_ENDPOINT_REQUIRED",
-          message:
-            "Use the RBI approval endpoint for approved/exported/closed disposition states.",
-        },
-      });
-      return;
-    }
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      const before = await loadRbiCase(client, caseId);
-      if (!before) {
-        await client.query("rollback");
-        res
-          .status(404)
-          .json({
-            error: {
-              code: "RBI_CASE_NOT_FOUND",
-              message: "RBI case not found.",
-            },
-          });
-        return;
-      }
-      const reviewer = await resolveUserId(client, req);
-      const result = await client.query<DbRow>(
-        `update rbi_cases
+    const reviewer = await resolveUserId(client, req);
+    const result = await client.query<DbRow>(
+      `update rbi_cases
        set status = $2,
            reviewer = coalesce(reviewer, $3),
            reviewed_at = coalesce(reviewed_at, now()),
@@ -1436,58 +727,74 @@ rbiRouter.patch(
            updated_at = now()
        where id = $1
        returning *`,
-        [before.id, nextStatus, reviewer],
-      );
-      const updated = result.rows[0];
-      const auditLogId = await writeAudit(
-        client,
-        req,
-        "RBI_CASE_STATUS_UPDATED",
-        "rbi_case",
-        String(updated?.id ?? before.id),
-        mapRbiCase(before),
-        mapRbiCase(updated),
-        {
-          module: "rbi_interface_trigger_workflow",
-        },
-      );
-      await client.query("commit");
-      res.json({ data: mapRbiCase(updated), auditLogId });
-    } catch (error) {
-      await client.query("rollback");
-      next(error);
-    } finally {
-      client.release();
-    }
-  },
-);
+      [before.id, nextStatus, reviewer]
+    );
+    const updated = result.rows[0];
+    const auditLogId = await writeAudit(client, req, 'RBI_CASE_STATUS_UPDATED', 'rbi_case', String(updated?.id ?? before.id), mapRbiCase(before), mapRbiCase(updated), {
+      module: 'rbi_interface_trigger_workflow'
+    });
+    await client.query('commit');
+    res.json({ data: mapRbiCase(updated), auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
 
 rbiRouter.post('/rbi/cases/:caseId/approve', requirePermission('rbi.interface.approve'), async (req, res, next) => {
-    const requestedStatus =
-      asString(isPlainObject(req.body) ? req.body.status : undefined) ??
-      "approved";
-    const finalStatus =
-      requestedStatus === "exported" || requestedStatus === "closed"
-        ? requestedStatus
-        : "approved";
-    await finalizeRbiCase(req, res, next, finalStatus, "RBI_CASE_APPROVED");
-  },
-);
-
-rbiRouter.post(
-  "/rbi/cases/:caseId/export",
-  requirePermission("rbi.interface.export"),
-  async (req, res, next) => {
-    await finalizeRbiCase(req, res, next, "exported", "RBI_CASE_EXPORTED");
-  },
-);
-
-rbiRouter.post(
-  "/rbi/cases/:caseId/close",
-  requirePermission("rbi.interface.approve"),
-  async (req, res, next) => {
-    await finalizeRbiCase(req, res, next, "closed", "RBI_CASE_CLOSED", {
-      requireComment: true,
+  if (rejectAiApproval(req, res)) return;
+  if (!hasSeniorAuthority(req)) {
+    res.status(403).json({
+      error: {
+        code: 'RBI_APPROVAL_REQUIRES_SENIOR_ENGINEER',
+        message: 'RBI interface approval/export requires senior_engineer or admin role.'
+      }
     });
-  },
-);
+    return;
+  }
+  const caseId = req.params.caseId;
+  if (!caseId) {
+    validationError(res, 'caseId', 'caseId is required.');
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const beforeResult = await client.query<DbRow>('select * from rbi_cases where id = $1 or case_id = $1 limit 1', [caseId]);
+    const before = beforeResult.rows[0];
+    if (!before) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'RBI_CASE_NOT_FOUND', message: 'RBI case not found.' } });
+      return;
+    }
+    const approver = await resolveUserId(client, req);
+    const requestedStatus = asString(isPlainObject(req.body) ? req.body.status : undefined) ?? 'approved';
+    const finalStatus = ['approved', 'exported', 'closed'].includes(requestedStatus) ? requestedStatus : 'approved';
+    const result = await client.query<DbRow>(
+      `update rbi_cases
+       set status = $2,
+           approver = $3,
+           approved_at = now(),
+           updated_by = $3,
+           updated_at = now()
+       where id = $1
+       returning *`,
+      [before.id, finalStatus, approver]
+    );
+    const updated = result.rows[0];
+    const auditLogId = await writeAudit(client, req, 'RBI_CASE_APPROVED', 'rbi_case', String(updated?.id ?? before.id), mapRbiCase(before), mapRbiCase(updated), {
+      module: 'rbi_interface_trigger_workflow',
+      quantitative_api_581_not_implemented: true
+    });
+    await client.query('commit');
+    res.json({ data: mapRbiCase(updated), auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+

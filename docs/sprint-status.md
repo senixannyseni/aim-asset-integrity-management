@@ -403,21 +403,3 @@ Implemented RC4-H controls:
 - Frontend provides `/findings`, `/findings/[findingId]`, and `/assets/[assetId]/findings` for create/list/detail/asset-scoped UX.
 
 RC4-H adds no new engineering formulas, no calculation engine changes, no FFS/RBI trigger logic or automatic case creation, no report/approval workflow changes, no AI/n8n/service actor governance boundary weakening, and no direct n8n/database access.
-
-## RC4-I RBI Workflow Detail, Guided UI, and Duplicate Prevention
-
-Status: Implemented as RBI workflow completion package.
-
-RC4-I continues after RC4-H and closes the RBI workflow gaps without reopening RC3 or RC4-A through RC4-H.
-
-Implemented RC4-I controls:
-
-- `/rbi/[caseId]` frontend detail page for RBI case summary, risk drivers, evidence lineage, finding-history source, audit link, input placeholders, and workflow actions.
-- Guided RBI create form on `/rbi`, replacing JSON-only entry for the manual case path while still showing a payload preview for developer/operator traceability.
-- Frontend actions for status update, review, approve, export, and close, with permission-aware visibility based on `/api/v1/auth/me` permissions and backend RBAC remaining authoritative.
-- `/api/v1/rbi/cases/from-finding-history` to create repeated-anomaly RBI trigger cases from RC4-H `findings` history when at least two relevant active findings exist.
-- Duplicate prevention for repeated calculation-warning triggers using `source_warning_signature` and repeated finding-history triggers using `source_finding_signature`.
-- Explicit review/export/close backend endpoints with audit events: `RBI_CASE_REVIEWED`, `RBI_CASE_EXPORTED`, and `RBI_CASE_CLOSED`.
-- Richer display-only risk matrix on list/detail pages, clearly labelled as qualitative/semi-quantitative placeholder unless approved Formula Registry rules exist.
-
-RC4-I adds no database migration and no new engineering formulas. It does not implement quantitative API RP 581 probability/consequence formulas, does not auto-create final integrity decisions, does not issue reports, does not approve calculations, and does not weaken AI/n8n/service-actor governance boundaries.

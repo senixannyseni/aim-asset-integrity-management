@@ -635,7 +635,7 @@ RBAC seed data is aligned with `apps/api/src/rbac/roles.ts` through Sprint 8. De
 | id | uuid | yes | PK | Internal rule identifier. |
 | rule_id | text | yes | unique | Configured trigger rule code. |
 | rule_name | text | yes |  | Human-readable rule name. |
-| trigger_source_type | text | yes |  | `calculation_warning`, `finding_history`, or `engineering_review`. |
+| trigger_source_type | text | yes |  | `calculation_warning` or `engineering_review`. |
 | warning_codes | text[] | yes |  | Deterministic calculation warning codes that may create RBI case. |
 | probability_driver | text | yes |  | Qualitative/semi-quantitative placeholder driver. |
 | consequence_driver | text | yes |  | Consequence placeholder driver. |
@@ -664,7 +664,7 @@ RBAC seed data is aligned with `apps/api/src/rbac/roles.ts` through Sprint 8. De
 | inspection_plan_reference | text | yes |  | Inspection plan reference placeholder. |
 | evidence_links | jsonb | yes |  | Supporting evidence snapshot. Evidence is also linked through evidence_links table. |
 | input_placeholders | jsonb | yes |  | Consequence of failure, probability of failure, damage mechanism, inspection effectiveness, fluid service, inventory, operating severity, and mitigation controls placeholders. |
-| trigger_source | text | yes |  | `calculation_warning`, `finding_history`, or `engineering_review`. |
+| trigger_source | text | yes |  | `calculation_warning` or `engineering_review`. |
 | trigger_reason | text | yes |  | Trigger explanation. |
 | trigger_rule_id | text | yes |  | RBI trigger rule used. |
 | calculation_basis | text | yes |  | Clearly states placeholder basis. |
@@ -690,18 +690,6 @@ RBI interface cases are governance records aligned to API RP 580/581 workflow ne
 - `evidence_links` may link `evidence_files` to `rbi_case` records after same-asset validation.
 - Quantitative API RP 581 probability/consequence/risk rules are not implemented or embedded.
 - Future quantitative RBI must use approved Formula Registry metadata and a controlled executor.
-
-
-
-## RC4-I RBI Workflow Detail and Repeated-Anomaly Trigger Notes
-
-RC4-I does not add new database columns. It uses the existing `rbi_cases`, `rbi_trigger_rules`, `findings`, `calculation_runs`, `calculation_inputs`, `calculation_outputs`, `evidence_files`, `evidence_links`, and `audit_logs` structures.
-
-- `/api/v1/rbi/cases/from-calculation` now stores `input_placeholders.source_warning_signature` and blocks duplicate open RBI cases for the same calculation-run / trigger-rule / warning-signature combination.
-- `/api/v1/rbi/cases/from-finding-history` uses RC4-H `findings` rows as the repeated-anomaly source, stores `input_placeholders.source_finding_signature`, stores source finding snapshots, and blocks duplicate open RBI cases for the same repeated-finding signature.
-- RBI review, approve, export, and close actions update existing workflow fields and write audit logs; closure requires a comment/reason.
-- `finding_history` is a trigger source only. It does not automatically approve engineering data, calculations, reports, FFS cases, or final integrity decisions.
-- Risk matrix display remains qualitative/semi-quantitative placeholder metadata unless future licensed Formula Registry rules are supplied and approved.
 
 
 ## Sprint 8.5 Evidence Linkage and Security Boundary Hardening Notes

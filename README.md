@@ -613,18 +613,3 @@ RC4-H adds a controlled place for engineers to record inspection, NDT, calculati
 Findings are traceable engineering records linked to assets, evidence, NDT, calculations, and validation where available. Critical findings require governance controls before closure. Finding closure does not approve engineering data, issue reports, create FFS/RBI cases, or make final integrity decisions.
 
 RC4-H introduces no engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculation content, no FFS/RBI case automation, no calculation engine changes, no Formula Registry changes, no AI/n8n/service actor authority expansion, and no direct n8n/database access.
-
-## RC4-I RBI Workflow Detail, Guided UI, and Duplicate Prevention
-
-Status: Implemented as RBI workflow completion package.
-
-RC4-I adds guided RBI case creation, `/rbi/[caseId]` detail workflow, review/status/finalization actions, duplicate prevention for repeated calculation-warning triggers, and repeated-anomaly RBI trigger creation from the RC4-H findings/anomaly history module.
-
-Changed areas:
-
-- `apps/api/src/routes/rbi.ts` now exposes repeated finding-history trigger creation, review/export/close actions, same-asset evidence validation on calculation-triggered cases, and duplicate prevention for warning/finding signatures.
-- `apps/web/app/rbi/RbiInterfaceClient.tsx` now provides guided fields instead of JSON-only manual case creation, calculation-trigger and findings-history trigger forms, and a display-only qualitative risk matrix.
-- `apps/web/app/rbi/[caseId]/page.tsx` and detail client provide case-level workflow actions, evidence/source traceability, audit links, and placeholder risk driver visibility.
-- `04_API/openapi.yaml`, data dictionary, ERD, UAT, release, and source-of-truth docs are aligned to the new RBI workflow behavior.
-
-RC4-I introduces no API RP 581 quantitative formulas, no new deterministic calculation math, no report issuance automation, no final integrity decision automation, no direct n8n/database access, and no AI approval path.

@@ -44,7 +44,6 @@ erDiagram
   calculation_runs ||--o{ ffs_cases : calculation_warning_source
   calculation_runs ||--o{ rbi_cases : rbi_warning_source
   rbi_trigger_rules ||--o{ rbi_cases : configured_trigger
-  findings ||--o{ rbi_cases : repeated_anomaly_source
   ffs_trigger_rules ||--o{ ffs_cases : configured_trigger
 ```
 
@@ -69,15 +68,6 @@ FFS cases are governance trigger records aligned to API 579-1/ASME FFS-1 workflo
 `rbi_trigger_rules` stores configurable trigger mappings from deterministic calculation warning codes or engineering review triggers to qualitative placeholder probability/consequence drivers and recommended inspection-plan actions.
 
 No quantitative API RP 581 logic is represented in the ERD. Quantitative rules require future approved Formula Registry entries and a controlled executor.
-
-
-## RC4-I RBI Detail Workflow and Repeated-Anomaly Trigger ERD Addendum
-
-RC4-I introduces no new tables. The logical relationship from `findings` to `rbi_cases` is represented through `rbi_cases.input_placeholders.source_findings`, `source_finding_signature`, `trigger_source = finding_history`, and supporting `evidence_links` rows where evidence exists. This is intentionally metadata/traceability only.
-
-`calculation_runs` to `rbi_cases` duplicate prevention is represented through `calculation_run_id`, `trigger_rule_id`, and `input_placeholders.source_warning_signature`. Repeated finding duplicate prevention is represented through `asset_id`, `trigger_rule_id`, and `input_placeholders.source_finding_signature`.
-
-No quantitative API RP 581 probability/consequence equations, no automatic final integrity decision, and no report issuance logic are introduced.
 
 
 ## Sprint 9 Engineering Review and Approval Workflow
