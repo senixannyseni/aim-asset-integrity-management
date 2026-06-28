@@ -299,27 +299,17 @@ Scope should include:
 - API smoke collection for auth/evidence/extraction/calculation/report/work-order paths.
 
 Do not proceed to major new business functionality until Phase 2.0 artifacts are reviewed and the UAT path is executable.
-<<<<<<< HEAD
-=======
-
-
 ## Phase 2.1 Follow-Up: Controlled UAT Execution Support
 
 Phase 2.1 adds controlled UAT execution support on top of the Phase 2.0 readiness pack:
 
 - `db/seeds/0002_uat_sample_data.sql` provides synthetic local/UAT seed data only.
 - `docs/sample_data/uat_seed_execution_guide.md` explains how to apply and validate the seed in local/UAT only.
-- `docs/uat/uat_execution_results_template.md` provides pass/fail/blocked/not-run tracking, defect references, audit references, and sign-off fields.
+- `docs/uat/uat_execution_results_template.md` provides pass/fail/blocked/not-run tracking, defect references, and sign-off fields.
 - `docs/uat/uat_smoke_test_guide.md` provides PowerShell-oriented smoke checks.
 - `docs/uat/uat_defect_triage_guide.md` defines severity, governance defect handling, retest, and closure criteria.
 
-The UAT seed remains synthetic and local/UAT only. Production use requires operator approval, environment confirmation, backup/restore readiness, and Product Owner / Lead Engineer / IT Admin sign-off. The follow-up does not add external CMMS, full API 579/API 581, 3D processing, frontend UI, or invented API/ASME formula implementation.
-
-## Phase 2.1 Follow-Up
-
-Phase 2.1 created controlled UAT execution support, including a synthetic and local/UAT only seed, UAT execution guide, smoke test guide, defect triage guide, and UAT result template.
-
-The UAT seed is synthetic and local/UAT only. Production use requires operator approval.
+The UAT seed remains synthetic and local/UAT only. Production use requires operator approval, environment confirmation, backup/restore readiness, and Product Owner / Lead Engineer / IT Admin sign-off.
 
 Boundary confirmation:
 
@@ -330,4 +320,4 @@ Boundary confirmation:
 - no SAP/Maximo/CMMS integration
 - no 3D processing
 - no frontend UI implementation
->>>>>>> phase2-1-controlled-uat-dataset-execution
+

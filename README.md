@@ -646,3 +646,17 @@ Implemented RC4-J controls:
 - DB-backed RBAC is aligned for admin, senior_engineer, lead_engineer, and approver final approval authority; AI agents remain blocked.
 
 RC4-J adds no formulas, no API 579/API 581 quantitative logic, no report issue changes, no direct n8n/database access, and no AI finalization.
+
+## RC4-K Report Detail and Issue Readiness
+
+RC4-K adds a controlled report detail and issue-readiness workflow on top of RC4-J.
+
+Implemented RC4-K controls:
+
+- `/reports/[reportId]` detail page for report status, traceability, sections, evidence register, export artifacts, issue-readiness gates, and governed report actions.
+- `GET /api/v1/reports/{reportId}/issue-readiness` for read-only preview of report issue gates before attempting final issue.
+- Permission-aware approve, issue, export, signed-URL open, and direct evidence-link actions in the report detail UI.
+- Direct evidence-link shortcuts for the report, calculation run, and approved integrity decision targets used by the issue gate.
+- Export artifact register with checksum/status visibility for object-storage report artifacts.
+
+The readiness endpoint does not approve, issue, export, lock, or mutate reports. The existing report issue endpoint remains authoritative and continues to enforce mandatory data/evidence/calculation/review/integrity/report approval/workflow-error/comment gates. RC4-K adds no formulas, no API 579/API 581 quantitative logic, no automatic report issue, no AI/n8n finalization, no external CMMS integration, and no direct n8n/database access.
