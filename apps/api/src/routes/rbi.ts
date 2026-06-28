@@ -1491,7 +1491,17 @@ rbiRouter.patch(
         error: {
           code: "RBI_APPROVAL_ENDPOINT_REQUIRED",
           message:
-            "Use the RBI approval endpoint for approved/exported/closed disposition states.",
+            "Use the dedicated RBI approve/export/close endpoints for final disposition states.",
+        },
+      });
+      return;
+    }
+    if (nextStatus === "ready_for_review") {
+      res.status(400).json({
+        error: {
+          code: "RBI_REVIEW_ENDPOINT_REQUIRED",
+          message:
+            "Use the RBI review endpoint to record human review and mark a case ready_for_review.",
         },
       });
       return;
@@ -1512,17 +1522,15 @@ rbiRouter.patch(
           });
         return;
       }
-      const reviewer = await resolveUserId(client, req);
+      const actor = await resolveUserId(client, req);
       const result = await client.query<DbRow>(
         `update rbi_cases
        set status = $2,
-           reviewer = coalesce(reviewer, $3),
-           reviewed_at = coalesce(reviewed_at, now()),
            updated_by = $3,
            updated_at = now()
        where id = $1
        returning *`,
-        [before.id, nextStatus, reviewer],
+        [before.id, nextStatus, actor],
       );
       const updated = result.rows[0];
       const auditLogId = await writeAudit(

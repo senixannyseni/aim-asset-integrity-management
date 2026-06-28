@@ -703,6 +703,7 @@ RC4-I does not add new database columns. It uses the existing `rbi_cases`, `rbi_
 - RC4-I hardening aligns DB seed/migration RBI finalization permissions with backend/static RBAC for `lead_engineer`.
 - Approval now requires recorded human review plus `ready_for_review` status; export and close require a previously approved RBI case.
 - `/approve` approves only. Export and close must use their dedicated endpoints so export permission and closure-comment gates cannot be bypassed.
+- Status update cannot mark `ready_for_review` or write `reviewed_at`; the RBI review endpoint is required to record human review before approval.
 - `approved_at` is populated only by actual approval, not by export or close.
 - RBI case lookup uses separate UUID/text parameters and asset-scoped creation validates `asset_id` as UUID before database lookup.
 - `finding_history` is a trigger source only. It does not automatically approve engineering data, calculations, reports, FFS cases, or final integrity decisions.

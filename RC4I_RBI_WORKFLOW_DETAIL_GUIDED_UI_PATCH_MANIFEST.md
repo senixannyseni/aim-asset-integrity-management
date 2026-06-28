@@ -103,6 +103,7 @@ Implements RC4-I RBI workflow completion:
 - Changed TypeScript/TSX files passed syntax transpilation checks.
 - RC4-I hotfix confirms `lead_engineer` is accepted by the backend finalization guard when the role has `rbi.interface.approve` / `rbi.interface.export`.
 - RC4-I cleanup aligns DB migration/seed RBI finalization permissions with `lead_engineer`, enforces review-before-approval, forces export/close through dedicated endpoints, and prevents export/close from populating `approved_at`.
+- RC4-I status-update cleanup prevents generic status updates from setting `ready_for_review` or writing `reviewed_at`; the dedicated review endpoint is required for approval readiness.
 - To run in dev environment:
   - `pnpm --filter @aim/api test -- rc4-i-rbi-workflow-detail-guided-ui.test.ts`
   - `pnpm --filter @aim/api test -- rbi-workflow.test.ts`

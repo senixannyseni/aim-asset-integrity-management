@@ -48,6 +48,8 @@ describe('RBI interface trigger workflow governance', () => {
     expect(route).toContain('AI_AGENT_CANNOT_APPROVE_RBI');
     expect(route).toContain('RBI_REVIEW_REQUIRED_BEFORE_APPROVAL');
     expect(route).toContain('RBI_APPROVE_ENDPOINT_APPROVES_ONLY');
+    expect(route).toContain('RBI_REVIEW_ENDPOINT_REQUIRED');
+    expect(route).not.toContain('reviewed_at = coalesce(reviewed_at, now())');
     expect(route).toContain('rbiRouter.post(\'/rbi/cases/:caseId/approve\', requirePermission(\'rbi.interface.approve\')');
     const roles = readRepoFile('apps/api/src/rbac/roles.ts');
     const aiAgentBlock = roles.slice(roles.indexOf('ai_agent: ['), roles.indexOf(']', roles.indexOf('ai_agent: [')));

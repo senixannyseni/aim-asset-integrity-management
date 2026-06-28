@@ -68,6 +68,7 @@ Existing approval endpoint remains:
 - `POST /api/v1/rbi/cases/{caseId}/approve`
 
 Close requires a comment/reason. AI actors are blocked from approve/export/close/finalization. Senior/lead-engineer/admin finalization authority is enforced in the backend. Approval requires recorded human review and `ready_for_review` status. Export and close require prior approval, and `/approve` cannot be used to export or close a case.
+The generic status update endpoint cannot mark `ready_for_review` or backfill `reviewed_at`; the dedicated `/review` endpoint must record human review before approval.
 
 ## Frontend Controls
 

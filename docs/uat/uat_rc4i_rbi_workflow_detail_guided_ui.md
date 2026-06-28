@@ -70,6 +70,7 @@ Expected result: status/review updates succeed and audit events are written.
 7. Close the case with a closure comment through `/close`.
 
 Expected result: final actions succeed only for authorized human senior roles; approval requires recorded review, export requires prior approval/export permission, and close requires prior approval plus comment/reason.
+The generic status update endpoint must not be able to mark `ready_for_review`; use `/review` to record human review before approval.
 
 ### RC4I-UAT-06A — Finalization bypass prevention
 
