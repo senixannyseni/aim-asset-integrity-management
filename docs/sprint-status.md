@@ -26,7 +26,7 @@ AIM remains the system of record. n8n may call AIM APIs only and must not write 
 - Evidence Repository: `/api/v1/evidence`, `/api/v1/evidence/{evidenceId}/links`, `/api/v1/evidence/{evidenceId}/open`
 - NDT Data Room: `/api/v1/ndt/measurements`, `/api/v1/ndt/measurements/bulk-import`, review and approval endpoints
 - Engineering Validation: `/api/v1/engineering/data-dictionary`, `/api/v1/engineering/validate-input`
-- Formula Registry: `/api/v1/formulas`, `/api/v1/formulas/approved/{formulaId}`, version/compare/approve/deprecate/test-run endpoints
+- Formula Registry: `/api/v1/formulas`, `/api/v1/formulas/approved/{formulaId}`, version/compare/approve/deprecate/test-run endpoints, and RC4-F sync-to-executable endpoint
 - Deterministic Calculations: `/api/v1/engineering/calculate`, `/api/v1/engineering/calculations`
 - FFS Trigger Workflow: `/api/v1/ffs/cases`, `/api/v1/ffs/cases/from-calculation`, `/api/v1/ffs/cases/{caseId}/status`, `/api/v1/ffs/cases/{caseId}/close`
 - RBI Interface Workflow: `/api/v1/rbi/cases`, `/api/v1/rbi/cases/from-calculation`, `/api/v1/rbi/cases/{caseId}/status`, `/api/v1/rbi/cases/{caseId}/approve`
@@ -349,3 +349,21 @@ Implemented RC4-E controls:
 - `03_Database/data_dictionary_current.md` is expanded for asset, geometry, shell-course, material, inspection, evidence, object-storage governance, evidence linkage, NDT, validation run/history, calculation snapshot, formula version, review gate, integrity decision, report, and audit domains.
 
 RC4-E adds no backend schema, no migrations, no new formulas, no calculation engine changes, no FFS/RBI trigger logic, no AI/n8n/service actor governance changes, no approval/report/evidence/NDT behavior changes, and no governance boundary weakening. Validation remains a control/readiness layer and does not approve engineering data.
+
+
+## RC4-F Formula Registry to formula_versions Synchronization
+
+Status: Implemented as backend governance synchronization package with Formula Registry sync-status visibility.
+
+RC4-F closes the Formula Registry to executable `formula_versions` synchronization gap without reopening RC3 or RC4-A through RC4-E.
+
+Implemented RC4-F controls:
+
+- Approved/locked human-governed Formula Registry records synchronize into executable `formula_versions`.
+- Draft, under-review, rejected, retired, deprecated, superseded, inactive, or otherwise unapproved Formula Registry records cannot synchronize into executable formula versions.
+- Synchronization is idempotent and does not create duplicate executable `formula_versions` rows for the same Formula Registry record/code/version.
+- Formula approval writes `FORMULA_APPROVED` and sync writes `FORMULA_SYNCED_TO_EXECUTABLE`; sync failures write `FORMULA_SYNC_FAILED`.
+- Calculation execution remains guarded by `formula_versions`, requires explicit approved synchronized versions, writes `FORMULA_VERSION_EXECUTION_BLOCKED` when blocked, and persists formula-version snapshots.
+- Formula Registry UI shows sync status, executable formula_version_id where safe, and last synced timestamp where available.
+
+RC4-F adds no new formulas, no calculation math changes, no FFS/RBI trigger logic, no migrations, no backend schema changes, no AI/n8n/service actor governance changes, and no governance boundary weakening. Formula approval remains human-governed.

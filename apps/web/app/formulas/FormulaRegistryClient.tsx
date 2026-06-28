@@ -18,6 +18,10 @@ type FormulaRecord = {
   version: string;
   locked_flag: boolean;
   production_usable: boolean;
+  sync_status?: string | null;
+  executable_formula_version_id?: string | null;
+  executable_formula_status?: string | null;
+  last_synced_at?: string | null;
 };
 
 type ValidationIssue = { field: string; message: string; severity: string };
@@ -110,7 +114,7 @@ export default function FormulaRegistryClient() {
         <div>
           <p className="eyebrow">Sprint 5</p>
           <h1>Formula Registry</h1>
-          <p>Controlled formula metadata, versioning, approval, and placeholder test governance. No engineering formula is executed here.</p>
+          <p>RC4-F controlled formula metadata, versioning, approval, executable sync status, and placeholder test governance. No engineering formula is executed here.</p>
         </div>
         <div className="action-row">
           <Link className="secondary-button" href="/validation">Validation</Link>
@@ -167,7 +171,7 @@ export default function FormulaRegistryClient() {
           <div className="panel-heading row-between">
             <div>
               <h2>Formula Versions</h2>
-              <p>Approved or locked formulas may be queried by formula_id and version by future calculation services.</p>
+              <p>Approved or locked registry records must be synchronized to executable formula_versions before calculation services can use them.</p>
             </div>
             <div className="search-row">
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search formula" />
@@ -179,7 +183,7 @@ export default function FormulaRegistryClient() {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Formula</th><th>Version</th><th>Type</th><th>Status</th><th>Production</th><th>Action</th></tr>
+                <tr><th>Formula</th><th>Version</th><th>Type</th><th>Registry Status</th><th>Executable Sync</th><th>Action</th></tr>
               </thead>
               <tbody>
                 {loading ? (
@@ -192,7 +196,7 @@ export default function FormulaRegistryClient() {
                     <td>{formula.version}</td>
                     <td>{formula.formula_type}</td>
                     <td><span className="badge">{formula.status}</span></td>
-                    <td>{formula.production_usable ? 'usable' : 'blocked'}</td>
+                    <td><span className="badge">{formula.sync_status ?? (formula.production_usable ? 'approved_not_synchronized' : 'not_executable')}</span><br />{formula.executable_formula_version_id ? <span className="muted-text">{formula.executable_formula_version_id}</span> : <span className="muted-text">No executable formula_version</span>}</td>
                     <td><Link href={`/formulas/${encodeURIComponent(formula.formula_id)}`}>Open</Link></td>
                   </tr>
                 ))}

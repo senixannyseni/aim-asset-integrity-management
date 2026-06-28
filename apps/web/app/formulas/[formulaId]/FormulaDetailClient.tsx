@@ -35,6 +35,10 @@ type FormulaRecord = {
   locked_flag: boolean;
   production_usable: boolean;
   approval_date?: string | null;
+  sync_status?: string | null;
+  executable_formula_version_id?: string | null;
+  executable_formula_status?: string | null;
+  last_synced_at?: string | null;
 };
 
 export default function FormulaDetailClient({ formulaId }: { formulaId: string }) {
@@ -80,7 +84,12 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
 
   async function approve() {
     if (!selected) return;
-    await postAction(`/api/v1/formulas/records/${selected.record_id}/approve`, 'Formula approved and locked.');
+    await postAction(`/api/v1/formulas/records/${selected.record_id}/approve`, 'Formula approved, locked, and synchronized to executable formula_versions.');
+  }
+
+  async function syncToExecutable() {
+    if (!selected) return;
+    await postAction(`/api/v1/formulas/records/${selected.record_id}/sync-to-executable`, 'Approved formula synchronized to executable formula_versions.');
   }
 
   async function deprecate() {
@@ -109,7 +118,7 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
         <div>
           <p className="eyebrow">Formula Detail</p>
           <h1>{formulaId}</h1>
-          <p>Version approval, deprecation, comparison, and placeholder test governance.</p>
+          <p>RC4-F version approval, executable formula_versions synchronization, deprecation, comparison, and placeholder test governance.</p>
         </div>
         <Link className="secondary-button" href="/formulas">Formula Registry</Link>
       </header>
@@ -121,14 +130,14 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
           <h2>Versions</h2>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Version</th><th>Status</th><th>Type</th><th>Locked</th><th>Select</th></tr></thead>
+              <thead><tr><th>Version</th><th>Status</th><th>Type</th><th>Executable Sync</th><th>Select</th></tr></thead>
               <tbody>
                 {versions.map((version) => (
                   <tr key={version.record_id}>
                     <td>{version.version}</td>
                     <td><span className="badge">{version.status}</span></td>
                     <td>{version.formula_type}</td>
-                    <td>{version.locked_flag ? 'yes' : 'no'}</td>
+                    <td><span className="badge">{version.sync_status ?? 'not_synchronized'}</span><br />{version.executable_formula_version_id ? <span className="muted-text">{version.executable_formula_version_id}</span> : <span className="muted-text">No executable version</span>}</td>
                     <td><button className="secondary-button" type="button" onClick={() => setSelectedRecordId(version.record_id)}>Select</button></td>
                   </tr>
                 ))}
@@ -147,9 +156,13 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
               <p>Clause reference: {selected.clause_reference}</p>
               <p>Expression type: {selected.expression_type}</p>
               <p>Expression body: {selected.expression_body ?? 'Not populated'}</p>
-              <p>Production usability: {selected.production_usable ? 'approved/locked' : 'blocked'}</p>
+              <p>Registry production usability: {selected.production_usable ? 'approved/locked' : 'blocked'}</p>
+              <p>Executable sync status: <span className="badge">{selected.sync_status ?? 'not_synchronized'}</span></p>
+              <p>Executable formula_version_id: {selected.executable_formula_version_id ?? 'Not synchronized'}</p>
+              <p>Last synced: {selected.last_synced_at ?? 'Not synchronized'}</p>
               <div className="action-row">
                 <button className="primary-button" type="button" onClick={approve}>Approve</button>
+                <button className="secondary-button" type="button" onClick={syncToExecutable}>Sync to Executable</button>
                 <button className="secondary-button" type="button" onClick={deprecate}>Deprecate</button>
                 <button className="secondary-button" type="button" onClick={testRun}>Run Placeholder Test</button>
               </div>

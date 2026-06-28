@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed; RC4-E validation-by-asset, validation history, and data dictionary UX completed**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed; RC4-E validation-by-asset, validation history, and data dictionary UX completed; RC4-F Formula Registry to formula_versions synchronization completed**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, approved Formula Registry to formula_versions synchronization, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 RC4-A adds Sprint 0 foundation polish only: dedicated health endpoint tests, Sprint 0 closure checklist documentation, historical clarification that Sprint 0 had no calculation runtime at that time, role evolution notes, and seed idempotency documentation. RC4-A does not change runtime engineering calculation behavior, does not add formulas, and does not change AI, n8n, approval, report, FFS, RBI, NDT, evidence, object-storage, or frontend behavior.
 
@@ -565,3 +565,20 @@ RC4-E completes the validation-by-asset workflow, validation history visibility,
 
 Validation is a control/readiness layer. It may flag, warn, block, and route records to human review, but it does not approve engineering data and does not execute new calculations. RC4-E introduces no engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculations, no FFS/RBI trigger logic, no calculation engine changes, no AI/n8n/service actor governance changes, and no backend schema changes.
 
+
+
+## RC4-F Formula Registry to formula_versions Synchronization
+
+Status: Implemented as backend governance synchronization package with minimal Formula Registry UI status visibility.
+
+RC4-F closes the governance gap between Formula Registry approval and executable `formula_versions`. It adds/updates:
+
+- `apps/api/src/modules/formula-registry/executable-sync.ts` for deterministic, idempotent synchronization from approved/locked Formula Registry records into executable `formula_versions`.
+- `apps/api/src/routes/formulas.ts` so human-governed Formula Registry approval synchronizes to `formula_versions` in the same governed operation and exposes an explicit `POST /api/v1/formulas/records/{recordId}/sync-to-executable` action for already-approved records.
+- `apps/api/src/routes/calculations.ts` so calculation execution continues to require an approved synchronized `formula_versions` record and audit logs formula-version execution blocks.
+- Formula Registry frontend status visibility for approved-not-synchronized, synchronized-to-executable, sync failed/not executable states, executable `formula_version_id`, and last synced timestamp where available.
+- Manual UAT coverage in `docs/uat/uat_rc4f_formula_registry_sync.md` and release report in `docs/release/AIM_RC4F_formula_registry_sync_report.md`.
+
+Only approved human-governed Formula Registry records can become executable. Draft, under-review, rejected, retired, deprecated, superseded, inactive, or otherwise unapproved records cannot be synchronized into executable `formula_versions`. Synchronization is idempotent and audit logged. Calculation execution still requires an explicit approved synchronized formula version and persists formula version metadata snapshots.
+
+RC4-F introduces no new engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculation content, no FFS/RBI trigger logic, no migrations, no backend schema changes, no AI/n8n/service actor governance changes, and no direct n8n/database access.

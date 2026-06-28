@@ -4,6 +4,7 @@ import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { ENGINEERING_REVIEW_DISCLAIMER, asNumber, asString, hashInputSnapshot, runDeterministicCalculation, type DeterministicCalculationRequest, type DeterministicCalculationResult } from '../modules/calculation-engine/deterministic-engine.js';
 import type { ValidationContext } from '../modules/engineering-validation/validation-engine.js';
+import { assertFormulaVersionIsExecutable } from '../modules/formula-registry/executable-sync.js';
 
 export const calculationsRouter = Router();
 
@@ -415,19 +416,40 @@ calculationsRouter.post('/engineering/calculate', requirePermission('calculation
   try {
     await client.query('begin');
     const formula = await getApprovedFormulaVersion(client, formulaId, formulaVersion);
-    if (!formula) {
-      await client.query('rollback');
+    try {
+      assertFormulaVersionIsExecutable(formula);
+    } catch (guardrailError) {
+      await writeAudit(client, req, 'FORMULA_VERSION_EXECUTION_BLOCKED', 'formula_versions', null, null, {
+        requested_formula_id: formulaId,
+        requested_formula_version: formulaVersion,
+        reason: guardrailError instanceof Error ? guardrailError.message : 'Formula version execution blocked.'
+      }, {
+        explicit_formula_version_required: true,
+        approved_synchronized_formula_versions_required: true,
+        no_silent_formula_default: true,
+        blocked_statuses: ['missing', 'draft', 'under_review', 'retired', 'rejected', 'superseded', 'inactive']
+      });
+      await client.query('commit');
       res.status(400).json({
         error: {
           code: 'APPROVED_FORMULA_VERSION_REQUIRED',
-          message: 'Calculation requires an explicit approved or locked formula_versions record. Missing, draft, under_review, retired, rejected, and silent/default formulas cannot be used.'
+          message: 'Calculation requires an explicit approved synchronized formula_versions record. Missing, draft, under_review, retired, rejected, superseded, inactive, and silent/default formulas cannot be used.'
         }
       });
       return;
     }
 
     if (formula.formula_type !== 'universal_deterministic') {
-      await client.query('rollback');
+      await writeAudit(client, req, 'FORMULA_VERSION_EXECUTION_BLOCKED', 'formula_versions', String(formula.formula_version_id ?? ''), null, {
+        requested_formula_id: formulaId,
+        requested_formula_version: formulaVersion,
+        formula_type: formula.formula_type,
+        reason: 'Non-deterministic formula type blocked from deterministic calculation engine.'
+      }, {
+        deterministic_engine_requires_universal_deterministic_formula: true,
+        approved_synchronized_formula_versions_required: true
+      });
+      await client.query('commit');
       res.status(400).json({
         error: {
           code: 'NON_DETERMINISTIC_FORMULA_BLOCKED',
