@@ -254,7 +254,7 @@ export default function ReportsClient() {
               const canIssue = report.report_status === 'approved' && Boolean(approvedDecision) && !report.locked_flag;
               return (
                 <tr key={report.report_id}>
-                  <td>{report.report_code}<br />{report.report_title}</td>
+                  <td><Link href={`/reports/${report.report_id}`}>{report.report_code}</Link><br />{report.report_title}</td>
                   <td>{report.report_status === 'draft' ? 'DRAFT — NOT APPROVED' : report.report_status}{report.locked_flag ? ' / locked' : ''}</td>
                   <td>{report.calculation_run_id}</td>
                   <td>{approvedDecision?.decision_code ?? approvedDecision?.integrity_decision_id ?? 'missing approved decision'}</td>
@@ -264,7 +264,7 @@ export default function ReportsClient() {
                     <button type="button" disabled={!approvedDecision} onClick={() => approvedDecision && linkEvidence('integrity_decision', approvedDecision.integrity_decision_id)}>Link integrity_decision</button>
                   </td>
                   <td>
-                    <button type="button" onClick={() => setSelected(report as unknown as Record<string, unknown>)}>View</button>
+                    <Link href={`/reports/${report.report_id}`}>Detail</Link>
                     <button type="button" disabled={report.report_status === 'issued'} onClick={() => approveReport(report.report_id)}>Approve</button>
                     <button type="button" disabled={!canIssue} onClick={() => issueReport(report.report_id)}>Issue</button>
                     <button type="button" onClick={() => createReportExport(report.report_id, 'json')}>Export JSON</button>

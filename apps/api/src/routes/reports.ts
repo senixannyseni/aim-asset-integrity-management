@@ -718,6 +718,55 @@ reportsRouter.get('/reports/:reportId', requirePermission('report.read'), async 
   }
 });
 
+reportsRouter.get('/reports/:reportId/issue-readiness', requirePermission('report.read'), async (req, res, next) => {
+  const reportId = req.params.reportId;
+  if (!isUuid(reportId)) {
+    validationError(res, 'reportId', 'reportId must be a UUID.');
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    const reportResult = await client.query<DbRow>('select * from reports where id = $1', [reportId]);
+    const report = reportResult.rows[0];
+    if (!report) {
+      res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
+      return;
+    }
+    const context = await loadReportGateContext(client, report);
+    const gates = buildReportGateChecklist(context, false);
+    const blockingGates = gates.filter((item) => item.blocking && item.gate_status !== 'pass');
+    const blockingGatesExcludingIssueComment = blockingGates.filter((item) => item.gate_type !== 'approver_comment_present');
+    res.json({
+      data: {
+        report: mapReport(report),
+        ready_to_issue: blockingGates.length === 0,
+        ready_to_issue_after_comment: blockingGatesExcludingIssueComment.length === 0,
+        blocking_gate_count: blockingGates.length,
+        blocking_gate_count_excluding_issue_comment: blockingGatesExcludingIssueComment.length,
+        issue_comment_required: true,
+        gates,
+        blocking_gates: blockingGates,
+        evidence_counts: {
+          total: context.evidenceCount,
+          report: context.reportEvidenceCount,
+          calculation_run: context.calculationRunEvidenceCount,
+          calculation_input: context.calculationInputEvidenceCount,
+          integrity_decision: context.integrityDecisionEvidenceCount
+        },
+        linked_context: {
+          calculation_run_id: asString(context.calculation?.id) ?? null,
+          integrity_decision_id: asString(context.integrityDecision?.id) ?? null,
+          approved_integrity_decision_id: asString(context.approvedIntegrityDecision?.id) ?? null
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
 reportsRouter.get('/reports/:reportId/exports', requirePermission('report.read'), async (req, res, next) => {
   const reportId = req.params.reportId;
   if (!isUuid(reportId)) {

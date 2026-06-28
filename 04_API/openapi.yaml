@@ -1952,6 +1952,38 @@ paths:
       - bearerAuth: []
       x-audit-event-generated: none
       x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+  /api/v1/reports/{reportId}/issue-readiness:
+    get:
+      summary: Preview report issue readiness gates without mutating report state
+      description: RC4-K read-only report issue readiness endpoint. It returns the same gate model used by report issue, including direct evidence counts for report, calculation_run, and approved integrity_decision. The issue endpoint remains authoritative and still requires an issue_comment.
+      x-permission-required: report.read
+      x-audit-event-generated: none
+      parameters:
+      - in: path
+        name: reportId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Report issue readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReportIssueReadiness'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+      - Reports
+      security:
+      - bearerAuth: []
+      x-human-review-required: true
+      x-evidence-link-required: true
+      x-source-of-truth-boundary: Read-only readiness preview only. It does not approve, issue, export, lock, or mutate a report. AIM backend issue endpoint remains authoritative.
   /api/v1/reports/{reportId}/approve:
     post:
       summary: Approve generated report
@@ -4428,6 +4460,60 @@ components:
           - unresolved_critical_warnings_absent
           - workflow_errors_resolved
           - approver_comment_present
+    ReportIssueReadiness:
+      type: object
+      description: Read-only RC4-K report issue readiness preview. Backend issue remains authoritative and requires a human issue comment.
+      properties:
+        report:
+          $ref: '#/components/schemas/GeneratedReport'
+        ready_to_issue:
+          type: boolean
+          description: True only when all gates pass, including approver_comment_present.
+        ready_to_issue_after_comment:
+          type: boolean
+          description: True when all blocking gates except the runtime issue comment gate pass.
+        blocking_gate_count:
+          type: integer
+        blocking_gate_count_excluding_issue_comment:
+          type: integer
+        issue_comment_required:
+          type: boolean
+        gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportGateChecklistItem'
+        blocking_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportGateChecklistItem'
+        evidence_counts:
+          type: object
+          properties:
+            total:
+              type: integer
+            report:
+              type: integer
+            calculation_run:
+              type: integer
+            calculation_input:
+              type: integer
+            integrity_decision:
+              type: integer
+        linked_context:
+          type: object
+          properties:
+            calculation_run_id:
+              type: string
+              format: uuid
+              nullable: true
+            integrity_decision_id:
+              type: string
+              format: uuid
+              nullable: true
+            approved_integrity_decision_id:
+              type: string
+              format: uuid
+              nullable: true
     ReportGateChecklistItem:
       type: object
       description: Includes required data, per-entity evidence, calculation, review, integrity decision, report approval, workflow-error, and approver-comment gates.

@@ -439,3 +439,17 @@ RC4-J closes Engineering Review and Approval UI gaps after RC4-I:
 - Aligned DB-backed approval permissions for senior_engineer, lead_engineer, approver, and admin while preserving AI-agent denial.
 
 RC4-J does not add formulas, final integrity decisions, report issue changes, quantitative RBI/FFS logic, external CMMS integration, or direct n8n/database access.
+
+## RC4-K Report Detail and Issue Readiness
+
+Status: Implemented as report issue UX and read-only readiness preview package.
+
+RC4-K closes the report workflow UX gap after RC4-J:
+
+- Added `/reports/[reportId]` detail page for report status, traceability, sections, evidence register, export artifacts, issue readiness gates, and direct evidence-link shortcuts.
+- Added `GET /api/v1/reports/{reportId}/issue-readiness` as a read-only preview of report issue gates.
+- Readiness preview reports `ready_to_issue`, `ready_to_issue_after_comment`, blocking gates, direct evidence counts, and linked context IDs for calculation run and approved integrity decision.
+- Report detail actions for approve, issue, export, signed URL open, and evidence link are permission-aware while backend RBAC remains authoritative.
+- Existing `POST /api/v1/reports/{reportId}/issue` remains the only authoritative report issue action and continues to write gate/audit/error records.
+
+RC4-K does not add formulas, report content formula expansion, automatic report approval/issue, AI/n8n/service finalization, external CMMS integration, or direct n8n/database access.
