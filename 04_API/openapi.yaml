@@ -3571,7 +3571,7 @@ components:
       type: object
       required:
       - review_id
-      description: Approval requests must reference a completed engineering review. entity_type/entity_id are optional cross-check fields and must match the linked review when provided. calculation_run_id is an optional calculation-context cross-check and must match the linked review calculation context when supplied. Approval records store the linked review checklist snapshot; clients cannot override that snapshot.
+      description: Approval requests must reference a completed engineering review. entity_type/entity_id, asset_id, and calculation_run_id are optional cross-check fields and must match the linked review context when provided. Approval records store the linked review asset/calculation context and checklist snapshot; clients cannot override that snapshot.
       properties:
         review_id:
           type: string
@@ -3583,6 +3583,10 @@ components:
           type: string
           format: uuid
           description: Optional cross-check; must match the linked reviewed engineering review when supplied.
+        asset_id:
+          type: string
+          format: uuid
+          description: Optional asset-context cross-check; must match the linked reviewed engineering review asset context when supplied.
         calculation_run_id:
           type: string
           format: uuid
@@ -3602,7 +3606,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
-          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
+          description: Calculation run to use as the source for draft report generation.
         report_title:
           type: string
         output_formats:

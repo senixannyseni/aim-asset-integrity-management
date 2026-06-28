@@ -92,3 +92,7 @@ Approval request creation now always snapshots the linked reviewed checklist fro
 ## RC4-J approval context cross-check hotfix
 
 Approval request creation now treats `entity_type`/`entity_id` and `calculation_run_id` as separate optional cross-checks. `calculation_run_id` is treated as a calculation-context cross-check only; it is no longer used as a fallback `entity_id`. The approval record stores the calculation context resolved from the linked reviewed engineering review, preventing valid non-calculation reviews from being rejected and preventing client-supplied calculation context drift.
+
+## Final hotfix addendum: review context source of truth
+
+Approval records now store asset and calculation context from the linked completed engineering review, not from client-supplied request fields. Optional `asset_id` and `calculation_run_id` values in approval request payloads are treated only as cross-checks. This prevents context drift and keeps `review_id` as the canonical approval source of truth.

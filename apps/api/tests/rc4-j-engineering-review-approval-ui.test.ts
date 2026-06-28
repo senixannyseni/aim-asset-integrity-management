@@ -59,9 +59,12 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");
     expect(route).toContain('ENGINEERING_REVIEW_REVISION_CREATED');
     expect(route).toContain('JSON.stringify(normalizeChecklist(review.checklist_json))');
+    expect(route).toContain('APPROVAL_REVIEW_ASSET_CONTEXT_MISMATCH');
     expect(route).toContain('APPROVAL_REVIEW_CALCULATION_CONTEXT_MISMATCH');
     expect(route).toContain('const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId);');
-    expect(route).toContain('const expectedCalculationRunId = context.calculationRunId ?? (entityType === \'calculation_run\' ? entityId : null);');
+    expect(route).toContain('const linkedReviewCalculationRunId = uuidOrNull(review.calculation_run_id);');
+    expect(route).toContain("const expectedCalculationRunId = linkedReviewCalculationRunId ?? context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null);");
+    expect(route).toContain('const expectedAssetId = linkedReviewAssetId ?? context.assetId;');
     expect(route).not.toContain('isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json)');
     expect(route).toContain('for update');
     expect(route).toContain('parent_comment_id');
@@ -95,6 +98,7 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(openapi).toContain('Controlled override approval payload');
     expect(openapi).toContain('Approval requests must reference a completed engineering review');
     expect(openapi).toContain('clients cannot override that snapshot');
+    expect(openapi).toContain('asset_id, and calculation_run_id are optional cross-check fields');
     expect(openapi).not.toContain(`        checklist:
           type: object
         approval_comment:`);

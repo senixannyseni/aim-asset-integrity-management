@@ -725,7 +725,17 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
       res.status(404).json({ error: { code: 'APPROVAL_ENTITY_NOT_FOUND', message: 'Approval target was not found.' } });
       return;
     }
-    const expectedCalculationRunId = context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null);
+    const linkedReviewAssetId = uuidOrNull(review.asset_id);
+    const expectedAssetId = linkedReviewAssetId ?? context.assetId;
+    const requestedAssetId = uuidOrNull(req.body.asset_id ?? req.body.assetId);
+    if (requestedAssetId && expectedAssetId && requestedAssetId !== expectedAssetId) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'APPROVAL_REVIEW_ASSET_CONTEXT_MISMATCH', message: 'Approval request asset_id must match the linked reviewed engineering review asset context.' } });
+      return;
+    }
+
+    const linkedReviewCalculationRunId = uuidOrNull(review.calculation_run_id);
+    const expectedCalculationRunId = linkedReviewCalculationRunId ?? context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null);
     const requestedCalculationRunId = uuidOrNull(req.body.calculation_run_id ?? req.body.calculationRunId);
     if (requestedCalculationRunId && requestedCalculationRunId !== expectedCalculationRunId) {
       await client.query('rollback');
@@ -748,7 +758,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
         reviewId,
         entityType,
         entityId,
-        uuidOrNull(req.body.asset_id) ?? context.assetId,
+        expectedAssetId,
         expectedCalculationRunId,
         asString(req.body.approval_type ?? req.body.approvalType) ?? 'final_result',
         actorUserId(req),
