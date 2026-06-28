@@ -50,6 +50,8 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");
     expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
     expect(route).toContain('APPROVAL_NOT_SUBMITTED');
+    expect(route).toContain('REVIEW_MUTATION_STATE_LOCKED');
+    expect(route).toContain('normalizeChecklist(review.checklist_json)');
   });
 
   it('locks calculation runs after senior approval and exposes full audit trail from calculation detail', () => {

@@ -58,3 +58,8 @@ Final-state immutability was hardened so approved, rejected, and locked review/a
 ## RC4-J Review Completion Gate Hotfix
 
 Review completion was hardened so new review and revision records cannot be created directly in `reviewed` or `submitted_for_approval` status. Approval requests now require a reviewed engineering review with `reviewed_at` recorded by the structured checklist status workflow, and the checklist is revalidated before approval request creation.
+
+
+## Submitted Review Lock Addendum
+
+Final review hardening blocks generic status/comment mutation once a review has been submitted for approval. The `submitted_for_approval` transition is controlled only by approval request creation, and approval records snapshot the reviewed checklist basis when created.

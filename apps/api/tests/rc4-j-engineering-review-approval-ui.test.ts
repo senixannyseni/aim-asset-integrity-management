@@ -48,7 +48,9 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(route).toContain('APPROVAL_REVIEW_ENTITY_MISMATCH');
     expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
     expect(route).toContain('REVIEW_STATUS_TRANSITION_REQUIRED');
-    expect(route).toContain("['approved', 'rejected', 'locked'].includes(status)");
+    expect(route).toContain("['submitted_for_approval', 'approved', 'rejected', 'locked'].includes(status)");
+    expect(route).toContain('REVIEW_MUTATION_STATE_LOCKED');
+    expect(route).toContain('isReviewMutationLocked');
     expect(route).toContain("['reviewed', 'submitted_for_approval', 'approved', 'rejected', 'locked'].includes(reviewStatus)");
     expect(route).toContain("['reviewed', 'submitted_for_approval', 'approved', 'rejected', 'locked'].includes(status)");
     expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");

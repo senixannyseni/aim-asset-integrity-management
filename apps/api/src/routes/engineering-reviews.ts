@@ -26,6 +26,7 @@ const REVIEW_STATUSES = [
 const REVIEW_ENTITY_TYPES = ['asset', 'calculation_run', 'ndt_measurement', 'ffs_case', 'rbi_case', 'finding'] as const;
 const FINAL_REVIEW_STATUSES = ['approved', 'rejected', 'locked'] as const;
 const FINAL_APPROVAL_STATUSES = ['approved', 'rejected', 'locked'] as const;
+const REVIEW_MUTATION_LOCKED_STATUSES = ['submitted_for_approval', 'approved', 'rejected', 'locked'] as const;
 
 type ReviewStatus = typeof REVIEW_STATUSES[number];
 
@@ -77,6 +78,11 @@ function isFinalReviewState(row: DbRow | undefined): boolean {
 function isFinalApprovalState(row: DbRow | undefined): boolean {
   if (!row) return false;
   return row.locked_flag === true || (FINAL_APPROVAL_STATUSES as readonly string[]).includes(String(row.approval_status ?? ''));
+}
+
+function isReviewMutationLocked(row: DbRow | undefined): boolean {
+  if (!row) return false;
+  return row.locked_flag === true || (REVIEW_MUTATION_LOCKED_STATUSES as readonly string[]).includes(String(row.review_status ?? ''));
 }
 
 function actorUserId(req: Request): string | null {
@@ -433,8 +439,8 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
     validationError(res, 'review_status', `review_status must be one of ${REVIEW_STATUSES.join(', ')}.`);
     return;
   }
-  if (['approved', 'rejected', 'locked'].includes(status)) {
-    validationError(res, 'review_status', 'Use approval_records endpoints for approved, rejected, or locked status.', 'APPROVAL_ENDPOINT_REQUIRED');
+  if (['submitted_for_approval', 'approved', 'rejected', 'locked'].includes(status)) {
+    validationError(res, 'review_status', 'Use approval_records endpoints for submitted_for_approval, approved, rejected, or locked status.', 'APPROVAL_ENDPOINT_REQUIRED');
     return;
   }
 
@@ -451,9 +457,9 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
       res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
       return;
     }
-    if (isFinalReviewState(before)) {
+    if (isReviewMutationLocked(before)) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'FINAL_REVIEW_STATE_LOCKED', message: 'Approved, rejected, or locked review records cannot be edited. Create a new revision.' } });
+      res.status(409).json({ error: { code: 'REVIEW_MUTATION_STATE_LOCKED', message: 'Submitted-for-approval, approved, rejected, or locked review records cannot be edited through status/comment routes. Approve, reject, or create a new revision.' } });
       return;
     }
     const nextChecklist = isPlainObject(req.body.checklist) ? req.body.checklist : before.checklist_json;
@@ -538,9 +544,9 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
       res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
       return;
     }
-    if (isFinalReviewState(before)) {
+    if (isReviewMutationLocked(before)) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'FINAL_REVIEW_STATE_LOCKED', message: 'Approved, rejected, or locked review records cannot be edited. Create a new revision.' } });
+      res.status(409).json({ error: { code: 'REVIEW_MUTATION_STATE_LOCKED', message: 'Submitted-for-approval, approved, rejected, or locked review records cannot be edited through status/comment routes. Approve, reject, or create a new revision.' } });
       return;
     }
     const result = await client.query<DbRow>(
@@ -740,7 +746,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
         asString(req.body.approval_type ?? req.body.approvalType) ?? 'final_result',
         actorUserId(req),
         asString(req.body.approval_comment ?? req.body.comment) ?? null,
-        JSON.stringify(normalizeChecklist(req.body.checklist))
+        JSON.stringify(isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json))
       ]
     );
     const created = result.rows[0];

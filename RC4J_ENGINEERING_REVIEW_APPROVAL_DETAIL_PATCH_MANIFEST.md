@@ -71,3 +71,8 @@ Final-state immutability was hardened so approved, rejected, and locked review/a
 ## RC4-J Review Completion Gate Hotfix
 
 Review completion was hardened so new reviews/revisions cannot be created directly as `reviewed` or `submitted_for_approval`. Completion must pass through the structured checklist status workflow, and approval requests require both `review_status = reviewed` and a recorded `reviewed_at` timestamp.
+
+
+## RC4-J Submitted Review Mutation Lock Hotfix
+
+Approval-submitted review records are now immutable through generic review status/comment routes. `submitted_for_approval` can only be set by creating an approval request, while `approved`, `rejected`, and `locked` remain restricted to approval-record finalization endpoints. Approval records also snapshot the reviewed checklist when no checklist is supplied in the approval request body.

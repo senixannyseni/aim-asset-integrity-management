@@ -50,3 +50,8 @@ Additional negative UAT cases:
 - Attempt to create a new engineering review directly with `review_status = submitted_for_approval`; expected: blocked with `REVIEW_STATUS_TRANSITION_REQUIRED`.
 - Attempt to create a new revision directly with `review_status = reviewed`; expected: blocked with `REVISION_START_STATUS_INVALID`.
 - Attempt to create an approval request for a review where `review_status = reviewed` but `reviewed_at` is missing; expected: blocked with `REVIEW_COMPLETION_REQUIRED`.
+
+
+## Submitted Review Lock Addendum
+
+Final review hardening blocks generic status/comment mutation once a review has been submitted for approval. The `submitted_for_approval` transition is controlled only by approval request creation, and approval records snapshot the reviewed checklist basis when created.
