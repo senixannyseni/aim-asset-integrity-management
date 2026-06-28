@@ -2,6 +2,15 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { hasPermission } from '../rbac/roles.js';
+
+function canCloseFinding(req: Request): boolean {
+  return Boolean(
+    req.user?.permissions?.includes('finding.close') ||
+      hasPermission(req.user?.roles ?? [], 'finding.close')
+  );
+}
+
 
 export const findingsRouter = Router();
 
@@ -519,6 +528,19 @@ findingsRouter.patch('/findings/:findingId', requirePermission('finding.update')
     const closing = (status === 'closed' || status === 'resolved') && before.status !== status;
     const closureReason = nullIfEmpty(body.closure_reason) ?? (before.closure_reason as string | null);
     if (closing) {
+      if (!canCloseFinding(req)) {
+        await writeAudit(client, req, 'finding.close_blocked', 'finding', String(req.params.findingId), before, null, {
+          reason: 'finding.close permission is required.'
+        });
+        await client.query('rollback');
+        res.status(403).json({
+          error: {
+            code: 'FINDING_CLOSE_PERMISSION_REQUIRED',
+            message: 'Permission required: finding.close'
+          }
+        });
+        return;
+      }
       if (isServiceActor(req)) {
         await writeAudit(client, req, 'finding.close_blocked', 'finding', String(req.params.findingId), before, null, { reason: 'AI/n8n/service actors cannot close findings.' });
         await client.query('rollback');
@@ -677,3 +699,4 @@ findingsRouter.delete('/findings/:findingId/links/evidence/:evidenceFileId', req
     client.release();
   }
 });
+

@@ -65,6 +65,8 @@ describe('RC4-H findings / anomaly foundation', () => {
     expect(route).toContain("requirePermission('finding.update')");
     expect(route).toContain('assertSameAssetLink');
     expect(route).toContain('CROSS_ASSET_LINK_BLOCKED');
+    expect(route).toContain('canCloseFinding');
+    expect(route).toContain('FINDING_CLOSE_PERMISSION_REQUIRED');
     expect(route).toContain('FINDING_CLOSE_BLOCKED_FOR_SERVICE_ACTOR');
     expect(route).toContain('CLOSURE_REASON_REQUIRED');
     expect(route).toContain('CRITICAL_FINDING_EVIDENCE_REQUIRED');
@@ -151,3 +153,4 @@ describe('RC4-H findings / anomaly foundation', () => {
     }
   });
 });
+
