@@ -45,3 +45,43 @@ pnpm --filter @aim/api test -- engineering-review-approval.test.ts
 pnpm -r lint
 pnpm -r test
 ```
+
+
+## Final Review Hardening Addendum
+
+The approval request flow was hardened so approval records require a reviewed `review_id`, entity context cannot be changed during approval request creation, and approved/rejected/locked review or approval records are immutable. Rejected approvals are locked and further changes require a new review revision.
+
+## RC4-J DB Final-State Lock Hotfix
+
+Final-state immutability was hardened so approved, rejected, and locked review/approval records cannot be changed through generic status routes or direct database updates. Existing final records are backfilled to `locked_flag = true` in the RC4-J migration, and final transitions remain restricted to approval-record endpoints.
+
+## RC4-J Review Completion Gate Hotfix
+
+Review completion was hardened so new review and revision records cannot be created directly in `reviewed` or `submitted_for_approval` status. Approval requests now require a reviewed engineering review with `reviewed_at` recorded by the structured checklist status workflow, and the checklist is revalidated before approval request creation.
+
+
+## Submitted Review Lock Addendum
+
+Final review hardening blocks generic status/comment mutation once a review has been submitted for approval. The `submitted_for_approval` transition is controlled only by approval request creation, and approval records snapshot the reviewed checklist basis when created.
+
+
+## RC4-J contract/UI lock cleanup
+
+- Approval request API contract requires `review_id`, matching backend validation.
+- `entity_type`/`entity_id` are optional cross-checks and must match the linked reviewed engineering review when supplied.
+- Submitted-for-approval and finalized reviews are disabled from status/checklist/comment mutation in the detail UI and blocked by backend gates.
+- Approval request and approval finalization database reads use row-level locks to reduce transition race risk.
+
+
+### RC4-J Approval Checklist Snapshot Hotfix
+Approval request creation now always snapshots the linked reviewed checklist from `engineering_reviews.checklist_json`. Client-supplied checklist payloads are ignored/removed from the create contract so approval records cannot diverge from the reviewed basis.
+
+
+## RC4-J approval context cross-check hotfix
+
+Approval request creation now treats `entity_type`/`entity_id` and `calculation_run_id` as separate optional cross-checks. `calculation_run_id` is treated as a calculation-context cross-check only; it is no longer used as a fallback `entity_id`. The approval record stores the calculation context resolved from the linked reviewed engineering review, preventing valid non-calculation reviews from being rejected and preventing client-supplied calculation context drift.
+
+
+## Final traceability hotfix
+
+Approval request creation now persists `asset_id` and `calculation_run_id` from the linked completed engineering review, with client-supplied values used only as optional cross-checks. This prevents approval context drift and supports auditable approval snapshots.

@@ -19,6 +19,8 @@ describe('Engineering review and approval workflow governance', () => {
     expect(migration).toContain('approval_record.approve');
     expect(migration).toContain('prevent_locked_engineering_review_change');
     expect(migration).toContain('prevent_locked_approval_record_change');
+    expect(migration).toContain("review_status in ('approved','rejected','locked')");
+    expect(migration).toContain("approval_status in ('approved','rejected','locked')");
   });
 
   it('registers engineering review routes in the API app', () => {
@@ -42,6 +44,22 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain('original_value');
     expect(route).toContain('override_value');
     expect(route).toContain('AI_AGENT_CANNOT_APPROVE_OR_OVERRIDE');
+    expect(route).toContain('REVIEW_ID_REQUIRED');
+    expect(route).toContain('REVIEW_STATUS_TRANSITION_REQUIRED');
+    expect(route).toContain('REVISION_START_STATUS_INVALID');
+    expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");
+    expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
+    expect(route).toContain('APPROVAL_NOT_SUBMITTED');
+    expect(route).toContain('REVIEW_MUTATION_STATE_LOCKED');
+    expect(route).toContain('JSON.stringify(normalizeChecklist(review.checklist_json))');
+    expect(route).toContain('APPROVAL_REVIEW_ASSET_CONTEXT_MISMATCH');
+    expect(route).toContain('APPROVAL_REVIEW_CALCULATION_CONTEXT_MISMATCH');
+    expect(route).toContain('const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId);');
+    expect(route).toContain('const linkedReviewCalculationRunId = uuidOrNull(review.calculation_run_id);');
+    expect(route).toContain("const expectedCalculationRunId = linkedReviewCalculationRunId ?? context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null);");
+    expect(route).toContain('const expectedAssetId = linkedReviewAssetId ?? context.assetId;');
+    expect(route).not.toContain('isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json)');
+    expect(route).toContain('for update');
   });
 
   it('locks calculation runs after senior approval and exposes full audit trail from calculation detail', () => {
@@ -62,5 +80,8 @@ describe('Engineering review and approval workflow governance', () => {
     expect(openapi).toContain('/approval-records:');
     expect(openapi).toContain('/approval-records/{approvalId}/approve:');
     expect(openapi).toContain('x-permission-required: approval_record.approve');
+    expect(openapi).toContain('Approval requests must reference a completed engineering review');
+    expect(openapi).toContain('asset_id, and calculation_run_id are optional cross-check fields');
+    expect(openapi).toContain('linked review asset/calculation context and checklist snapshot');
   });
 });

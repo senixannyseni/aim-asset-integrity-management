@@ -111,7 +111,8 @@ export default function EngineeringReviewDetailClient({ reviewId }: { reviewId: 
   const canApprove = hasPermission(user, 'approval_record.approve');
   const canReject = hasPermission(user, 'approval_record.reject');
   const canCreateRevision = hasPermission(user, 'engineering_review.create');
-  const openApproval = useMemo(() => detail?.approvals?.find((approval) => !approval.locked_flag && approval.approval_status !== 'approved' && approval.approval_status !== 'rejected'), [detail]);
+  const reviewMutationLocked = Boolean(detail?.locked_flag || ['submitted_for_approval', 'approved', 'rejected', 'locked'].includes(String(detail?.review_status ?? '')));
+  const openApproval = useMemo(() => detail?.approvals?.find((approval) => !approval.locked_flag && approval.approval_status === 'submitted_for_approval'), [detail]);
 
   async function loadDetail() {
     const [meRes, detailRes] = await Promise.all([
@@ -183,8 +184,7 @@ export default function EngineeringReviewDetailClient({ reviewId }: { reviewId: 
         entity_id: detail.entity_id,
         calculation_run_id: detail.calculation_run_id,
         approval_type: 'final_result',
-        approval_comment: 'Submitted for final engineering approval after structured checklist completion.',
-        checklist: { review_status_confirmed: detail.review_status }
+        approval_comment: 'Submitted for final engineering approval after structured checklist completion.'
       })
     });
     const payload = await response.json();
@@ -289,12 +289,12 @@ export default function EngineeringReviewDetailClient({ reviewId }: { reviewId: 
           <section className="panel">
             <h2>Permission-aware actions</h2>
             <div className="action-row">
-              <button className="secondary-button" type="button" onClick={() => void updateStatus('returned_for_revision')} disabled={!canUpdateReview || detail.locked_flag}>Return</button>
-              <button className="primary-button" type="button" onClick={() => void updateStatus('reviewed')} disabled={!canUpdateReview || detail.locked_flag}>Mark Reviewed</button>
-              <button className="secondary-button" type="button" onClick={() => void requestApproval()} disabled={!canCreateApproval || detail.locked_flag || detail.review_status !== 'reviewed'}>Request Approval</button>
+              <button className="secondary-button" type="button" onClick={() => void updateStatus('returned_for_revision')} disabled={!canUpdateReview || reviewMutationLocked}>Return</button>
+              <button className="primary-button" type="button" onClick={() => void updateStatus('reviewed')} disabled={!canUpdateReview || reviewMutationLocked}>Mark Reviewed</button>
+              <button className="secondary-button" type="button" onClick={() => void requestApproval()} disabled={!canCreateApproval || reviewMutationLocked || detail.review_status !== 'reviewed'}>Request Approval</button>
               <button className="secondary-button" type="button" onClick={() => void createRevision()} disabled={!canCreateRevision}>Create New Revision</button>
             </div>
-            <p className="muted-text">Buttons are hidden/disabled by frontend permission hints and rechecked by the backend.</p>
+            <p className="muted-text">Buttons are hidden/disabled by frontend permission hints and rechecked by the backend. Submitted-for-approval and finalized reviews are locked from further status/comment mutation.</p>
           </section>
         </section>
 
@@ -308,14 +308,14 @@ export default function EngineeringReviewDetailClient({ reviewId }: { reviewId: 
                   <tr key={row.key}>
                     <td>{row.key}</td>
                     <td>
-                      <select value={row.status} onChange={(event) => updateChecklistRow(index, { status: event.target.value })} disabled={detail.locked_flag || !canUpdateReview}>
+                      <select value={row.status} onChange={(event) => updateChecklistRow(index, { status: event.target.value })} disabled={reviewMutationLocked || !canUpdateReview}>
                         <option value="pending">pending</option>
                         <option value="pass">pass</option>
                         <option value="not_applicable">not_applicable</option>
                         <option value="fail">fail</option>
                       </select>
                     </td>
-                    <td><input value={row.comment} onChange={(event) => updateChecklistRow(index, { comment: event.target.value })} disabled={detail.locked_flag || !canUpdateReview} /></td>
+                    <td><input value={row.comment} onChange={(event) => updateChecklistRow(index, { comment: event.target.value })} disabled={reviewMutationLocked || !canUpdateReview} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -328,7 +328,7 @@ export default function EngineeringReviewDetailClient({ reviewId }: { reviewId: 
             <h2>Threaded comments</h2>
             <label><span>Reply to comment ID</span><input value={parentCommentId} onChange={(event) => setParentCommentId(event.target.value)} placeholder="Optional parent comment_id" /></label>
             <label><span>Comment</span><textarea rows={4} value={comment} onChange={(event) => setComment(event.target.value)} /></label>
-            <button className="primary-button" type="submit" disabled={!canComment || detail.locked_flag || !comment.trim()}>Add Comment</button>
+            <button className="primary-button" type="submit" disabled={!canComment || reviewMutationLocked || !comment.trim()}>Add Comment</button>
           </form>
           <section className="panel">
             <h2>Comment thread</h2>

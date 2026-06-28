@@ -37,6 +37,9 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(detail).toContain("hasPermission(user, 'approval_record.approve')");
     expect(detail).toContain("hasPermission(user, 'approval_record.reject')");
     expect(detail).toContain("hasPermission(user, 'engineering_review.update')");
+    expect(detail).toContain('reviewMutationLocked');
+    expect(detail).toContain("approval.approval_status === 'submitted_for_approval'");
+    expect(detail).not.toContain('review_status_confirmed');
   });
 
   it('hardens backend review gates before approval and prevents raw checklist bypass', () => {
@@ -44,8 +47,26 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(route).toContain('validateStructuredChecklistForReview');
     expect(route).toContain('STRUCTURED_CHECKLIST_REQUIRED');
     expect(route).toContain('REVIEW_COMPLETION_REQUIRED');
-    expect(route).toContain("review.review_status !== 'reviewed'");
+    expect(route).toContain('REVIEW_ID_REQUIRED');
+    expect(route).toContain('APPROVAL_REVIEW_ENTITY_MISMATCH');
+    expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
+    expect(route).toContain('REVIEW_STATUS_TRANSITION_REQUIRED');
+    expect(route).toContain("['submitted_for_approval', 'approved', 'rejected', 'locked'].includes(status)");
+    expect(route).toContain('REVIEW_MUTATION_STATE_LOCKED');
+    expect(route).toContain('isReviewMutationLocked');
+    expect(route).toContain("['reviewed', 'submitted_for_approval', 'approved', 'rejected', 'locked'].includes(reviewStatus)");
+    expect(route).toContain("['reviewed', 'submitted_for_approval', 'approved', 'rejected', 'locked'].includes(status)");
+    expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");
     expect(route).toContain('ENGINEERING_REVIEW_REVISION_CREATED');
+    expect(route).toContain('JSON.stringify(normalizeChecklist(review.checklist_json))');
+    expect(route).toContain('APPROVAL_REVIEW_ASSET_CONTEXT_MISMATCH');
+    expect(route).toContain('APPROVAL_REVIEW_CALCULATION_CONTEXT_MISMATCH');
+    expect(route).toContain('const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId);');
+    expect(route).toContain('const linkedReviewCalculationRunId = uuidOrNull(review.calculation_run_id);');
+    expect(route).toContain("const expectedCalculationRunId = linkedReviewCalculationRunId ?? context.calculationRunId ?? (entityType === 'calculation_run' ? entityId : null);");
+    expect(route).toContain('const expectedAssetId = linkedReviewAssetId ?? context.assetId;');
+    expect(route).not.toContain('isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json)');
+    expect(route).toContain('for update');
     expect(route).toContain('parent_comment_id');
     expect(route).toContain('thread_id');
   });
@@ -75,6 +96,12 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(openapi).toContain('/api/v1/engineering/reviews/{reviewId}/revision:');
     expect(openapi).toContain('EngineeringReviewRevisionRequest');
     expect(openapi).toContain('Controlled override approval payload');
+    expect(openapi).toContain('Approval requests must reference a completed engineering review');
+    expect(openapi).toContain('clients cannot override that snapshot');
+    expect(openapi).toContain('asset_id, and calculation_run_id are optional cross-check fields');
+    expect(openapi).not.toContain(`        checklist:
+          type: object
+        approval_comment:`);
     expect(openapi).toContain('ENGINEERING_REVIEW_REVISION_CREATED');
   });
 });

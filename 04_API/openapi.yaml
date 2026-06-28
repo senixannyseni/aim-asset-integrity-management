@@ -1570,6 +1570,7 @@ paths:
   /api/v1/engineering/reviews/{reviewId}/status:
     patch:
       summary: Update engineering review status, structured checklist, and review comment
+      description: Cannot set submitted_for_approval, approved, rejected, or locked directly. submitted_for_approval is set only by approval request creation; approved/rejected/locked are set only by approval-record finalization endpoints.
       x-permission-required: engineering_review.update
       x-audit-event-generated: ENGINEERING_REVIEW_STATUS_UPDATED
       parameters:
@@ -1583,13 +1584,14 @@ paths:
         '200':
           description: Engineering review status updated
         '409':
-          description: Locked review immutable
+          description: Submitted-for-approval/final review immutable through status/comment routes
       security:
       - bearerAuth: []
       x-human-review-required: true
   /api/v1/engineering/reviews/{reviewId}/comments:
     post:
       summary: Add engineering review comment
+      description: Comments are blocked once a review is submitted for approval or finalized; later changes require approve/reject or a new revision.
       x-permission-required: engineering_review.comment
       x-audit-event-generated: ENGINEERING_REVIEW_COMMENT_ADDED
       parameters:
@@ -1601,7 +1603,7 @@ paths:
           format: uuid
       responses:
         '201':
-          description: Review comment added with optional parent_comment_id/thread metadata
+          description: Review comment added with optional parent_comment_id/thread metadata before approval submission
       security:
       - bearerAuth: []
       x-human-review-required: true
@@ -3448,6 +3450,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
         finding_id:
           type: string
           description: Optional seed finding UUID/code for repeated-anomaly RBI trigger workflows.
@@ -3516,15 +3519,11 @@ components:
           type: string
         review_status:
           type: string
+          description: Initial review status. Completion and approval states must be reached through status/checklist and approval-record workflow endpoints.
           enum:
           - draft
           - submitted_for_review
           - returned_for_revision
-          - reviewed
-          - submitted_for_approval
-          - approved
-          - rejected
-          - locked
         checklist:
           type: object
           additionalProperties:
@@ -3546,11 +3545,11 @@ components:
       properties:
         review_status:
           type: string
+          description: New revision start status. Reviewed/submitted_for_approval/final states must be reached through workflow gates.
           enum:
           - draft
           - submitted_for_review
           - returned_for_revision
-          - reviewed
         review_comment:
           type: string
         checklist:
@@ -3571,27 +3570,32 @@ components:
     ApprovalRecordCreateRequest:
       type: object
       required:
-      - entity_type
-      - entity_id
+      - review_id
+      description: Approval requests must reference a completed engineering review. entity_type/entity_id, asset_id, and calculation_run_id are optional cross-check fields and must match the linked review context when provided. Approval records store the linked review asset/calculation context and checklist snapshot; clients cannot override that snapshot.
       properties:
         review_id:
           type: string
           format: uuid
         entity_type:
           type: string
+          description: Optional cross-check; must match the linked reviewed engineering review when supplied.
         entity_id:
           type: string
           format: uuid
+          description: Optional cross-check; must match the linked reviewed engineering review when supplied.
+        asset_id:
+          type: string
+          format: uuid
+          description: Optional asset-context cross-check; must match the linked reviewed engineering review asset context when supplied.
         calculation_run_id:
           type: string
           format: uuid
+          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
         approval_type:
           type: string
           enum:
           - final_result
           - override
-        checklist:
-          type: object
         approval_comment:
           type: string
     ReportGenerateRequest:
@@ -3602,6 +3606,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+          description: Calculation run to use as the source for draft report generation.
         report_title:
           type: string
         output_formats:
@@ -3635,6 +3640,7 @@ components:
         calculation_run_id:
           type: string
           format: uuid
+          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
         input_snapshot_hash:
           type: string
         traceability:
