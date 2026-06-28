@@ -28,6 +28,7 @@ This follow-up patch cleans RC4-I before RC4-J work starts. It closes finalizati
 1. Adds `lead_engineer` to DB migration/seed RBI finalization permission grants.
 2. Makes `/approve` approve-only and rejects attempts to set `status=exported` or `status=closed` through that endpoint.
 3. Requires recorded human review and `ready_for_review` status before approval.
+7. Follow-up review cleanup: generic status update cannot mark `ready_for_review` or write `reviewed_at`; approval readiness must be created through `/review`.
 4. Requires prior approval before export.
 5. Requires prior approval/export plus closure comment before close.
 6. Ensures `approved_at` is set only by actual approval, not by export or close.

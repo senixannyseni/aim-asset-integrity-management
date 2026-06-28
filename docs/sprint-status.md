@@ -421,3 +421,21 @@ Implemented RC4-I controls:
 - Richer display-only risk matrix on list/detail pages, clearly labelled as qualitative/semi-quantitative placeholder unless approved Formula Registry rules exist.
 
 RC4-I adds no database migration and no new engineering formulas. It does not implement quantitative API RP 581 probability/consequence formulas, does not auto-create final integrity decisions, does not issue reports, does not approve calculations, and does not weaken AI/n8n/service-actor governance boundaries.
+
+## RC4-J Engineering Review and Approval Detail
+
+Status: Implemented as Engineering Review / Approval detail and governance UX package.
+
+RC4-J closes Engineering Review and Approval UI gaps after RC4-I:
+
+- Added `/reviews/[reviewId]` review detail page.
+- Added structured checklist UI and backend checklist gate before status `reviewed`.
+- Added threaded review comments with parent/thread metadata.
+- Added reject action with mandatory reason.
+- Added controlled override approval form requiring reason and evidence.
+- Added new revision creation instead of mutating locked records.
+- Replaced calculation detail raw JSON-only audit display with readable timeline and review links.
+- Added permission-aware action visibility for review, approval, rejection, override, and revision actions.
+- Aligned DB-backed approval permissions for senior_engineer, lead_engineer, approver, and admin while preserving AI-agent denial.
+
+RC4-J does not add formulas, final integrity decisions, report issue changes, quantitative RBI/FFS logic, external CMMS integration, or direct n8n/database access.

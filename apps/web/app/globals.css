@@ -445,3 +445,17 @@ pre {
   padding: 16px;
   white-space: pre-wrap;
 }
+
+.timeline-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.timeline-list article {
+  box-shadow: none;
+}
+
+.timeline-list article strong {
+  color: var(--navy);
+}

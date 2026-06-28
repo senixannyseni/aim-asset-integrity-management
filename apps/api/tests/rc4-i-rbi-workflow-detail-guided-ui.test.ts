@@ -52,6 +52,9 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(route).toContain('RBI_APPROVAL_REQUIRED_BEFORE_EXPORT');
     expect(route).toContain('RBI_APPROVAL_REQUIRED_BEFORE_CLOSE');
     expect(route).toContain('RBI_APPROVE_ENDPOINT_APPROVES_ONLY');
+    expect(route).toContain('RBI_REVIEW_ENDPOINT_REQUIRED');
+    expect(route).toContain('RBI_FINAL_STATE_LOCKED');
+    expect(route).not.toContain('reviewed_at = coalesce(reviewed_at, now())');
     expect(route).toContain('where id = $1::uuid or case_id = $2');
     expect(route).toContain('asset_id must be a valid UUID');
     expect(route).toContain('lead_engineer');

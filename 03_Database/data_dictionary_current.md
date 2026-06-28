@@ -703,6 +703,7 @@ RC4-I does not add new database columns. It uses the existing `rbi_cases`, `rbi_
 - RC4-I hardening aligns DB seed/migration RBI finalization permissions with backend/static RBAC for `lead_engineer`.
 - Approval now requires recorded human review plus `ready_for_review` status; export and close require a previously approved RBI case.
 - `/approve` approves only. Export and close must use their dedicated endpoints so export permission and closure-comment gates cannot be bypassed.
+- Status update cannot mark `ready_for_review` or write `reviewed_at`; the RBI review endpoint is required to record human review before approval.
 - `approved_at` is populated only by actual approval, not by export or close.
 - RBI case lookup uses separate UUID/text parameters and asset-scoped creation validates `asset_id` as UUID before database lookup.
 - `finding_history` is a trigger source only. It does not automatically approve engineering data, calculations, reports, FFS cases, or final integrity decisions.
@@ -1099,3 +1100,24 @@ RC4-E expands field-level documentation for frontend validation-by-asset, valida
 | calculation_run_id | Calculation Run | findings | uuid | optional | Must reference same-asset calculation run when supplied | Calculation inputs remain evidence-gated separately | PostgreSQL `findings` | `/calculations/{calculationRunId}`, findings detail | Does not approve calculation. |
 | validation_run_id | Validation Run | findings | uuid | optional | References validation run where available | Evidence linkage remains separate | PostgreSQL `findings` | `/validation/history` | Validation flags but does not approve. |
 | closure_reason | Closure Reason | findings | text | conditional | Required when closing/resolving | Critical findings require evidence | PostgreSQL `findings` | Finding detail closure panel | Human-governed closure note. |
+
+
+## RC4-I final-state lock hotfix
+
+Approved, exported, and closed RBI cases are locked from generic `/status` and `/review` mutation. Further engineering changes must use a new/revision case path rather than mutating the final disposition record. The `/review` endpoint remains the only route that can mark `ready_for_review`; `/status` is limited to mutable pre-review workflow states.
+
+## RC4-J Engineering Review and Approval Detail Addendum
+
+RC4-J extends the Sprint 9 engineering review and approval workflow without adding new tables.
+
+Updated behavior:
+
+- `engineering_reviews.checklist_json` stores structured gate items such as `{ status, comment }`.
+- Review status `reviewed` requires a structured checklist with all blocking items `pass` or `not_applicable`.
+- `engineering_reviews.comments_json` may include `comment_id`, `parent_comment_id`, `thread_id`, author metadata, and timestamp.
+- `engineering_reviews.supersedes_review_id` is used by the new revision endpoint to preserve lineage when locked records require follow-up.
+- `approval_records` approval creation requires a completed reviewed review when `review_id` is supplied.
+- `approval_records.override_json`, `affected_field`, `original_value_json`, `override_value_json`, `reason`, and `evidence_links` are required for controlled override approval.
+- DB permission grants align `approval_record.approve` and `approval_record.reject` with admin, senior_engineer, lead_engineer, and approver roles.
+
+No direct AI finalization, direct n8n PostgreSQL writes, new formulas, or report issue behavior changes are introduced.

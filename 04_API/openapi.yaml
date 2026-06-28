@@ -1344,7 +1344,7 @@ paths:
   /api/v1/rbi/cases/{caseId}/status:
     patch:
       summary: Update RBI workflow status
-      description: Updates non-final RBI interface workflow status. Use approval endpoint for approved/exported/closed states.
+      description: Updates mutable non-final RBI interface workflow status only. Use the review endpoint to mark ready_for_review, and use dedicated approve/export/close endpoints for final disposition states. Existing approved/exported/closed cases are locked from review/status mutation.
       x-permission-required: rbi.interface.update
       x-audit-event-generated: RBI_CASE_STATUS_UPDATED
       parameters:
@@ -1369,7 +1369,6 @@ paths:
                   - under_review
                   - data_required
                   - assessment_in_progress
-                  - ready_for_review
       responses:
         '200':
           description: RBI case status updated
@@ -1384,7 +1383,7 @@ paths:
   /api/v1/rbi/cases/{caseId}/review:
     post:
       summary: Record RBI case review action
-      description: RC4-I records human review workflow status and audit comment. Does not approve or finalize the RBI case.
+      description: RC4-I records human review workflow status and audit comment. Does not approve or finalize the RBI case. Existing approved/exported/closed cases are locked from review/status mutation.
       x-permission-required: rbi.interface.review
       x-audit-event-generated: RBI_CASE_REVIEWED
       parameters:
@@ -1570,7 +1569,7 @@ paths:
       x-human-review-required: true
   /api/v1/engineering/reviews/{reviewId}/status:
     patch:
-      summary: Update engineering review status, checklist, and review comment
+      summary: Update engineering review status, structured checklist, and review comment
       x-permission-required: engineering_review.update
       x-audit-event-generated: ENGINEERING_REVIEW_STATUS_UPDATED
       parameters:
@@ -1602,10 +1601,40 @@ paths:
           format: uuid
       responses:
         '201':
-          description: Review comment added
+          description: Review comment added with optional parent_comment_id/thread metadata
       security:
       - bearerAuth: []
       x-human-review-required: true
+  /api/v1/engineering/reviews/{reviewId}/revision:
+    post:
+      summary: Create a new engineering review revision from an existing review
+      description: Creates a new review revision instead of mutating locked approved/rejected records. Supersedes the prior review and preserves audit lineage.
+      x-permission-required: engineering_review.create
+      x-audit-event-generated: ENGINEERING_REVIEW_REVISION_CREATED
+      x-human-review-required: true
+      parameters:
+      - in: path
+        name: reviewId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EngineeringReviewRevisionRequest'
+      responses:
+        '201':
+          description: Review revision created
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '404':
+          description: Review not found
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM creates revision records through backend APIs only; locked records are never edited in place.
   /api/v1/approval-records:
     get:
       summary: List approval records
@@ -3498,8 +3527,47 @@ components:
           - locked
         checklist:
           type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum:
+                - pending
+                - pass
+                - fail
+                - not_applicable
+              comment:
+                type: string
         review_comment:
           type: string
+    EngineeringReviewRevisionRequest:
+      type: object
+      properties:
+        review_status:
+          type: string
+          enum:
+          - draft
+          - submitted_for_review
+          - returned_for_revision
+          - reviewed
+        review_comment:
+          type: string
+        checklist:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum:
+                - pending
+                - pass
+                - fail
+                - not_applicable
+              comment:
+                type: string
+      description: Creates a new revision instead of mutating a locked review.
     ApprovalRecordCreateRequest:
       type: object
       required:
@@ -4285,6 +4353,30 @@ components:
         checklist:
           type: object
           additionalProperties: true
+        override:
+          type: object
+          required:
+          - affected_field
+          - original_value
+          - override_value
+          - reason
+          properties:
+            affected_field:
+              type: string
+            original_value:
+              nullable: true
+            override_value:
+              nullable: true
+            reason:
+              type: string
+            evidence_file_id:
+              type: string
+              format: uuid
+            evidence_links:
+              type: array
+              items:
+                type: object
+          description: Controlled override approval payload. Backend requires affected field, original value, override value, reason, and evidence.
     RejectionActionRequest:
       type: object
       required:

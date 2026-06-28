@@ -207,6 +207,34 @@ function normalizeChecklist(value: unknown): Record<string, unknown> {
   return isPlainObject(value) ? value : {};
 }
 
+function checklistEntries(checklist: unknown): Array<{ key: string; status: string; comment: string }> {
+  if (!isPlainObject(checklist)) return [];
+  return Object.entries(checklist).map(([key, value]) => {
+    if (isPlainObject(value)) {
+      return {
+        key,
+        status: asString(value.status ?? value.result ?? value.value) ?? 'pending',
+        comment: asString(value.comment ?? value.note ?? value.reason) ?? ''
+      };
+    }
+    if (typeof value === 'boolean') return { key, status: value ? 'pass' : 'fail', comment: '' };
+    return { key, status: asString(value) ?? 'pending', comment: '' };
+  });
+}
+
+function validateStructuredChecklistForReview(checklist: unknown): string[] {
+  const entries = checklistEntries(checklist);
+  if (entries.length === 0) return ['STRUCTURED_CHECKLIST_REQUIRED'];
+  const blockers: string[] = [];
+  for (const entry of entries) {
+    const status = entry.status.toLowerCase();
+    if (!['pass', 'passed', 'true', 'ok', 'not_applicable', 'n/a'].includes(status)) {
+      blockers.push(`CHECKLIST_${entry.key.toUpperCase()}_${status.toUpperCase()}`);
+    }
+  }
+  return blockers;
+}
+
 function normalizeEvidenceLinks(value: unknown): Array<Record<string, unknown>> {
   if (!Array.isArray(value)) return [];
   return value.filter(isPlainObject);
@@ -403,6 +431,21 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
       res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked review records cannot be edited. Create a new revision.' } });
       return;
     }
+    const nextChecklist = isPlainObject(req.body.checklist) ? req.body.checklist : before.checklist_json;
+    if (status === 'reviewed') {
+      const checklistBlockers = validateStructuredChecklistForReview(nextChecklist);
+      if (checklistBlockers.length > 0) {
+        await client.query('rollback');
+        res.status(422).json({
+          error: {
+            code: 'STRUCTURED_CHECKLIST_REQUIRED',
+            message: 'Review completion requires a structured checklist with pass/not_applicable status for every blocking item.',
+            details: checklistBlockers.map((blocker) => ({ code: blocker, severity: 'blocking' }))
+          }
+        });
+        return;
+      }
+    }
     const result = await client.query<DbRow>(
       `update engineering_reviews
        set review_status = $2,
@@ -447,7 +490,11 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
     validationError(res, 'comment', 'comment is required.');
     return;
   }
+  const parentCommentId = asString(req.body.parent_comment_id ?? req.body.parentCommentId);
   const commentRecord = {
+    comment_id: `CMT-${Date.now()}`,
+    parent_comment_id: parentCommentId ?? null,
+    thread_id: parentCommentId ?? `THR-${Date.now()}`,
     comment,
     author_user_id: actorUserId(req),
     author_roles: actorRoles(req),
@@ -480,6 +527,77 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
     const auditLogId = await writeAudit(client, req, 'ENGINEERING_REVIEW_COMMENT_ADDED', 'engineering_review', String(updated?.id), mapReview(before), mapReview(updated ?? {}), { comment_added: true });
     await client.query('commit');
     res.status(201).json({ data: mapReview(updated ?? {}), auditLogId });
+  } catch (error) {
+    await client.query('rollback');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', requirePermission('engineering_review.create'), async (req, res, next) => {
+  if (!isPlainObject(req.body)) {
+    validationError(res, 'body', 'JSON object body is required.');
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [req.params.reviewId]);
+    const before = beforeResult.rows[0];
+    if (!before) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
+      return;
+    }
+    const revisionResult = await client.query<{ next_revision: string }>(
+      `select coalesce(max(revision_no), 0) + 1 as next_revision
+       from engineering_reviews
+       where entity_type = $1 and entity_id = $2`,
+      [before.entity_type, before.entity_id]
+    );
+    const nextRevision = Number(revisionResult.rows[0]?.next_revision ?? '1');
+    const status = asString(req.body.review_status ?? req.body.status) ?? 'draft';
+    if (!isReviewStatus(status) || ['approved', 'locked'].includes(status)) {
+      await client.query('rollback');
+      validationError(res, 'review_status', 'New revision must start as draft, submitted_for_review, returned_for_revision, or reviewed.', 'REVISION_START_STATUS_INVALID');
+      return;
+    }
+    const result = await client.query<DbRow>(
+      `insert into engineering_reviews(
+        review_code, entity_type, entity_id, asset_id, calculation_run_id, review_type,
+        reviewer_id, assigned_engineer, review_status, review_comment, checklist_json, comments_json,
+        revision_no, supersedes_review_id, submitted_at, updated_at
+      ) values (
+        $1, $2, $3, $4, $5, $6,
+        $7, $8, $9, $10, $11::jsonb, $12::jsonb,
+        $13, $14, $15, now()
+      ) returning *`,
+      [
+        `REV-${Date.now()}-${nextRevision}`,
+        before.entity_type,
+        before.entity_id,
+        before.asset_id,
+        before.calculation_run_id,
+        asString(req.body.review_type ?? req.body.reviewType) ?? asString(before.review_type) ?? 'engineering_review_revision',
+        actorUserId(req),
+        uuidOrNull(req.body.assigned_engineer ?? req.body.assignedEngineer) ?? asString(before.assigned_engineer) ?? null,
+        status,
+        asString(req.body.review_comment ?? req.body.comment) ?? `Revision ${nextRevision} created from ${String(before.review_code ?? before.id)}.`,
+        JSON.stringify(isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(before.checklist_json)),
+        JSON.stringify([]),
+        nextRevision,
+        before.id,
+        status === 'submitted_for_review' ? new Date().toISOString() : null
+      ]
+    );
+    const created = result.rows[0];
+    const auditLogId = await writeAudit(client, req, 'ENGINEERING_REVIEW_REVISION_CREATED', 'engineering_review', String(created?.id), mapReview(before), mapReview(created ?? {}), {
+      supersedes_review_id: before.id,
+      locked_records_are_not_mutated: true
+    });
+    await client.query('commit');
+    res.status(201).json({ data: mapReview(created ?? {}), auditLogId });
   } catch (error) {
     await client.query('rollback');
     next(error);
@@ -531,6 +649,25 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
       await client.query('rollback');
       res.status(404).json({ error: { code: 'APPROVAL_ENTITY_NOT_FOUND', message: 'Approval target was not found.' } });
       return;
+    }
+    if (reviewId) {
+      const reviewResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
+      const review = reviewResult.rows[0];
+      if (!review) {
+        await client.query('rollback');
+        res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
+        return;
+      }
+      if (review.locked_flag === true || review.review_status === 'locked') {
+        await client.query('rollback');
+        res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked review records cannot be submitted again. Create a new revision.' } });
+        return;
+      }
+      if (review.review_status !== 'reviewed') {
+        await client.query('rollback');
+        res.status(422).json({ error: { code: 'REVIEW_COMPLETION_REQUIRED', message: 'Approval request is blocked until the engineering review is marked reviewed through the structured checklist flow.' } });
+        return;
+      }
     }
     const approvalCode = `APR-${Date.now()}`;
     const result = await client.query<DbRow>(
@@ -625,14 +762,14 @@ function requireSeniorApprovalActor(req: Request, res: ApiResponse): boolean {
     return false;
   }
   if (!isSeniorApprovalActor(req) || !hasReqPermission(req, 'approval_record.approve')) {
-    res.status(403).json({ error: { code: 'SENIOR_ENGINEER_APPROVAL_REQUIRED', message: 'Final approval requires senior_engineer or admin with approval_record.approve permission.' } });
+    res.status(403).json({ error: { code: 'SENIOR_ENGINEER_APPROVAL_REQUIRED', message: 'Final approval requires admin, senior_engineer, lead_engineer, or approver with approval_record.approve permission.' } });
     return false;
   }
   return true;
 }
 
 function hasRequiredApprovalComment(req: Request): boolean {
-  return Boolean(isPlainObject(req.body) && asString(req.body.approval_comment ?? req.body.comment ?? req.body.reason));
+  return Boolean(isPlainObject(req.body) && asString(req.body.approval_comment ?? req.body.comment ?? req.body.reason ?? req.body.rejection_reason));
 }
 
 function isSelfApprovalAttempt(req: Request, approval: DbRow): boolean {
@@ -799,7 +936,7 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
     return;
   }
   if (!isSeniorApprovalActor(req) || isAiAgent(req)) {
-    res.status(403).json({ error: { code: 'SENIOR_ENGINEER_REJECTION_REQUIRED', message: 'Rejecting final engineering approval requires senior_engineer or admin. AI agents cannot reject.' } });
+    res.status(403).json({ error: { code: 'SENIOR_ENGINEER_REJECTION_REQUIRED', message: 'Rejecting final engineering approval requires admin, senior_engineer, lead_engineer, or approver. AI agents cannot reject.' } });
     return;
   }
   if (!hasRequiredApprovalComment(req)) {
@@ -834,7 +971,7 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
            updated_at = now()
        where id = $1
        returning *`,
-      [approvalId, actorUserId(req), isPlainObject(req.body) ? asString(req.body.reason ?? req.body.comment) ?? null : null]
+      [approvalId, actorUserId(req), isPlainObject(req.body) ? asString(req.body.rejection_reason ?? req.body.reason ?? req.body.comment) ?? null : null]
     );
     const updated = result.rows[0];
     if (updated?.review_id) {

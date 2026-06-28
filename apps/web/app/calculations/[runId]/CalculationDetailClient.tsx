@@ -83,6 +83,12 @@ function diffObjects(current: unknown, previous: unknown): DifferenceRow[] {
 }
 function asRecordFrom(value: unknown): Record<string, unknown> | null { return isRecord(value) ? value : null; }
 function formulaValue(snapshot: Record<string, unknown> | null | undefined, key: string): string { const value = snapshot?.[key]; return value === undefined || value === null ? '-' : String(value); }
+function auditEventLabel(event: Record<string, unknown>): string { return String(event.event_type ?? event.action_type ?? 'audit.event'); }
+function auditEventTime(event: Record<string, unknown>): string { return safeDate(String(event.created_at ?? event.timestamp ?? '')); }
+function auditEventActor(event: Record<string, unknown>): string {
+  const roles = Array.isArray(event.actor_role_codes) ? event.actor_role_codes.join(', ') : String(event.actor_role_codes ?? '');
+  return roles || String(event.actor_user_id ?? 'system');
+}
 
 export default function CalculationDetailClient({ runId }: { runId: string }) {
   const [detail, setDetail] = useState<CalculationRunDetail | null>(null);
@@ -199,7 +205,30 @@ export default function CalculationDetailClient({ runId }: { runId: string }) {
           </>}
         </section>
 
-        <section className="panel wide-panel"><h2>Reviews, approvals, and audit trail</h2><div className="grid-two"><article><h2>{detail.engineering_reviews?.length ?? 0}</h2><p>Engineering reviews</p></article><article><h2>{detail.approval_records?.length ?? 0}</h2><p>Approval records</p></article><article><h2>{detail.audit_trail?.length ?? 0}</h2><p>Audit events</p></article></div><pre className="json-panel">{renderJson({ engineering_reviews: detail.engineering_reviews, approval_records: detail.approval_records, audit_trail: detail.audit_trail })}</pre></section>
+        <section className="panel wide-panel">
+          <div className="panel-heading"><h2>Reviews, approvals, and readable audit timeline</h2><p>RC4-J replaces the raw JSON-only audit block with a readable lifecycle view. Raw JSON remains available only as a fallback.</p></div>
+          <div className="grid-two">
+            <article><h2>{detail.engineering_reviews?.length ?? 0}</h2><p>Engineering reviews</p></article>
+            <article><h2>{detail.approval_records?.length ?? 0}</h2><p>Approval records</p></article>
+            <article><h2>{detail.audit_trail?.length ?? 0}</h2><p>Audit events</p></article>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Type</th><th>Record</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody>
+                {(detail.engineering_reviews ?? []).map((review) => <tr key={String(review.id ?? review.review_id)}><td>Review</td><td>{review.id ? <Link href={`/reviews/${String(review.id)}`}>{String(review.review_code ?? review.id)}</Link> : String(review.review_code ?? '-')}</td><td><span className={badgeClass(String(review.review_status ?? ''))}>{String(review.review_status ?? '-')}</span></td><td>{String(review.review_type ?? '-')}</td></tr>)}
+                {(detail.approval_records ?? []).map((approval) => <tr key={String(approval.id ?? approval.approval_record_id)}><td>Approval</td><td>{String(approval.approval_code ?? approval.id ?? '-')}</td><td><span className={badgeClass(String(approval.approval_status ?? ''))}>{String(approval.approval_status ?? '-')}</span></td><td>{String(approval.approval_type ?? '-')}</td></tr>)}
+                {(detail.engineering_reviews ?? []).length === 0 && (detail.approval_records ?? []).length === 0 && <tr><td colSpan={4}>No review or approval records returned.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          <h3>Audit timeline</h3>
+          <div className="timeline-list">
+            {(detail.audit_trail ?? []).map((event, index) => <article className="issue-card" key={`${String(event.id ?? index)}-${auditEventLabel(event)}`}><strong>{auditEventLabel(event)}</strong><p>{auditEventTime(event)} · {auditEventActor(event)}</p><p className="muted-text">{String(event.entity_type ?? '')} {String(event.entity_id ?? '')}</p></article>)}
+            {(detail.audit_trail ?? []).length === 0 && <p>No audit events returned.</p>}
+          </div>
+          <details><summary>Raw audit fallback</summary><pre className="json-panel">{renderJson({ engineering_reviews: detail.engineering_reviews, approval_records: detail.approval_records, audit_trail: detail.audit_trail })}</pre></details>
+        </section>
       </>}
     </main>
   );

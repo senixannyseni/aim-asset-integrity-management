@@ -68,6 +68,7 @@ Existing approval endpoint remains:
 - `POST /api/v1/rbi/cases/{caseId}/approve`
 
 Close requires a comment/reason. AI actors are blocked from approve/export/close/finalization. Senior/lead-engineer/admin finalization authority is enforced in the backend. Approval requires recorded human review and `ready_for_review` status. Export and close require prior approval, and `/approve` cannot be used to export or close a case.
+The generic status update endpoint cannot mark `ready_for_review` or backfill `reviewed_at`; the dedicated `/review` endpoint must record human review before approval.
 
 ## Frontend Controls
 
@@ -114,3 +115,8 @@ pnpm -r lint
 ## Release Decision
 
 RC4-I is ready for code review and UAT execution after applying the changed files and running the validation commands in the developer environment.
+
+
+## RC4-I final-state lock hotfix
+
+Approved, exported, and closed RBI cases are locked from generic `/status` and `/review` mutation. Further engineering changes must use a new/revision case path rather than mutating the final disposition record. The `/review` endpoint remains the only route that can mark `ready_for_review`; `/status` is limited to mutable pre-review workflow states.

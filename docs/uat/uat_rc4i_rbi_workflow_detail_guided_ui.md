@@ -70,6 +70,7 @@ Expected result: status/review updates succeed and audit events are written.
 7. Close the case with a closure comment through `/close`.
 
 Expected result: final actions succeed only for authorized human senior roles; approval requires recorded review, export requires prior approval/export permission, and close requires prior approval plus comment/reason.
+The generic status update endpoint must not be able to mark `ready_for_review`; use `/review` to record human review before approval.
 
 ### RC4I-UAT-06A — Finalization bypass prevention
 
@@ -102,3 +103,8 @@ Expected result: action is rejected. AI/service actors cannot approve, export, c
 | Engineer |  |  |  |  |
 | Senior Engineer/Lead Engineer/Admin |  |  |  |  |
 | QA/UAT |  |  |  |  |
+
+
+## RC4-I final-state lock hotfix
+
+Approved, exported, and closed RBI cases are locked from generic `/status` and `/review` mutation. Further engineering changes must use a new/revision case path rather than mutating the final disposition record. The `/review` endpoint remains the only route that can mark `ready_for_review`; `/status` is limited to mutable pre-review workflow states.

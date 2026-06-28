@@ -320,3 +320,14 @@ Governance boundary:
 - Findings do not approve calculations, issue reports, or make final integrity decisions.
 - Critical finding closure requires evidence linkage and closure reason.
 - AI/n8n/service actors cannot close findings.
+
+## RC4-J Engineering Review Revision and Comment Lineage
+
+RC4-J adds no new tables. It clarifies relationships already present in the Sprint 9 schema:
+
+- `engineering_reviews.supersedes_review_id` references prior `engineering_reviews.id` for new revisions.
+- `engineering_reviews.comments_json` contains threaded comment metadata (`comment_id`, `parent_comment_id`, `thread_id`).
+- `approval_records.review_id` references the reviewed engineering review that produced the approval request.
+- `approval_records.override_json` and evidence link metadata support controlled override approval with audit traceability.
+
+Locked reviews and approval records remain immutable; revisions create new rows.
