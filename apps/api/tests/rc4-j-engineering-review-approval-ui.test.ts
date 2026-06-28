@@ -37,6 +37,8 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(detail).toContain("hasPermission(user, 'approval_record.approve')");
     expect(detail).toContain("hasPermission(user, 'approval_record.reject')");
     expect(detail).toContain("hasPermission(user, 'engineering_review.update')");
+    expect(detail).toContain('reviewMutationLocked');
+    expect(detail).toContain("approval.approval_status === 'submitted_for_approval'");
   });
 
   it('hardens backend review gates before approval and prevents raw checklist bypass', () => {
@@ -55,6 +57,7 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(route).toContain("['reviewed', 'submitted_for_approval', 'approved', 'rejected', 'locked'].includes(status)");
     expect(route).toContain("review.review_status !== 'reviewed' || !review.reviewed_at");
     expect(route).toContain('ENGINEERING_REVIEW_REVISION_CREATED');
+    expect(route).toContain('for update');
     expect(route).toContain('parent_comment_id');
     expect(route).toContain('thread_id');
   });
@@ -84,6 +87,7 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(openapi).toContain('/api/v1/engineering/reviews/{reviewId}/revision:');
     expect(openapi).toContain('EngineeringReviewRevisionRequest');
     expect(openapi).toContain('Controlled override approval payload');
+    expect(openapi).toContain('Approval requests must reference a completed engineering review');
     expect(openapi).toContain('ENGINEERING_REVIEW_REVISION_CREATED');
   });
 });

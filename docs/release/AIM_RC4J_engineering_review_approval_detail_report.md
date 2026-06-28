@@ -63,3 +63,11 @@ Review completion was hardened so new review and revision records cannot be crea
 ## Submitted Review Lock Addendum
 
 Final review hardening blocks generic status/comment mutation once a review has been submitted for approval. The `submitted_for_approval` transition is controlled only by approval request creation, and approval records snapshot the reviewed checklist basis when created.
+
+
+## RC4-J contract/UI lock cleanup
+
+- Approval request API contract requires `review_id`, matching backend validation.
+- `entity_type`/`entity_id` are optional cross-checks and must match the linked reviewed engineering review when supplied.
+- Submitted-for-approval and finalized reviews are disabled from status/checklist/comment mutation in the detail UI and blocked by backend gates.
+- Approval request and approval finalization database reads use row-level locks to reduce transition race risk.

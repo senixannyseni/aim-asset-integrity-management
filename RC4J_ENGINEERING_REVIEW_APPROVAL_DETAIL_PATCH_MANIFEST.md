@@ -76,3 +76,10 @@ Review completion was hardened so new reviews/revisions cannot be created direct
 ## RC4-J Submitted Review Mutation Lock Hotfix
 
 Approval-submitted review records are now immutable through generic review status/comment routes. `submitted_for_approval` can only be set by creating an approval request, while `approved`, `rejected`, and `locked` remain restricted to approval-record finalization endpoints. Approval records also snapshot the reviewed checklist when no checklist is supplied in the approval request body.
+
+## RC4-J final contract/UI lock cleanup
+
+- Added `RC4J_CONTRACT_UI_LOCK_HOTFIX_PATCH_MANIFEST.md`.
+- Approval request OpenAPI contract now requires `review_id`, matching backend gates.
+- Submitted/final review mutation lock is reflected in detail UI disabled states.
+- Approval request/finalization reads use row-level transaction locks.

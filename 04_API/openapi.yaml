@@ -3569,17 +3569,19 @@ components:
     ApprovalRecordCreateRequest:
       type: object
       required:
-      - entity_type
-      - entity_id
+      - review_id
+      description: Approval requests must reference a completed engineering review. entity_type/entity_id are optional cross-check fields and must match the linked review when provided.
       properties:
         review_id:
           type: string
           format: uuid
         entity_type:
           type: string
+          description: Optional cross-check; must match the linked reviewed engineering review when supplied.
         entity_id:
           type: string
           format: uuid
+          description: Optional cross-check; must match the linked reviewed engineering review when supplied.
         calculation_run_id:
           type: string
           format: uuid

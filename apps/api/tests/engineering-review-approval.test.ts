@@ -52,6 +52,7 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain('APPROVAL_NOT_SUBMITTED');
     expect(route).toContain('REVIEW_MUTATION_STATE_LOCKED');
     expect(route).toContain('normalizeChecklist(review.checklist_json)');
+    expect(route).toContain('for update');
   });
 
   it('locks calculation runs after senior approval and exposes full audit trail from calculation detail', () => {
@@ -72,5 +73,6 @@ describe('Engineering review and approval workflow governance', () => {
     expect(openapi).toContain('/approval-records:');
     expect(openapi).toContain('/approval-records/{approvalId}/approve:');
     expect(openapi).toContain('x-permission-required: approval_record.approve');
+    expect(openapi).toContain('Approval requests must reference a completed engineering review');
   });
 });

@@ -679,7 +679,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const reviewResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
+    const reviewResult = await client.query<DbRow>('select * from engineering_reviews where id = $1 for update', [reviewId]);
     const review = reviewResult.rows[0];
     if (!review) {
       await client.query('rollback');
@@ -765,7 +765,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
 });
 
 async function loadApprovalForUpdate(client: Queryable, approvalId: string): Promise<DbRow | undefined> {
-  const result = await client.query<DbRow>('select * from approval_records where id = $1', [approvalId]);
+  const result = await client.query<DbRow>('select * from approval_records where id = $1 for update', [approvalId]);
   return result.rows[0];
 }
 
