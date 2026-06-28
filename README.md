@@ -660,3 +660,18 @@ Implemented RC4-K controls:
 - Export artifact register with checksum/status visibility for object-storage report artifacts.
 
 The readiness endpoint does not approve, issue, export, lock, or mutate reports. The existing report issue endpoint remains authoritative and continues to enforce mandatory data/evidence/calculation/review/integrity/report approval/workflow-error/comment gates. RC4-K adds no formulas, no API 579/API 581 quantitative logic, no automatic report issue, no AI/n8n finalization, no external CMMS integration, and no direct n8n/database access.
+
+## RC4-L Work Order Detail and Closure Readiness
+
+RC4-L adds a governed internal work-order detail and closure-readiness workflow on top of RC4-K.
+
+Implemented RC4-L controls:
+
+- `/work-orders/[workOrderId]` detail page for work order status, closure-readiness gates, linked closure evidence, source traceability, audit timeline, update form, and governed close form.
+- `GET /api/v1/work-orders/{workOrderId}/closure-readiness` as a read-only preview of closure gates.
+- Close endpoint alignment with readiness gates, including mandatory completion note, conditional closure evidence, source traceability, and external CMMS boundary checks.
+- Closed work orders are locked from generic update and repeat close actions.
+- Work-order list links users to the detail-level readiness workflow before close.
+
+RC4-L does not add external CMMS/SAP/Maximo integration, automatic closure, AI/n8n/service finalization, engineering formulas, report issue changes, calculation changes, FFS/RBI quantitative logic, or direct n8n/database access.
+
