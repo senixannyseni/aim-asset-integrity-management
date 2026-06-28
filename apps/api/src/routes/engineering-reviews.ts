@@ -746,7 +746,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
         asString(req.body.approval_type ?? req.body.approvalType) ?? 'final_result',
         actorUserId(req),
         asString(req.body.approval_comment ?? req.body.comment) ?? null,
-        JSON.stringify(isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json))
+        JSON.stringify(normalizeChecklist(review.checklist_json))
       ]
     );
     const created = result.rows[0];

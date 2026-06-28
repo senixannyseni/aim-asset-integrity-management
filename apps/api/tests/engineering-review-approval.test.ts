@@ -51,7 +51,8 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
     expect(route).toContain('APPROVAL_NOT_SUBMITTED');
     expect(route).toContain('REVIEW_MUTATION_STATE_LOCKED');
-    expect(route).toContain('normalizeChecklist(review.checklist_json)');
+    expect(route).toContain('JSON.stringify(normalizeChecklist(review.checklist_json))');
+    expect(route).not.toContain('isPlainObject(req.body.checklist) ? req.body.checklist : normalizeChecklist(review.checklist_json)');
     expect(route).toContain('for update');
   });
 

@@ -3570,7 +3570,7 @@ components:
       type: object
       required:
       - review_id
-      description: Approval requests must reference a completed engineering review. entity_type/entity_id are optional cross-check fields and must match the linked review when provided.
+      description: Approval requests must reference a completed engineering review. entity_type/entity_id are optional cross-check fields and must match the linked review when provided. Approval records store the linked review checklist snapshot; clients cannot override that snapshot.
       properties:
         review_id:
           type: string
@@ -3590,8 +3590,6 @@ components:
           enum:
           - final_result
           - override
-        checklist:
-          type: object
         approval_comment:
           type: string
     ReportGenerateRequest:

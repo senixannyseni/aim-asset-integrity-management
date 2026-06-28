@@ -184,8 +184,7 @@ export default function EngineeringReviewDetailClient({ reviewId }: { reviewId: 
         entity_id: detail.entity_id,
         calculation_run_id: detail.calculation_run_id,
         approval_type: 'final_result',
-        approval_comment: 'Submitted for final engineering approval after structured checklist completion.',
-        checklist: { review_status_confirmed: detail.review_status }
+        approval_comment: 'Submitted for final engineering approval after structured checklist completion.'
       })
     });
     const payload = await response.json();

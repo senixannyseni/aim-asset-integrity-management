@@ -71,3 +71,7 @@ Final review hardening blocks generic status/comment mutation once a review has 
 - `entity_type`/`entity_id` are optional cross-checks and must match the linked reviewed engineering review when supplied.
 - Submitted-for-approval and finalized reviews are disabled from status/checklist/comment mutation in the detail UI and blocked by backend gates.
 - Approval request and approval finalization database reads use row-level locks to reduce transition race risk.
+
+
+### RC4-J Approval Checklist Snapshot Hotfix
+Approval request creation now always snapshots the linked reviewed checklist from `engineering_reviews.checklist_json`. Client-supplied checklist payloads are ignored/removed from the create contract so approval records cannot diverge from the reviewed basis.

@@ -83,3 +83,7 @@ Approval-submitted review records are now immutable through generic review statu
 - Approval request OpenAPI contract now requires `review_id`, matching backend gates.
 - Submitted/final review mutation lock is reflected in detail UI disabled states.
 - Approval request/finalization reads use row-level transaction locks.
+
+
+### RC4-J Approval Checklist Snapshot Hotfix
+Approval request creation now always snapshots the linked reviewed checklist from `engineering_reviews.checklist_json`. Client-supplied checklist payloads are ignored/removed from the create contract so approval records cannot diverge from the reviewed basis.
