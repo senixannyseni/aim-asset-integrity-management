@@ -297,3 +297,21 @@ Implemented RC4-B controls:
 - Frontend validation clearly flags missing code edition, diameter, shell height, material, joint efficiency, invalid construction year, invalid inspection due date, invalid numeric ranges, and missing/ambiguous units where applicable.
 
 RC4-B adds no backend schema, no migrations, no new formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/FFS/RBI/NDT/evidence behavior changes, and no governance boundary weakening. Frontend validation is UX-only; backend validation remains authoritative.
+
+
+## RC4-C Evidence Upload UI and Evidence Detail Page
+
+Status: Implemented as frontend-focused completion package.
+
+RC4-C completes the Evidence Repository upload/detail frontend without reopening RC3, RC4-A, or RC4-B.
+
+Implemented RC4-C controls:
+
+- `apps/web/app/evidence/page.tsx` exists and provides evidence list/table, evidence upload panel, metadata summary, asset filter, inspection/event filter, method/component/location display, upload status display, malware scan status display, checksum display, detail links, audited open/download action, loading state, empty state, error state, and permission-denied state.
+- Evidence upload uses the existing object-storage flow: user file selection, client-side file validation, `POST /api/v1/evidence/upload-url`, browser PUT to the signed upload URL or controlled upload instruction, then `POST /api/v1/evidence/complete-upload`.
+- Upload UI exposes file name, file size, MIME type, extension, SHA-256 checksum, upload progress, status messages, backend errors, and complete-upload confirmation.
+- Evidence metadata fields include asset, inspection/event ID where applicable, method, component, location, inspection date, page/sheet reference, and notes where supported.
+- `apps/web/app/evidence/[evidenceId]/page.tsx` exists and shows evidence metadata, object-storage status, upload status, malware status, checksum, file size, MIME type, asset link, inspection/event reference, component/location/method, page/sheet reference, evidence linkage, audit link, and safe preview panel.
+- Safe preview supports browser-safe PDF/image/CSV where feasible and is blocked for infected, blocked, quarantined, scan-failed, deleted, or delete-requested evidence. Signed URLs and raw object keys are not displayed.
+
+RC4-C adds no backend schema, no migrations, no new formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/FFS/RBI/NDT behavior changes, and no governance boundary weakening. Frontend validation is UX-only; backend validation remains authoritative.

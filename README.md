@@ -1,6 +1,6 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
@@ -519,3 +519,18 @@ RC4-B completes the Tank Asset Register and Engineering Master Data frontend usi
 - Manual UAT coverage in `docs/uat/uat_rc4b_tank_asset_register_frontend.md` and release report in `docs/release/AIM_RC4B_tank_asset_register_frontend_report.md`.
 
 Frontend validation is UX-only. Backend validation, RBAC, audit logging, and persistence remain authoritative. RC4-B introduces no new engineering formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no report/FFS/RBI/NDT/evidence behavior changes, and no backend schema changes.
+
+
+## RC4-C Evidence Upload UI and Evidence Detail Page
+
+Status: Implemented as frontend-focused completion package.
+
+RC4-C completes the Evidence Repository upload/detail frontend using existing AIM backend APIs and the RC3-B object-storage flow. It adds/updates:
+
+- `apps/web/app/evidence/page.tsx` for evidence list/table, asset and inspection/event filtering, object-storage upload panel, client-side file validation, SHA-256 checksum calculation, browser PUT upload progress, complete-upload confirmation, upload status, malware scan status, checksum display, and audited open/download action.
+- `apps/web/app/evidence/[evidenceId]/page.tsx` for evidence metadata, object-storage status, upload status, malware scan status, checksum, file size, MIME type, asset/inspection context, evidence linkage, audit-log link, safe preview panel, and audited open/download action.
+- Manual UAT coverage in `docs/uat/uat_rc4c_evidence_upload_ui.md` and release report in `docs/release/AIM_RC4C_evidence_upload_ui_report.md`.
+
+Evidence UI now uses `POST /api/v1/evidence/upload-url`, browser upload to the returned signed PUT URL or controlled upload instruction, and `POST /api/v1/evidence/complete-upload`. Signed URLs and raw object keys are not displayed. Preview is blocked for infected, blocked, quarantined, scan-failed, deleted, or delete-requested evidence and otherwise uses audited backend URL issuance. Frontend validation is UX-only; backend validation, object-storage policy, RBAC, malware status, audit logging, and evidence persistence remain authoritative.
+
+RC4-C introduces no new engineering formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/FFS/RBI/NDT behavior changes, and no backend schema changes.
