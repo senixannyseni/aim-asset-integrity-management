@@ -48,8 +48,16 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(route).toContain('RBI_CASE_CLOSED');
     expect(route).toContain('A comment or closure reason is required');
     expect(route).toContain('RBI_FINALIZATION_REQUIRES_SENIOR_ENGINEER');
+    expect(route).toContain('RBI_REVIEW_REQUIRED_BEFORE_APPROVAL');
+    expect(route).toContain('RBI_APPROVAL_REQUIRED_BEFORE_EXPORT');
+    expect(route).toContain('RBI_APPROVAL_REQUIRED_BEFORE_CLOSE');
+    expect(route).toContain('RBI_APPROVE_ENDPOINT_APPROVES_ONLY');
+    expect(route).toContain('where id = $1::uuid or case_id = $2');
+    expect(route).toContain('asset_id must be a valid UUID');
     expect(route).toContain('lead_engineer');
     expect(route).toContain('AI agents may not approve, export, close, or finalize RBI cases');
+    expect(route).toContain('review_gate_enforced');
+    expect(route).toContain('export_and_close_require_prior_approval');
   });
 
   it('connects repeated anomaly triggers to real findings history without automatic FFS/RBI formula logic', () => {
@@ -71,6 +79,8 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     const detailPage = expectFile('apps/web/app/rbi/[caseId]/page.tsx');
     const detailUi = expectFile('apps/web/app/rbi/[caseId]/RbiCaseDetailClient.tsx');
     const css = expectFile('apps/web/app/globals.css');
+    const migration = expectFile('db/migrations/0009_rbi_interface_trigger_workflow.sql');
+    const seed = expectFile('db/seeds/0001_foundation_seed.sql');
 
     expect(listUi).toContain('Guided RBI Case Input');
     expect(listUi).toContain('Create from Calculation Warning');
@@ -89,7 +99,10 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(detailUi).toContain('/close');
     expect(detailUi).toContain('Finding History Source');
     expect(detailUi).toContain('No API RP 581 quantitative formula');
+    expect(detailUi).toContain('senior-engineer/lead-engineer/admin authority');
     expect(css).toContain('.risk-matrix');
+    expect(migration).toContain("where r.role_code in ('senior_engineer','lead_engineer')");
+    expect(seed).toContain("where r.role_code in ('admin','senior_engineer','lead_engineer')");
   });
 
   it('documents OpenAPI, data dictionary, ERD, release, UAT, README, and source-of-truth alignment', () => {

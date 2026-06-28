@@ -252,7 +252,7 @@ join permissions p on p.permission_code in (
   'rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve',
   'report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','audit.read','audit_logs.view'
 )
-where r.role_code = 'senior_engineer'
+where r.role_code in ('senior_engineer','lead_engineer')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
@@ -366,7 +366,7 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in ('asset.read','asset.update','asset.delete','asset.approve','inspection.read','inspection.review','inspection.approve','evidence.read','evidence.link','evidence.update_metadata','evidence.delete_request','ai_extraction.read','ai_extraction.review','ai_extraction.correct','ai_extraction.promote','ndt.read','ndt_data_room.view','ndt.review','ndt.approve','ndt.import','formula.read','formula.create','formula.update','formula.approve','formula.retire','formula.test','calculation.run','calculation.read','calculation.review','calculation.approve','calculation.revise','ffs.read','ffs.create','ffs.trigger','ffs.update','ffs.review','ffs.request_assessment','ffs.approve','ffs.close','rbi.interface.read','rbi.interface.create','rbi.interface.export','integrity_decision.create','integrity_decision.review','integrity_decision.approve','report.read','report.generate','report.review','report.approve','work_order.read','work_order.create','work_order.update','work_order.close','validation.read','validation.run','workflow_event.create','error_log.create','error_log.read','audit.read','audit_logs.view')
-where r.role_code = 'senior_engineer'
+where r.role_code in ('senior_engineer','lead_engineer')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
@@ -579,7 +579,7 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in ('rbi.interface.read','rbi.interface.create','rbi.interface.update','rbi.interface.review','rbi.interface.approve','rbi.interface.export')
-where r.role_code in ('admin','senior_engineer')
+where r.role_code in ('admin','senior_engineer','lead_engineer')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)
@@ -628,7 +628,7 @@ from roles r
 join permissions p on p.permission_code in (
   'engineering_review.approve','engineering_review.override','approval_record.approve','approval_record.reject'
 )
-where r.role_code in ('admin','senior_engineer')
+where r.role_code in ('admin','senior_engineer','lead_engineer')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)

@@ -102,6 +102,7 @@ Implements RC4-I RBI workflow completion:
 - OpenAPI YAML parsed successfully.
 - Changed TypeScript/TSX files passed syntax transpilation checks.
 - RC4-I hotfix confirms `lead_engineer` is accepted by the backend finalization guard when the role has `rbi.interface.approve` / `rbi.interface.export`.
+- RC4-I cleanup aligns DB migration/seed RBI finalization permissions with `lead_engineer`, enforces review-before-approval, forces export/close through dedicated endpoints, and prevents export/close from populating `approved_at`.
 - To run in dev environment:
   - `pnpm --filter @aim/api test -- rc4-i-rbi-workflow-detail-guided-ui.test.ts`
   - `pnpm --filter @aim/api test -- rbi-workflow.test.ts`
@@ -126,6 +127,8 @@ Checklist:
 - [ ] Confirm `/rbi/[caseId]` detail page loads using a user-facing `case_id`.
 - [ ] Confirm duplicate calculation-warning trigger returns duplicate block for repeated submission.
 - [ ] Confirm repeated finding-history trigger requires at least two relevant active findings.
-- [ ] Confirm Senior Engineer/Lead Engineer/Admin can approve/export/close.
+- [ ] Confirm Senior Engineer/Lead Engineer/Admin can approve after review, export after approval, and close after approval/export.
+- [ ] Confirm `/approve` cannot be used for export or close.
+- [ ] Confirm close without comment is rejected.
 - [ ] Confirm AI/service actor cannot approve/export/close.
 - [ ] Confirm no untracked ZIP/package files are committed.

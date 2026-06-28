@@ -63,11 +63,23 @@ Expected result: status/review updates succeed and audit events are written.
 
 1. Log in as Senior Engineer/Lead Engineer/Admin.
 2. Open `/rbi/[caseId]`.
-3. Approve the case.
-4. Export the case.
-5. Close the case with a closure comment.
+3. Confirm approval is blocked while the case lacks recorded human review or is not `ready_for_review`.
+4. Record review status as `ready_for_review` with a comment.
+5. Approve the case through `/approve`.
+6. Export the approved case through `/export`.
+7. Close the case with a closure comment through `/close`.
 
-Expected result: final actions succeed only for authorized human senior roles; close requires a comment/reason.
+Expected result: final actions succeed only for authorized human senior roles; approval requires recorded review, export requires prior approval/export permission, and close requires prior approval plus comment/reason.
+
+### RC4I-UAT-06A — Finalization bypass prevention
+
+1. Attempt to call `/approve` with `status=exported`.
+2. Attempt to call `/approve` with `status=closed`.
+3. Attempt to export an unapproved case.
+4. Attempt to close an unapproved case.
+5. Attempt to close an approved case without a closure comment.
+
+Expected result: each bypass attempt is blocked with validation/gate errors; `approved_at` is populated only by actual approval.
 
 ### RC4I-UAT-07 — AI/service actor boundary
 

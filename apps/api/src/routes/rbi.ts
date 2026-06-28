@@ -286,11 +286,19 @@ async function assetExists(
   client: Queryable,
   assetId: string,
 ): Promise<boolean> {
+  if (!isUuid(assetId)) return false;
   const result = await client.query(
-    "select id from assets where id = $1 and deleted_at is null limit 1",
+    "select id from assets where id = $1::uuid and deleted_at is null limit 1",
     [assetId],
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+function invalidUuidError(res: ApiResponse, field: string): void {
+  const message = field === "asset_id"
+    ? "asset_id must be a valid UUID."
+    : `${field} must be a valid UUID.`;
+  validationError(res, field, message);
 }
 
 function evidenceIdsFromLinks(links: RbiEvidenceLinkInput[]): string[] {
@@ -569,8 +577,12 @@ rbiRouter.get(
       const assetId = asString(req.query.asset_id);
       const status = asString(req.query.status);
       if (assetId) {
+        if (!isUuid(assetId)) {
+          invalidUuidError(res, "asset_id");
+          return;
+        }
         values.push(assetId);
-        where.push(`asset_id = $${values.length}`);
+        where.push(`asset_id = $${values.length}::uuid`);
       }
       if (status) {
         values.push(status);
@@ -627,6 +639,10 @@ rbiRouter.post('/rbi/cases', requirePermission('rbi.interface.create'), async (r
     const normalized = normalizeManualBody(req.body);
     if (!normalized.assetId) {
       validationError(res, "asset_id", "asset_id is required.");
+      return;
+    }
+    if (!isUuid(normalized.assetId)) {
+      invalidUuidError(res, "asset_id");
       return;
     }
     if (!isStatus(normalized.status)) {
@@ -739,14 +755,23 @@ async function loadRbiCase(
 ): Promise<DbRow | undefined> {
   const result = isUuid(caseId)
     ? await client.query<DbRow>(
-        "select * from rbi_cases where id = $1::uuid or case_id = $1 limit 1",
-        [caseId],
+        "select * from rbi_cases where id = $1::uuid or case_id = $2 limit 1",
+        [caseId, caseId],
       )
     : await client.query<DbRow>(
         "select * from rbi_cases where case_id = $1 limit 1",
         [caseId],
       );
   return result.rows[0];
+}
+
+function hasRecordedRbiReview(caseRow: DbRow): boolean {
+  return Boolean(caseRow.reviewed_at) && caseRow.status === "ready_for_review";
+}
+
+function hasApprovedRbiCase(caseRow: DbRow): boolean {
+  return Boolean(caseRow.approved_at) &&
+    (caseRow.status === "approved" || caseRow.status === "exported");
 }
 
 
@@ -868,18 +893,63 @@ async function finalizeRbiCase(
         });
       return;
     }
-    const approver = await resolveUserId(client, req);
-    const result = await client.query<DbRow>(
-      `update rbi_cases
-       set status = $2,
-           approver = $3,
-           approved_at = coalesce(approved_at, now()),
-           updated_by = $3,
-           updated_at = now()
-       where id = $1
-       returning *`,
-      [before.id, finalStatus, approver],
-    );
+
+    if (finalStatus === "approved" && !hasRecordedRbiReview(before)) {
+      await client.query("rollback");
+      res.status(400).json({
+        error: {
+          code: "RBI_REVIEW_REQUIRED_BEFORE_APPROVAL",
+          message:
+            "RBI approval requires a recorded human review and ready_for_review status.",
+        },
+      });
+      return;
+    }
+
+    if (finalStatus === "exported" && !hasApprovedRbiCase(before)) {
+      await client.query("rollback");
+      res.status(400).json({
+        error: {
+          code: "RBI_APPROVAL_REQUIRED_BEFORE_EXPORT",
+          message: "RBI export requires a previously approved RBI case.",
+        },
+      });
+      return;
+    }
+
+    if (finalStatus === "closed" && !hasApprovedRbiCase(before)) {
+      await client.query("rollback");
+      res.status(400).json({
+        error: {
+          code: "RBI_APPROVAL_REQUIRED_BEFORE_CLOSE",
+          message: "RBI close requires a previously approved or exported RBI case.",
+        },
+      });
+      return;
+    }
+
+    const actor = await resolveUserId(client, req);
+    const result = finalStatus === "approved"
+      ? await client.query<DbRow>(
+          `update rbi_cases
+           set status = 'approved',
+               approver = $2,
+               approved_at = now(),
+               updated_by = $2,
+               updated_at = now()
+           where id = $1
+           returning *`,
+          [before.id, actor],
+        )
+      : await client.query<DbRow>(
+          `update rbi_cases
+           set status = $2,
+               updated_by = $3,
+               updated_at = now()
+           where id = $1
+           returning *`,
+          [before.id, finalStatus, actor],
+        );
     const updated = result.rows[0];
     const auditLogId = await writeAudit(
       client,
@@ -893,6 +963,8 @@ async function finalizeRbiCase(
         module: "rbi_interface_detail_workflow",
         final_status: finalStatus,
         comment: comment ?? null,
+        review_gate_enforced: true,
+        export_and_close_require_prior_approval: true,
         quantitative_api_581_not_implemented: true,
       },
     );
@@ -950,6 +1022,11 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
               "Calculation run must have asset_id before creating an RBI case.",
           },
         });
+        return;
+      }
+      if (!isUuid(runAssetId)) {
+        await client.query("rollback");
+        invalidUuidError(res, "asset_id");
         return;
       }
 
@@ -1156,6 +1233,11 @@ rbiRouter.post(
           "asset_id",
           "asset_id or finding_id is required for repeated-anomaly RBI trigger creation.",
         );
+        return;
+      }
+      if (!isUuid(assetId)) {
+        await client.query("rollback");
+        invalidUuidError(res, "asset_id");
         return;
       }
       if (!(await assetExists(client, assetId))) {
@@ -1467,14 +1549,19 @@ rbiRouter.patch(
 );
 
 rbiRouter.post('/rbi/cases/:caseId/approve', requirePermission('rbi.interface.approve'), async (req, res, next) => {
-    const requestedStatus =
-      asString(isPlainObject(req.body) ? req.body.status : undefined) ??
-      "approved";
-    const finalStatus =
-      requestedStatus === "exported" || requestedStatus === "closed"
-        ? requestedStatus
-        : "approved";
-    await finalizeRbiCase(req, res, next, finalStatus, "RBI_CASE_APPROVED");
+    const requestedStatus = asString(
+      isPlainObject(req.body) ? req.body.status : undefined,
+    );
+    if (requestedStatus && requestedStatus !== "approved") {
+      validationError(
+        res,
+        "status",
+        "The RBI approve endpoint may only approve. Use /export or /close for export and closure actions.",
+        "RBI_APPROVE_ENDPOINT_APPROVES_ONLY",
+      );
+      return;
+    }
+    await finalizeRbiCase(req, res, next, "approved", "RBI_CASE_APPROVED");
   },
 );
 

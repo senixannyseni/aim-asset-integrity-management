@@ -169,7 +169,7 @@ insert into role_permissions(role_id, permission_id)
 select r.id, p.id
 from roles r
 join permissions p on p.permission_code in ('rbi.interface.read','rbi.interface.create','rbi.interface.update','rbi.interface.review','rbi.interface.approve','rbi.interface.export')
-where r.role_code = 'senior_engineer'
+where r.role_code in ('senior_engineer','lead_engineer')
 on conflict do nothing;
 
 insert into role_permissions(role_id, permission_id)

@@ -234,7 +234,7 @@ export default function RbiCaseDetailClient({ caseId }: { caseId: string }) {
 
       <section className="grid-two">
         <section className="panel">
-          <div className="panel-heading"><h2>Final Actions</h2><p>Visible only when RBAC permission is available. Backend still enforces senior-engineer/admin authority and blocks AI actors.</p></div>
+          <div className="panel-heading"><h2>Final Actions</h2><p>Visible only when RBAC permission is available. Backend still enforces senior-engineer/lead-engineer/admin authority and blocks AI actors.</p></div>
           <div className="action-row">
             {canApprove && <button className="primary-button" disabled={actionLoading} onClick={() => void finalAction('approve', { status: 'approved', comment: 'Approved from RBI detail page.' })}>Approve</button>}
             {canExport && <button className="secondary-button" disabled={actionLoading} onClick={() => void finalAction('export', { comment: 'Export action from RBI detail page.' })}>Export</button>}
@@ -242,7 +242,7 @@ export default function RbiCaseDetailClient({ caseId }: { caseId: string }) {
           </div>
         </section>
         <form className="panel" onSubmit={closeCase}>
-          <div className="panel-heading"><h2>Close Case</h2><p>Closure requires a comment/reason and senior-engineer/admin authority.</p></div>
+          <div className="panel-heading"><h2>Close Case</h2><p>Closure requires a comment/reason and senior-engineer/lead-engineer/admin authority.</p></div>
           <label><span>Closure comment</span><input name="closure_comment" required placeholder="Reason for closing this RBI interface case" /></label>
           <button className="primary-button" disabled={actionLoading || !canApprove} type="submit">Close RBI case</button>
         </form>

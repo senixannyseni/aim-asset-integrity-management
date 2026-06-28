@@ -671,9 +671,9 @@ RBAC seed data is aligned with `apps/api/src/rbac/roles.ts` through Sprint 8. De
 | calculation_basis_note | text | yes |  | States quantitative API RP 581 rules are not implemented unless Formula Registry provides approved rules. |
 | status | text | yes | allowed statuses | Workflow status: open, under_review, data_required, assessment_in_progress, ready_for_review, approved, exported, closed. |
 | reviewer | uuid | no | FK users(id) | Reviewer. |
-| approver | uuid | no | FK users(id) | Senior engineer/admin approver. |
+| approver | uuid | no | FK users(id) | Senior engineer/lead engineer/admin approver. |
 | reviewed_at | timestamptz | no |  | Review timestamp. |
-| approved_at | timestamptz | no |  | Approval/export timestamp. |
+| approved_at | timestamptz | no |  | Approval timestamp only; export and close must not backfill approval time. |
 | created_by | uuid | no | FK users(id) | Creator. |
 | updated_by | uuid | no | FK users(id) | Last updater. |
 | created_at | timestamptz | yes | default now() | Creation timestamp. |
@@ -700,6 +700,11 @@ RC4-I does not add new database columns. It uses the existing `rbi_cases`, `rbi_
 - `/api/v1/rbi/cases/from-calculation` now stores `input_placeholders.source_warning_signature` and blocks duplicate open RBI cases for the same calculation-run / trigger-rule / warning-signature combination.
 - `/api/v1/rbi/cases/from-finding-history` uses RC4-H `findings` rows as the repeated-anomaly source, stores `input_placeholders.source_finding_signature`, stores source finding snapshots, and blocks duplicate open RBI cases for the same repeated-finding signature.
 - RBI review, approve, export, and close actions update existing workflow fields and write audit logs; closure requires a comment/reason.
+- RC4-I hardening aligns DB seed/migration RBI finalization permissions with backend/static RBAC for `lead_engineer`.
+- Approval now requires recorded human review plus `ready_for_review` status; export and close require a previously approved RBI case.
+- `/approve` approves only. Export and close must use their dedicated endpoints so export permission and closure-comment gates cannot be bypassed.
+- `approved_at` is populated only by actual approval, not by export or close.
+- RBI case lookup uses separate UUID/text parameters and asset-scoped creation validates `asset_id` as UUID before database lookup.
 - `finding_history` is a trigger source only. It does not automatically approve engineering data, calculations, reports, FFS cases, or final integrity decisions.
 - Risk matrix display remains qualitative/semi-quantitative placeholder metadata unless future licensed Formula Registry rules are supplied and approved.
 
