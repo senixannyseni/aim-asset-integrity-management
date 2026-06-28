@@ -51,3 +51,15 @@ pnpm -r test
 ## Boundaries
 
 No new formulas, no API 579/API 581 quantitative logic, no AI finalization, no direct n8n database access, and no report issue changes.
+
+
+## RC4-J Review Addendum — Approval Request Gate Hardening
+
+Additional review hardening applied after final static review:
+
+- Approval requests now require `review_id`; direct approval-record creation without a reviewed engineering review is blocked with `REVIEW_ID_REQUIRED`.
+- Approval request entity context must match the reviewed engineering review entity; mismatch is blocked with `APPROVAL_REVIEW_ENTITY_MISMATCH`.
+- Approved, rejected, or locked review records are immutable for status/comment mutation and require a new revision.
+- Approved, rejected, or locked approval records are immutable and cannot be re-approved or re-rejected.
+- Approval/rejection actions require the approval record to be `submitted_for_approval`.
+- Rejected approval records are locked, and the linked review is marked rejected/locked so later changes require a revision.

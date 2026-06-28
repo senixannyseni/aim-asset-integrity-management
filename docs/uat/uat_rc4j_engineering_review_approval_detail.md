@@ -29,3 +29,11 @@ Verify that Engineering Review and Approval can be completed through review deta
 - Screenshots of `/reviews`, `/reviews/[reviewId]`, and `/calculations/[runId]` timeline.
 - API responses for blocked checklist, blocked approval request, rejection, override, and revision creation.
 - Audit log entries for review status update, comment, approval/rejection, override, and revision.
+
+
+## Additional Negative UAT Cases
+
+- Attempt to create an approval request without `review_id`; expected: `REVIEW_ID_REQUIRED`.
+- Attempt to create an approval request with a `review_id` that points to a different entity; expected: `APPROVAL_REVIEW_ENTITY_MISMATCH`.
+- Attempt to approve or reject an already approved/rejected/locked approval record; expected: `FINAL_APPROVAL_STATE_LOCKED`.
+- Attempt to change status or add comment to an approved/rejected/locked review; expected: final review state lock response.

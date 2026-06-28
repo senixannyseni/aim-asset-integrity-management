@@ -44,6 +44,9 @@ describe('RC4-J engineering review detail and approval UX hardening', () => {
     expect(route).toContain('validateStructuredChecklistForReview');
     expect(route).toContain('STRUCTURED_CHECKLIST_REQUIRED');
     expect(route).toContain('REVIEW_COMPLETION_REQUIRED');
+    expect(route).toContain('REVIEW_ID_REQUIRED');
+    expect(route).toContain('APPROVAL_REVIEW_ENTITY_MISMATCH');
+    expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
     expect(route).toContain("review.review_status !== 'reviewed'");
     expect(route).toContain('ENGINEERING_REVIEW_REVISION_CREATED');
     expect(route).toContain('parent_comment_id');

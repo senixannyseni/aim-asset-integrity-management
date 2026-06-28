@@ -42,6 +42,9 @@ describe('Engineering review and approval workflow governance', () => {
     expect(route).toContain('original_value');
     expect(route).toContain('override_value');
     expect(route).toContain('AI_AGENT_CANNOT_APPROVE_OR_OVERRIDE');
+    expect(route).toContain('REVIEW_ID_REQUIRED');
+    expect(route).toContain('FINAL_APPROVAL_STATE_LOCKED');
+    expect(route).toContain('APPROVAL_NOT_SUBMITTED');
   });
 
   it('locks calculation runs after senior approval and exposes full audit trail from calculation detail', () => {

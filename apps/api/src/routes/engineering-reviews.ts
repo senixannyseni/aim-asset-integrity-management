@@ -24,6 +24,8 @@ const REVIEW_STATUSES = [
 ] as const;
 
 const REVIEW_ENTITY_TYPES = ['asset', 'calculation_run', 'ndt_measurement', 'ffs_case', 'rbi_case', 'finding'] as const;
+const FINAL_REVIEW_STATUSES = ['approved', 'rejected', 'locked'] as const;
+const FINAL_APPROVAL_STATUSES = ['approved', 'rejected', 'locked'] as const;
 
 type ReviewStatus = typeof REVIEW_STATUSES[number];
 
@@ -56,6 +58,25 @@ function validationError(res: ApiResponse, field: string, message: string, code 
       details: [{ field, message, severity: 'error' }]
     }
   });
+}
+
+function routeUuidParam(res: ApiResponse, field: string, value: unknown): string | null {
+  const id = uuidOrNull(value);
+  if (!id) {
+    validationError(res, field, `${field} must be a valid UUID.`, 'INVALID_ROUTE_PARAM');
+    return null;
+  }
+  return id;
+}
+
+function isFinalReviewState(row: DbRow | undefined): boolean {
+  if (!row) return false;
+  return row.locked_flag === true || (FINAL_REVIEW_STATUSES as readonly string[]).includes(String(row.review_status ?? ''));
+}
+
+function isFinalApprovalState(row: DbRow | undefined): boolean {
+  if (!row) return false;
+  return row.locked_flag === true || (FINAL_APPROVAL_STATUSES as readonly string[]).includes(String(row.approval_status ?? ''));
 }
 
 function actorUserId(req: Request): string | null {
@@ -380,7 +401,8 @@ engineeringReviewsRouter.post('/engineering/reviews', requirePermission('enginee
 
 engineeringReviewsRouter.get('/engineering/reviews/:reviewId', requirePermission('engineering_review.read'), async (req, res, next) => {
   try {
-    const reviewId = asString(req.params.reviewId);
+    const reviewId = routeUuidParam(res, 'reviewId', req.params.reviewId);
+    if (!reviewId) return;
     const reviewResult = await pool.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
     const review = reviewResult.rows[0];
     if (!review) {
@@ -416,19 +438,22 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
     return;
   }
 
+  const reviewId = routeUuidParam(res, 'reviewId', req.params.reviewId);
+  if (!reviewId) return;
+
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [req.params.reviewId]);
+    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
       return;
     }
-    if (before.locked_flag === true || before.review_status === 'locked') {
+    if (isFinalReviewState(before)) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked review records cannot be edited. Create a new revision.' } });
+      res.status(409).json({ error: { code: 'FINAL_REVIEW_STATE_LOCKED', message: 'Approved, rejected, or locked review records cannot be edited. Create a new revision.' } });
       return;
     }
     const nextChecklist = isPlainObject(req.body.checklist) ? req.body.checklist : before.checklist_json;
@@ -457,7 +482,7 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
            updated_at = now()
        where id = $1
        returning *`,
-      [req.params.reviewId, status, asString(req.body.review_comment ?? req.body.comment) ?? null, isPlainObject(req.body.checklist) ? JSON.stringify(req.body.checklist) : null]
+      [reviewId, status, asString(req.body.review_comment ?? req.body.comment) ?? null, isPlainObject(req.body.checklist) ? JSON.stringify(req.body.checklist) : null]
     );
     const updated = result.rows[0];
     if (updated?.calculation_run_id && status === 'reviewed') {
@@ -491,6 +516,9 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
     return;
   }
   const parentCommentId = asString(req.body.parent_comment_id ?? req.body.parentCommentId);
+  const reviewId = routeUuidParam(res, 'reviewId', req.params.reviewId);
+  if (!reviewId) return;
+
   const commentRecord = {
     comment_id: `CMT-${Date.now()}`,
     parent_comment_id: parentCommentId ?? null,
@@ -503,16 +531,16 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [req.params.reviewId]);
+    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
       return;
     }
-    if (before.locked_flag === true || before.review_status === 'locked') {
+    if (isFinalReviewState(before)) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked review records cannot be edited. Create a new revision.' } });
+      res.status(409).json({ error: { code: 'FINAL_REVIEW_STATE_LOCKED', message: 'Approved, rejected, or locked review records cannot be edited. Create a new revision.' } });
       return;
     }
     const result = await client.query<DbRow>(
@@ -521,7 +549,7 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
            updated_at = now()
        where id = $1
        returning *`,
-      [req.params.reviewId, JSON.stringify([commentRecord])]
+      [reviewId, JSON.stringify([commentRecord])]
     );
     const updated = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'ENGINEERING_REVIEW_COMMENT_ADDED', 'engineering_review', String(updated?.id), mapReview(before), mapReview(updated ?? {}), { comment_added: true });
@@ -540,10 +568,13 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', require
     validationError(res, 'body', 'JSON object body is required.');
     return;
   }
+  const reviewId = routeUuidParam(res, 'reviewId', req.params.reviewId);
+  if (!reviewId) return;
+
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [req.params.reviewId]);
+    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -634,40 +665,52 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
     return;
   }
   const reviewId = uuidOrNull(req.body.review_id ?? req.body.reviewId);
-  const entityType = asString(req.body.entity_type ?? req.body.entityType) ?? 'calculation_run';
-  const entityId = uuidOrNull(req.body.entity_id ?? req.body.entityId ?? req.body.calculation_run_id ?? req.body.calculationRunId);
-  if (!entityId) {
-    validationError(res, 'entity_id', 'entity_id or calculation_run_id must be a valid UUID.');
+  if (!reviewId) {
+    validationError(res, 'review_id', 'review_id is required and must reference a reviewed engineering review before approval can be requested.', 'REVIEW_ID_REQUIRED');
     return;
   }
 
   const client = await pool.connect();
   try {
     await client.query('begin');
+    const reviewResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
+    const review = reviewResult.rows[0];
+    if (!review) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
+      return;
+    }
+    if (isFinalReviewState(review)) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'FINAL_REVIEW_STATE_LOCKED', message: 'Approved, rejected, or locked review records cannot be submitted again. Create a new revision.' } });
+      return;
+    }
+    if (review.review_status !== 'reviewed') {
+      await client.query('rollback');
+      res.status(422).json({ error: { code: 'REVIEW_COMPLETION_REQUIRED', message: 'Approval request is blocked until the engineering review is marked reviewed through the structured checklist flow.' } });
+      return;
+    }
+
+    const entityType = asString(review.entity_type);
+    const entityId = uuidOrNull(review.entity_id);
+    if (!entityType || !entityId) {
+      await client.query('rollback');
+      res.status(422).json({ error: { code: 'REVIEW_ENTITY_CONTEXT_INVALID', message: 'Reviewed engineering review does not contain a valid entity context.' } });
+      return;
+    }
+    const requestedEntityType = asString(req.body.entity_type ?? req.body.entityType);
+    const requestedEntityId = uuidOrNull(req.body.entity_id ?? req.body.entityId ?? req.body.calculation_run_id ?? req.body.calculationRunId);
+    if ((requestedEntityType && requestedEntityType !== entityType) || (requestedEntityId && requestedEntityId !== entityId)) {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'APPROVAL_REVIEW_ENTITY_MISMATCH', message: 'Approval request entity must match the reviewed engineering review entity.' } });
+      return;
+    }
+
     const context = await resolveEntityContext(client, entityType, entityId);
     if (!context.assetId && entityType !== 'finding') {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'APPROVAL_ENTITY_NOT_FOUND', message: 'Approval target was not found.' } });
       return;
-    }
-    if (reviewId) {
-      const reviewResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
-      const review = reviewResult.rows[0];
-      if (!review) {
-        await client.query('rollback');
-        res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
-        return;
-      }
-      if (review.locked_flag === true || review.review_status === 'locked') {
-        await client.query('rollback');
-        res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked review records cannot be submitted again. Create a new revision.' } });
-        return;
-      }
-      if (review.review_status !== 'reviewed') {
-        await client.query('rollback');
-        res.status(422).json({ error: { code: 'REVIEW_COMPLETION_REQUIRED', message: 'Approval request is blocked until the engineering review is marked reviewed through the structured checklist flow.' } });
-        return;
-      }
     }
     const approvalCode = `APR-${Date.now()}`;
     const result = await client.query<DbRow>(
@@ -796,17 +839,8 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
     return;
   }
 
-  const approvalId = req.params.approvalId;
-
-  if (!approvalId) {
-    res.status(400).json({
-      error: {
-        code: 'MISSING_ROUTE_PARAM',
-        message: 'approvalId is required.'
-      }
-    });
-    return;
-  }
+  const approvalId = routeUuidParam(res, 'approvalId', req.params.approvalId);
+  if (!approvalId) return;
 
   const client = await pool.connect();
   try {
@@ -817,9 +851,14 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
       res.status(404).json({ error: { code: 'APPROVAL_RECORD_NOT_FOUND', message: 'Approval record not found.' } });
       return;
     }
-    if (before.locked_flag === true || before.approval_status === 'locked') {
+    if (isFinalApprovalState(before)) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked approval records cannot be edited. Create a new revision.' } });
+      res.status(409).json({ error: { code: 'FINAL_APPROVAL_STATE_LOCKED', message: 'Approved, rejected, or locked approval records cannot be edited. Create a new revision.' } });
+      return;
+    }
+    if (before.approval_status !== 'submitted_for_approval') {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'APPROVAL_NOT_SUBMITTED', message: 'Only submitted approval records can be approved or rejected.' } });
       return;
     }
     if (isSelfApprovalAttempt(req, before)) {
@@ -920,17 +959,8 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
 });
 
 engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePermission('approval_record.reject'), async (req, res, next) => {
-  const approvalId = req.params.approvalId;
-
-  if (!approvalId) {
-    res.status(400).json({
-      error: {
-        code: 'MISSING_ROUTE_PARAM',
-        message: 'approvalId is required.'
-      }
-    });
-    return;
-  }
+  const approvalId = routeUuidParam(res, 'approvalId', req.params.approvalId);
+  if (!approvalId) return;
   if (!isPlainObject(req.body)) {
     validationError(res, 'body', 'JSON object body is required.');
     return;
@@ -952,9 +982,14 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
       res.status(404).json({ error: { code: 'APPROVAL_RECORD_NOT_FOUND', message: 'Approval record not found.' } });
       return;
     }
-    if (before.locked_flag === true || before.approval_status === 'locked') {
+    if (isFinalApprovalState(before)) {
       await client.query('rollback');
-      res.status(409).json({ error: { code: 'LOCKED_RECORD_IMMUTABLE', message: 'Locked approval records cannot be edited. Create a new revision.' } });
+      res.status(409).json({ error: { code: 'FINAL_APPROVAL_STATE_LOCKED', message: 'Approved, rejected, or locked approval records cannot be edited. Create a new revision.' } });
+      return;
+    }
+    if (before.approval_status !== 'submitted_for_approval') {
+      await client.query('rollback');
+      res.status(409).json({ error: { code: 'APPROVAL_NOT_SUBMITTED', message: 'Only submitted approval records can be approved or rejected.' } });
       return;
     }
     if (isSelfApprovalAttempt(req, before)) {
@@ -967,6 +1002,7 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
        set approval_status = 'rejected',
            approver_id = $2,
            approval_comment = coalesce($3, approval_comment),
+           locked_flag = true,
            rejected_at = now(),
            updated_at = now()
        where id = $1
@@ -975,7 +1011,7 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
     );
     const updated = result.rows[0];
     if (updated?.review_id) {
-      await client.query(`update engineering_reviews set review_status = 'rejected', updated_at = now() where id = $1 and locked_flag = false`, [updated.review_id]);
+      await client.query(`update engineering_reviews set review_status = 'rejected', locked_flag = true, updated_at = now() where id = $1 and locked_flag = false`, [updated.review_id]);
     }
     if (updated?.calculation_run_id) {
       await client.query(`update calculation_runs set approval_status = 'rejected', status = 'rejected', approver_id = $2 where id = $1 and locked_flag = false`, [updated.calculation_run_id, actorUserId(req)]);

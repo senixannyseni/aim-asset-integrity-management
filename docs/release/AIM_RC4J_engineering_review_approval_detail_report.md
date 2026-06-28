@@ -45,3 +45,8 @@ pnpm --filter @aim/api test -- engineering-review-approval.test.ts
 pnpm -r lint
 pnpm -r test
 ```
+
+
+## Final Review Hardening Addendum
+
+The approval request flow was hardened so approval records require a reviewed `review_id`, entity context cannot be changed during approval request creation, and approved/rejected/locked review or approval records are immutable. Rejected approvals are locked and further changes require a new review revision.
