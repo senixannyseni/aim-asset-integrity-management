@@ -730,6 +730,11 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
     const checksum = verificationChecksum;
     const safeFilename = String(session.safe_filename);
     const fileExtension = extensionForFilename(safeFilename);
+    const completedInspectionDate = asDateString(body.inspection_date);
+    const completedMethod = asString(body.method);
+    const completedComponent = asString(body.component);
+    const completedLocation = asString(body.location);
+    const completedPageOrSheetRef = asString(body.page_or_sheet_ref);
     const evidenceResult = await client.query<DbRow>(
       `insert into evidence_files(
         evidence_code,
@@ -751,6 +756,12 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
         checksum_sha256,
         checksum,
         uploaded_by,
+        method,
+        component,
+        inspection_date,
+        location,
+        page_figure_table_reference,
+        page_or_sheet_ref,
         status,
         evidence_status,
         malware_scan_status,
@@ -758,11 +769,17 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
         upload_status,
         uploaded_at,
         completed_at
-      ) values ($1, $2, $3, $4, $4, 's3-compatible', $5, $6, $7, $8, $8, $9, $9, $10, $11, $11, $12, $12, $13, 'active', 'active', 'pending_scan', 'not_issued', 'verified', now(), now())
+      ) values ($1, $2, $3, $4, $4, 's3-compatible', $5, $6, $7, $8, $8, $9, $9, $10, $11, $11, $12, $12, $13, $14, $15, $16, $17, $18, $18, 'active', 'active', 'pending_scan', 'not_issued', 'verified', now(), now())
       on conflict (checksum_sha256, object_storage_uri) do update set
         storage_bucket = excluded.storage_bucket,
         object_key = excluded.object_key,
         upload_status = 'verified',
+        method = coalesce(excluded.method, evidence_files.method),
+        component = coalesce(excluded.component, evidence_files.component),
+        inspection_date = coalesce(excluded.inspection_date, evidence_files.inspection_date),
+        location = coalesce(excluded.location, evidence_files.location),
+        page_figure_table_reference = coalesce(excluded.page_figure_table_reference, evidence_files.page_figure_table_reference),
+        page_or_sheet_ref = coalesce(excluded.page_or_sheet_ref, evidence_files.page_or_sheet_ref),
         completed_at = now(),
         updated_at = now()
       returning *`,
@@ -779,7 +796,12 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
         String(session.declared_mime_type),
         objectHead.contentLength,
         checksum,
-        actorUserId(req)
+        actorUserId(req),
+        completedMethod, 
+        completedComponent,
+        completedInspectionDate,
+        completedLocation,
+        completedPageOrSheetRef
       ]
     );
     const evidence = evidenceResult.rows[0];
