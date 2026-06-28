@@ -315,3 +315,20 @@ Implemented RC4-C controls:
 - Safe preview supports browser-safe PDF/image/CSV where feasible and is blocked for infected, blocked, quarantined, scan-failed, deleted, or delete-requested evidence. Signed URLs and raw object keys are not displayed.
 
 RC4-C adds no backend schema, no migrations, no new formulas, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/FFS/RBI/NDT behavior changes, and no governance boundary weakening. Frontend validation is UX-only; backend validation remains authoritative.
+
+## RC4-D NDT Bulk Import UX and Measurement Detail Page
+
+Status: Implemented as frontend-focused NDT completion package.
+
+RC4-D completes the user-facing NDT bulk import and measurement detail frontend without reopening RC3, RC4-A, RC4-B, or RC4-C.
+
+Implemented RC4-D controls:
+
+- `apps/web/app/ndt/page.tsx` exists and provides NDT measurement list/table, manual NDT entry, CSV bulk import preview, row-level validation, import summary, filters, evidence-linked and missing-evidence markers, critical missing-evidence warnings, CSV export, loading state, empty state, error state, and permission-denied state.
+- `apps/web/app/ndt/[measurementId]/page.tsx` exists and shows measurement metadata, asset link, inspection/event reference, component/course/grid/elevation/orientation, measured thickness with unit, method, confidence, extraction source, reviewer status, validation status, evidence gate, evidence linkage, missing-evidence blocking/warning state, calculation input link, and audit-log link.
+- `apps/web/app/assets/[assetId]/ndt/page.tsx` exists and provides asset-scoped NDT list, asset context, asset-prefilled manual entry, CSV bulk import with asset fallback, filters, evidence markers, and detail links.
+- Bulk import supports preview before commit and row-level validation for missing asset, missing component, missing measured thickness, invalid thickness, invalid date, unsupported method, missing/ambiguous unit, and critical missing-evidence warnings.
+- Display-only NDT visualization includes CML/TML grid table, UT/MFL/method grouping, component/course/grid filters, status badges based only on existing validation/reviewer/evidence-gate values, and evidence-linked/missing-evidence markers.
+
+RC4-D adds no backend schema, no migrations, no new formulas, no calculation engine changes, no FFS/RBI trigger logic, no AI/n8n/service actor governance changes, no approval/report/evidence upload behavior changes, and no governance boundary weakening. Frontend validation is UX-only; backend validation remains authoritative.
+
