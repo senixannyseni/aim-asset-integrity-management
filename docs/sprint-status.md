@@ -497,3 +497,17 @@ RC4-N closes the integrity decision detail UX gap after RC4-M:
 - Detail page actions for direct evidence linkage and senior-human approval are permission-aware while backend RBAC remains authoritative.
 
 RC4-N does not add formulas, report issue automation, work-order automation, AI/n8n/service finalization, object-storage changes, migrations, or direct n8n/database access.
+
+## RC4-O Calculation Run Detail and Formula Traceability Readiness
+
+Status: Implemented as calculation detail UX and read-only formula traceability readiness package.
+
+RC4-O closes the calculation run final-use visibility gap after RC4-N:
+
+- Added `GET /api/v1/engineering/calculations/{runId}/readiness` as a read-only readiness preview.
+- Added `/calculations/[runId]` formula traceability readiness panels, snapshot hashes, readiness gates, linked evidence, downstream integrity decision/report/work-order traceability, and review/approval/audit timeline.
+- Added calculation readiness gates for formula version snapshot, output snapshot, validation status, evidence linkage, engineering review, approval, downstream decision trace, and AI/n8n finalization boundary.
+- Calculation run list now links to **Formula readiness** detail workflow.
+
+RC4-O does not add formulas, recalculate outputs, approve/reject/lock calculations, issue reports, create integrity decisions, create work orders, change object storage, implement API 579/API 581 quantitative logic, enable AI/n8n/service finalization, or bypass human engineering review.
+
