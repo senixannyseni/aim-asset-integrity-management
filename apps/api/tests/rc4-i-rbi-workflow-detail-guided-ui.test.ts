@@ -24,6 +24,8 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(hasPermission(['engineer'], 'rbi.interface.review')).toBe(true);
     expect(hasPermission(['senior_engineer'], 'rbi.interface.approve')).toBe(true);
     expect(hasPermission(['senior_engineer'], 'rbi.interface.export')).toBe(true);
+    expect(hasPermission(['lead_engineer'], 'rbi.interface.approve')).toBe(true);
+    expect(hasPermission(['lead_engineer'], 'rbi.interface.export')).toBe(true);
     expect(hasPermission(['ai_agent'], 'rbi.interface.approve')).toBe(false);
     expect(hasPermission(['ai_agent'], 'rbi.interface.export')).toBe(false);
   });
@@ -46,6 +48,7 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(route).toContain('RBI_CASE_CLOSED');
     expect(route).toContain('A comment or closure reason is required');
     expect(route).toContain('RBI_FINALIZATION_REQUIRES_SENIOR_ENGINEER');
+    expect(route).toContain('lead_engineer');
     expect(route).toContain('AI agents may not approve, export, close, or finalize RBI cases');
   });
 

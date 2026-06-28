@@ -13,7 +13,7 @@ RC4-I implements Future Fix items 51–57 for the RBI workflow:
 3. Frontend actions for status update, review, approve, export, and close with RBAC-aware visibility.
 4. Repeated-anomaly trigger connection to the real RC4-H findings/anomaly history module.
 5. Duplicate-prevention logic for repeated RBI triggers from the same calculation warning signature and same finding-history signature.
-6. Integration/static regression coverage for calculation warning → RBI case → review → senior approval/export/close workflow.
+6. Integration/static regression coverage for calculation warning → RBI case → review → senior/lead-engineer approval/export/close workflow.
 7. Richer placeholder/semi-quantitative risk matrix visualization.
 
 ## Changed Files
@@ -67,7 +67,7 @@ Existing approval endpoint remains:
 
 - `POST /api/v1/rbi/cases/{caseId}/approve`
 
-Close requires a comment/reason. AI actors are blocked from approve/export/close/finalization. Senior authority is enforced in the backend.
+Close requires a comment/reason. AI actors are blocked from approve/export/close/finalization. Senior/lead-engineer/admin finalization authority is enforced in the backend.
 
 ## Frontend Controls
 

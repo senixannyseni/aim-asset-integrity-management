@@ -117,7 +117,11 @@ function actorRoles(req: Request): Role[] {
 
 function hasSeniorAuthority(req: Request): boolean {
   const roles = actorRoles(req);
-  return roles.includes("admin") || roles.includes("senior_engineer");
+  return (
+    roles.includes("admin") ||
+    roles.includes("senior_engineer") ||
+    roles.includes("lead_engineer")
+  );
 }
 
 function rejectAiApproval(req: Request, res: ApiResponse): boolean {
@@ -827,7 +831,7 @@ async function finalizeRbiCase(
       error: {
         code: "RBI_FINALIZATION_REQUIRES_SENIOR_ENGINEER",
         message:
-          "RBI approval, export, and close actions require senior_engineer or admin role.",
+          "RBI approval, export, and close actions require senior_engineer, lead_engineer, or admin role.",
       },
     });
     return;

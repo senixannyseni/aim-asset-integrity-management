@@ -6,7 +6,7 @@ Verify that the RBI workflow supports guided input, case detail review, calculat
 
 ## Preconditions
 
-- User can log in as Engineer and Senior Engineer/Admin.
+- User can log in as Engineer and Senior Engineer/Lead Engineer/Admin.
 - At least one active tank asset exists.
 - At least one calculation run exists with RBI trigger warning output, such as `HIGH_CORROSION_RATE`, `LOW_REMAINING_LIFE`, or `RBI_TRIGGER_CANDIDATE`.
 - At least two relevant active findings exist for the same asset/component if testing finding-history trigger.
@@ -61,7 +61,7 @@ Expected result: status/review updates succeed and audit events are written.
 
 ### RC4I-UAT-06 — Senior approval, export, and close
 
-1. Log in as Senior Engineer/Admin.
+1. Log in as Senior Engineer/Lead Engineer/Admin.
 2. Open `/rbi/[caseId]`.
 3. Approve the case.
 4. Export the case.
@@ -88,5 +88,5 @@ Expected result: action is rejected. AI/service actors cannot approve, export, c
 | Role | Name | Result | Notes | Date |
 |---|---|---|---|---|
 | Engineer |  |  |  |  |
-| Senior Engineer/Admin |  |  |  |  |
+| Senior Engineer/Lead Engineer/Admin |  |  |  |  |
 | QA/UAT |  |  |  |  |
