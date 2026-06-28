@@ -36,6 +36,7 @@ describe('database migration sequence', () => {
       '0024_workflow_console_visibility.sql',
       '0025_ndt_data_room_visualization.sql',
       '0026_hypercare_golive_readiness.sql',
+      '0027_findings_anomaly_foundation.sql',
     ]);
   });
 });

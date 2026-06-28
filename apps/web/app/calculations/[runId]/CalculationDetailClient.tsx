@@ -141,6 +141,7 @@ export default function CalculationDetailClient({ runId }: { runId: string }) {
           {detail?.asset_id && <Link className="secondary-button" href={`/assets/${detail.asset_id}`}>Asset</Link>}
           {detail?.asset_id && <Link className="secondary-button" href={`/assets/${detail.asset_id}/calculations`}>Asset Calculations</Link>}
           <Link className="secondary-button" href={`/audit-logs?entity_type=calculation_run&entity_id=${encodeURIComponent(runId)}`}>Audit Logs</Link>
+          <Link className="secondary-button" href={`/findings?calculation_run_id=${encodeURIComponent(runId)}`}>Findings</Link>
         </div>
       </header>
 

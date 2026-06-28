@@ -287,3 +287,26 @@ RC3-B closeout tightens the object-storage evidence model to match the source-of
 - Report issue and report export gates count only evidence records with `upload_status = 'verified'` and a persisted object key/storage URI.
 - Legacy metadata-only evidence records remain blocked and not gate-eligible until completed through object-storage verification.
 - n8n may route file-intake, reminder, and failure notifications only through AIM APIs; it must not write object-storage metadata or final engineering data directly to PostgreSQL.
+
+## RC4-H Findings / Anomaly Foundation ERD Addendum
+
+RC4-H adds the `findings` table as a traceable engineering record for inspection, evidence, NDT, calculation, and validation anomalies.
+
+Relationships:
+
+- `findings.asset_id` → `assets.id` (required, restrict delete)
+- `findings.inspection_event_id` → `inspection_events.id` (optional)
+- `findings.evidence_file_id` → `evidence_files.id` (optional direct evidence link)
+- `findings.ndt_measurement_id` → `ndt_measurements.id` (optional NDT source link)
+- `findings.calculation_run_id` → `calculation_runs.id` (optional calculation source link)
+- `findings.validation_run_id` → `validation_runs.id` (optional validation source link)
+- `evidence_links.linked_entity_type = 'finding'` and `linked_entity_id = findings.id` provides many-to-one evidence linkage.
+- `audit_logs.entity_type = 'finding'` and `entity_id = findings.id` records create/update/link/unlink/close/block events.
+
+Governance boundary:
+
+- Findings are not FFS/RBI cases.
+- Findings do not automatically create FFS/RBI cases.
+- Findings do not approve calculations, issue reports, or make final integrity decisions.
+- Critical finding closure requires evidence linkage and closure reason.
+- AI/n8n/service actors cannot close findings.
