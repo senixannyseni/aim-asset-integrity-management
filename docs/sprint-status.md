@@ -367,3 +367,21 @@ Implemented RC4-F controls:
 - Formula Registry UI shows sync status, executable formula_version_id where safe, and last synced timestamp where available.
 
 RC4-F adds no new formulas, no calculation math changes, no FFS/RBI trigger logic, no migrations, no backend schema changes, no AI/n8n/service actor governance changes, and no governance boundary weakening. Formula approval remains human-governed.
+
+
+## RC4-G Calculation Guided UI and Golden Dataset Fixtures
+
+Status: Implemented as calculation UX and deterministic golden-fixture package.
+
+RC4-G completes the guided calculation workflow without reopening RC3 or RC4-A through RC4-F.
+
+Implemented RC4-G controls:
+
+- `apps/web/app/calculations/page.tsx` exposes a guided calculation form instead of relying only on raw JSON input.
+- The guided form loads approved executable `formula_versions` from `GET /api/v1/formula-versions/executable` and does not expose draft/unapproved Formula Registry records for execution.
+- The form displays asset, evidence, NDT, readiness, unit, and formula-version warnings where available before run.
+- `apps/web/app/calculations/[runId]/page.tsx` shows metadata, formula snapshot, input snapshot, output snapshot, warnings, blockers, evidence/NDT linkage, audit link, and display-only comparison to a previous run where available.
+- `apps/web/app/assets/[assetId]/calculations/page.tsx` provides asset-scoped calculation history and prefilled guided run workflow.
+- Golden dataset fixtures verify existing deterministic calculation behavior with synthetic internal data.
+
+RC4-G adds no new engineering formulas, no calculation math changes, no FFS/RBI trigger logic, no migrations, no backend schema changes, no AI/n8n/service actor governance changes, and no governance boundary weakening. Calculation results require engineering review before final use.

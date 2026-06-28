@@ -1,8 +1,8 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed; RC4-E validation-by-asset, validation history, and data dictionary UX completed; RC4-F Formula Registry to formula_versions synchronization completed**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed; RC4-E validation-by-asset, validation history, and data dictionary UX completed; RC4-F Formula Registry to formula_versions synchronization completed; RC4-G Calculation guided UI and golden dataset fixtures completed**
 
-This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, approved Formula Registry to formula_versions synchronization, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
+This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, approved Formula Registry to formula_versions synchronization, guided universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 RC4-A adds Sprint 0 foundation polish only: dedicated health endpoint tests, Sprint 0 closure checklist documentation, historical clarification that Sprint 0 had no calculation runtime at that time, role evolution notes, and seed idempotency documentation. RC4-A does not change runtime engineering calculation behavior, does not add formulas, and does not change AI, n8n, approval, report, FFS, RBI, NDT, evidence, object-storage, or frontend behavior.
 
@@ -582,3 +582,18 @@ RC4-F closes the governance gap between Formula Registry approval and executable
 Only approved human-governed Formula Registry records can become executable. Draft, under-review, rejected, retired, deprecated, superseded, inactive, or otherwise unapproved records cannot be synchronized into executable `formula_versions`. Synchronization is idempotent and audit logged. Calculation execution still requires an explicit approved synchronized formula version and persists formula version metadata snapshots.
 
 RC4-F introduces no new engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculation content, no FFS/RBI trigger logic, no migrations, no backend schema changes, no AI/n8n/service actor governance changes, and no direct n8n/database access.
+
+
+## RC4-G Calculation Guided UI and Golden Dataset Fixtures
+
+Status: Implemented as frontend calculation UX and deterministic test-fixture package.
+
+RC4-G adds a guided calculation workflow without changing the deterministic calculation engine or introducing engineering formulas. It adds/updates:
+
+- `apps/web/app/calculations/page.tsx` and `apps/web/app/calculations/CalculationEngineClient.tsx` for a guided calculation form, asset selector, approved executable `formula_versions` selector, evidence/NDT selectors, request preview, validation/readiness messages, calculation result summary, and calculation run history.
+- `apps/web/app/calculations/[runId]/page.tsx` and detail client for formula version snapshots, input/output snapshots, warnings, blockers, evidence/NDT linkage, engineering review/audit visibility, and display-only comparison to previous calculation runs.
+- `apps/web/app/assets/[assetId]/calculations/page.tsx` for asset-scoped calculation history and a prefilled guided calculation form.
+- `GET /api/v1/formula-versions/executable` as a read-only adapter that returns only approved/locked deterministic executable `formula_versions` synchronized from human-governed Formula Registry records.
+- Golden dataset fixtures and tests for existing MVP deterministic calculation behavior in `apps/api/tests/fixtures/calculation-golden-datasets.ts` and `apps/api/tests/rc4-g-calculation-guided-ui-golden-datasets.test.ts`.
+
+Only approved executable `formula_versions` can be selected. Calculation output remains deterministic, versioned, auditable, and subject to engineering review before final use. RC4-G introduces no new calculations, no API/ASME formulas, no FFS/RBI trigger logic, no AI/n8n/service actor governance changes, no migrations, and no backend schema changes.
