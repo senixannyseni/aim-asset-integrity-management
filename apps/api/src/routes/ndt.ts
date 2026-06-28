@@ -132,6 +132,269 @@ function mapNdt(row: DbRow): Record<string, unknown> {
   };
 }
 
+
+
+type NdtReadinessGate = {
+  gate_type: string;
+  gate_status: 'pass' | 'warning' | 'fail';
+  blocking: boolean;
+  message: string;
+  metadata?: Record<string, unknown>;
+};
+
+function ndtReadinessGate(
+  gateType: string,
+  pass: boolean,
+  message: string,
+  metadata: Record<string, unknown> = {},
+  blocking = true,
+  warningWhenFailed = false
+): NdtReadinessGate {
+  return {
+    gate_type: gateType,
+    gate_status: pass ? 'pass' : warningWhenFailed ? 'warning' : 'fail',
+    blocking,
+    message,
+    metadata
+  };
+}
+
+function mapTraceRow(row: DbRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    code: row.finding_code ?? row.run_id ?? row.review_code ?? row.approval_code ?? row.evidence_code ?? row.inspection_code,
+    title: row.title ?? row.input_name ?? row.review_type ?? row.approval_type ?? row.original_filename ?? row.file_name,
+    status: row.status ?? row.validation_status ?? row.review_status ?? row.approval_status ?? row.evidence_status,
+    severity: row.severity,
+    type: row.source_type ?? row.source_entity_type ?? row.entity_type ?? row.method,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    reviewed_at: row.reviewed_at,
+    approved_at: row.approved_at
+  };
+}
+
+function mapNdtAuditEvent(row: DbRow): Record<string, unknown> {
+  return {
+    audit_log_id: row.audit_log_id ?? row.id,
+    event_type: row.event_type,
+    actor_user_id: row.actor_user_id,
+    actor_role_codes: row.actor_role_codes,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    created_at: row.created_at,
+    metadata: row.metadata ?? row.metadata_json
+  };
+}
+
+function mapNdtEvidenceLink(row: DbRow): Record<string, unknown> {
+  return {
+    evidence_link_id: row.evidence_link_id ?? row.id,
+    evidence_file_id: row.evidence_file_id,
+    evidence_code: row.evidence_code,
+    original_filename: row.original_filename ?? row.file_name,
+    checksum_sha256: row.checksum_sha256 ?? row.checksum,
+    evidence_status: row.evidence_status ?? row.status,
+    link_reason: row.link_reason,
+    linked_by: row.linked_by,
+    created_at: row.created_at,
+    asset_id: row.asset_id
+  };
+}
+
+async function loadNdtEvidenceLinks(client: PoolClient, measurementId: string): Promise<DbRow[]> {
+  const result = await client.query<DbRow>(
+    `select
+       el.id as evidence_link_id,
+       el.evidence_file_id,
+       el.link_reason,
+       el.linked_by,
+       el.created_at,
+       ef.asset_id,
+       ef.evidence_code,
+       ef.original_filename,
+       ef.file_name,
+       ef.checksum_sha256,
+       ef.checksum,
+       ef.evidence_status,
+       ef.status
+     from evidence_links el
+     join evidence_files ef on ef.id = el.evidence_file_id
+     where el.linked_entity_type = 'ndt_measurement'
+       and el.linked_entity_id = $1::uuid
+     order by el.created_at desc`,
+    [measurementId]
+  );
+  return result.rows;
+}
+
+async function loadNdtAuditEvents(client: PoolClient, measurementId: string): Promise<DbRow[]> {
+  const result = await client.query<DbRow>(
+    `select
+       id as audit_log_id,
+       event_type,
+       actor_user_id,
+       actor_role_codes,
+       entity_type,
+       entity_id,
+       created_at,
+       metadata_json as metadata
+     from audit_logs
+     where (entity_type = 'ndt_measurement' and entity_id = $1::uuid)
+        or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where entity_type = 'ndt_measurement' and entity_id = $1::uuid))
+        or (entity_type = 'approval_record' and entity_id in (select id from approval_records where entity_type = 'ndt_measurement' and entity_id = $1::uuid))
+     order by created_at desc
+     limit 30`,
+    [measurementId]
+  );
+  return result.rows;
+}
+
+async function buildNdtMeasurementReadiness(client: PoolClient, row: DbRow): Promise<Record<string, unknown>> {
+  const measurementId = String(row.id);
+  const assetId = String(row.asset_id);
+  const inspectionEventId = asString(row.inspection_event_id);
+
+  const [evidenceLinks, findings, calculationInputs, reviews, approvals, auditEvents, inspectionEvent] = await Promise.all([
+    loadNdtEvidenceLinks(client, measurementId),
+    client.query<DbRow>(
+      `select id, finding_code, title, severity, status, source_type, source_entity_id, ndt_measurement_id, calculation_run_id, created_at, updated_at
+       from findings
+       where ndt_measurement_id = $1::uuid
+          or (source_type = 'ndt_measurement' and source_entity_id = $1::uuid)
+       order by created_at desc`,
+      [measurementId]
+    ),
+    client.query<DbRow>(
+      `select ci.id, ci.calculation_run_id, ci.input_name, ci.validation_status, ci.evidence_file_id, ci.created_at,
+              cr.run_id, cr.status, cr.run_status, cr.validation_status as calculation_validation_status, cr.review_status, cr.approval_status, cr.created_at as calculation_created_at
+       from calculation_inputs ci
+       join calculation_runs cr on cr.id = ci.calculation_run_id
+       where ci.source_entity_type = 'ndt_measurement'
+         and ci.source_entity_id = $1::uuid
+       order by cr.created_at desc, ci.input_name`,
+      [measurementId]
+    ),
+    client.query<DbRow>(
+      `select id, review_code, entity_type, entity_id, review_type, review_status, reviewer_id, reviewed_at, locked_flag, created_at, updated_at
+       from engineering_reviews
+       where entity_type = 'ndt_measurement'
+         and entity_id = $1::uuid
+       order by reviewed_at desc nulls last, updated_at desc nulls last, created_at desc`,
+      [measurementId]
+    ),
+    client.query<DbRow>(
+      `select id, approval_code, entity_type, entity_id, approval_type, approval_status, approver_id, approved_at, locked_flag, created_at, updated_at
+       from approval_records
+       where entity_type = 'ndt_measurement'
+         and entity_id = $1::uuid
+       order by approved_at desc nulls last, updated_at desc nulls last, created_at desc`,
+      [measurementId]
+    ),
+    loadNdtAuditEvents(client, measurementId),
+    inspectionEventId
+      ? client.query<DbRow>('select * from inspection_events where id = $1::uuid and asset_id = $2::uuid limit 1', [inspectionEventId, assetId])
+      : Promise.resolve({ rows: [], rowCount: 0 })
+  ]);
+
+  const linkedEvidenceRows = evidenceLinks;
+  const directEvidenceFileId = typeof row.evidence_file_id === 'string' && (!row.direct_evidence_asset_id || row.direct_evidence_asset_id === row.asset_id)
+    ? row.evidence_file_id
+    : null;
+  const sameAssetEvidence = linkedEvidenceRows.filter((link) => link.asset_id === assetId);
+  const crossAssetEvidence = linkedEvidenceRows.filter((link) => link.asset_id !== assetId);
+  const evidenceGate = evaluateNdtEvidenceGate({
+    isCritical: Boolean(row.is_critical),
+    directEvidenceFileId,
+    linkedEvidenceFileIds: sameAssetEvidence.map((link) => String(link.evidence_file_id))
+  });
+
+  const reviewerStatus = String(row.reviewer_status ?? '').toLowerCase();
+  const validationStatus = String(row.validation_status ?? '').toLowerCase();
+  const reviewedOrApproved = ['reviewed', 'approved'].includes(reviewerStatus)
+    || reviews.rows.some((review) => ['reviewed', 'approved', 'locked', 'submitted_for_approval'].includes(String(review.review_status)));
+  const validationReady = !['blocked', 'invalid', 'failed', 'validation_failed'].includes(validationStatus);
+  const evidenceReady = evidenceGate.status !== 'blocked' && crossAssetEvidence.length === 0;
+  const inspectionLinked = Boolean(inspectionEventId && inspectionEvent.rows.length > 0);
+  const calculationUsageVisible = calculationInputs.rows.length > 0;
+  const findingTraceabilityVisible = findings.rows.length > 0;
+  const readyForDownstreamCalculation = evidenceReady && validationReady && reviewedOrApproved;
+
+  const gates: NdtReadinessGate[] = [
+    ndtReadinessGate('ndt_measurement_recorded', true, 'NDT measurement record exists and is traceable.', { measurement_id: measurementId }),
+    ndtReadinessGate('inspection_context_linked', inspectionLinked, 'Measurement should link to a same-asset inspection event for inspection traceability.', { inspection_event_id: inspectionEventId ?? null }, false, true),
+    ndtReadinessGate('same_asset_evidence_linked', evidenceReady, 'Direct or linked evidence must belong to the same asset before downstream use.', { direct_evidence_file_id: directEvidenceFileId, same_asset_evidence_count: sameAssetEvidence.length, cross_asset_evidence_count: crossAssetEvidence.length }),
+    ndtReadinessGate('critical_measurement_evidence_gate_satisfied', evidenceGate.status !== 'blocked', 'Critical NDT measurements require traceable evidence before approval and downstream use.', { evidence_gate: evidenceGate }),
+    ndtReadinessGate('reviewer_status_ready', reviewedOrApproved, 'Human review or NDT approval should be completed before the measurement is used downstream.', { reviewer_status: row.reviewer_status ?? null, review_count: reviews.rows.length, approval_count: approvals.rows.length }),
+    ndtReadinessGate('validation_not_blocked', validationReady, 'Validation status must not be blocked or invalid before downstream use.', { validation_status: row.validation_status ?? null, validation_message: row.validation_message ?? null }),
+    ndtReadinessGate('downstream_calculation_trace_visible', calculationUsageVisible, 'Calculation-input usage is visible when this measurement has already been consumed by deterministic calculation runs.', { calculation_input_count: calculationInputs.rows.length }, false, true),
+    ndtReadinessGate('finding_traceability_visible', findingTraceabilityVisible, 'Finding/anomaly traceability is visible when findings have been created from this measurement.', { finding_count: findings.rows.length }, false, true),
+    ndtReadinessGate('ai_n8n_finalization_absent', true, 'Readiness preview is read-only; AI/n8n/service actors cannot approve measurements or finalize downstream engineering decisions.', { read_only: true, prohibited_controls: ['approve', 'reject', 'calculate', 'issue_report', 'close_work_order', 'n8n_direct_write'] })
+  ];
+
+  const blockingGates = gates.filter((gate) => gate.blocking && gate.gate_status === 'fail');
+
+  return {
+    measurement_id: measurementId,
+    measurement_code: row.measurement_code,
+    asset_id: assetId,
+    inspection_event_id: inspectionEventId ?? null,
+    ready_for_downstream_calculation: readyForDownstreamCalculation,
+    ready_for_finding_triage: evidenceReady && validationReady,
+    gate_summary: {
+      total: gates.length,
+      pass: gates.filter((gate) => gate.gate_status === 'pass').length,
+      warning: gates.filter((gate) => gate.gate_status === 'warning').length,
+      fail: gates.filter((gate) => gate.gate_status === 'fail').length,
+      blocking: blockingGates.length
+    },
+    readiness_gates: gates,
+    evidence_traceability: {
+      direct_evidence: mapEvidence(row),
+      linked_evidence: linkedEvidenceRows.map(mapNdtEvidenceLink),
+      same_asset_evidence_count: sameAssetEvidence.length + (directEvidenceFileId ? 1 : 0),
+      cross_asset_evidence_file_ids: crossAssetEvidence.map((link) => link.evidence_file_id),
+      evidence_gate: evidenceGate
+    },
+    inspection_traceability: {
+      inspection_event: inspectionEvent.rows[0] ?? null,
+      has_same_asset_inspection_event: inspectionLinked,
+      component: row.component,
+      shell_course_no: row.shell_course_no,
+      cml_tml_id: row.cml_tml_id,
+      grid_ref: row.grid_ref,
+      elevation_m: row.elevation_m,
+      orientation: row.orientation,
+      method: row.method,
+      reading_date: row.reading_date
+    },
+    linked_context: {
+      findings: findings.rows.map(mapTraceRow),
+      calculation_inputs: calculationInputs.rows.map((input) => ({
+        id: input.id,
+        calculation_run_id: input.calculation_run_id,
+        run_id: input.run_id,
+        input_name: input.input_name,
+        validation_status: input.validation_status,
+        calculation_status: input.status ?? input.run_status,
+        review_status: input.review_status,
+        approval_status: input.approval_status,
+        evidence_file_id: input.evidence_file_id,
+        created_at: input.calculation_created_at ?? input.created_at
+      })),
+      engineering_reviews: reviews.rows.map(mapTraceRow),
+      approval_records: approvals.rows.map(mapTraceRow)
+    },
+    audit_events: auditEvents.map(mapNdtAuditEvent),
+    governance_notes: [
+      'RC4-P readiness is a read-only preview and does not approve, reject, correct, calculate, issue reports, or close work orders.',
+      'AIM remains the system of record; PostgreSQL stores structured NDT data and object storage stores original evidence files.',
+      'No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is implemented by this endpoint.',
+      'AI/n8n/service actors cannot finalize NDT measurements or downstream engineering decisions.'
+    ]
+  };
+}
+
 function validateReviewerStatus(value: unknown): 'needs_review' | 'reviewed' | 'rejected' | undefined {
   const status = asString(value);
   if (status === 'needs_review' || status === 'reviewed' || status === 'rejected') return status;
@@ -332,6 +595,30 @@ ndtRouter.get('/ndt/measurements', requirePermission('ndt.read'), async (req, re
     res.json({ data: result.rows.map(mapNdt) });
   } catch (error) {
     next(error);
+  }
+});
+
+
+ndtRouter.get('/ndt/measurements/:measurementId/readiness', requirePermission('ndt.read'), async (req, res, next) => {
+  const measurementId = req.params.measurementId;
+  if (!measurementId) {
+    res.status(400).json({ error: { code: 'MISSING_ROUTE_PARAM', message: 'Missing measurementId.' } });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    const row = await loadNdtMeasurement(client, measurementId);
+    if (!row) {
+      res.status(404).json({ error: { code: 'NDT_MEASUREMENT_NOT_FOUND', message: 'NDT measurement not found.' } });
+      return;
+    }
+    const readiness = await buildNdtMeasurementReadiness(client, row);
+    res.json({ data: readiness });
+  } catch (error) {
+    next(error);
+  } finally {
+    client.release();
   }
 });
 

@@ -511,3 +511,12 @@ RC4-O closes the calculation run final-use visibility gap after RC4-N:
 
 RC4-O does not add formulas, recalculate outputs, approve/reject/lock calculations, issue reports, create integrity decisions, create work orders, change object storage, implement API 579/API 581 quantitative logic, enable AI/n8n/service finalization, or bypass human engineering review.
 
+
+
+## RC4-P — NDT Measurement Detail + Inspection Traceability Readiness
+
+Status: implemented in patch package.
+
+- Added read-only NDT measurement readiness endpoint.
+- Enhanced NDT measurement detail page with inspection traceability, evidence, findings, calculation input usage, review/approval trace, and audit timeline.
+- Preserved no-formula/no-AI-finalization/no-n8n-direct-write boundaries.

@@ -39,6 +39,22 @@ type NdtMeasurementDetail = {
   created_at?: string | null;
   updated_at?: string | null;
 };
+type ReadinessGate = { gate_type: string; gate_status: 'pass' | 'warning' | 'fail' | string; blocking?: boolean; message?: string; metadata?: Record<string, unknown> };
+type NdtMeasurementReadiness = {
+  measurement_id: string;
+  measurement_code?: string | null;
+  asset_id: string;
+  inspection_event_id?: string | null;
+  ready_for_downstream_calculation?: boolean;
+  ready_for_finding_triage?: boolean;
+  gate_summary?: { total?: number; pass?: number; warning?: number; fail?: number; blocking?: number };
+  readiness_gates?: ReadinessGate[];
+  evidence_traceability?: { linked_evidence?: Array<Record<string, unknown>>; cross_asset_evidence_file_ids?: string[]; evidence_gate?: EvidenceGate; same_asset_evidence_count?: number };
+  inspection_traceability?: Record<string, unknown>;
+  linked_context?: { findings?: Array<Record<string, unknown>>; calculation_inputs?: Array<Record<string, unknown>>; engineering_reviews?: Array<Record<string, unknown>>; approval_records?: Array<Record<string, unknown>> };
+  audit_events?: Array<Record<string, unknown>>;
+  governance_notes?: string[];
+};
 
 type DetailPageProps = { params: { measurementId: string } };
 
@@ -52,7 +68,7 @@ function dateValue(value?: string | null): string {
 
 function badgeClass(value?: string | null): string {
   const normalized = String(value ?? '').toLowerCase();
-  if (['blocked', 'invalid', 'rejected', 'missing', 'error'].some((token) => normalized.includes(token))) return 'badge badge-danger';
+  if (['blocked', 'invalid', 'rejected', 'missing', 'error', 'fail'].some((token) => normalized.includes(token))) return 'badge badge-danger';
   if (['warning', 'needs_review', 'pending'].some((token) => normalized.includes(token))) return 'badge badge-warning';
   return 'badge';
 }
@@ -72,8 +88,16 @@ function ErrorList({ issues }: { issues: ValidationIssue[] }) {
   return <div className="error-list" role="alert">{issues.map((issue, index) => <p key={`${issue.field}-${issue.message}-${index}`}><strong>{issue.field}</strong>: {issue.message}</p>)}</div>;
 }
 
+function TraceTable({ title, rows, emptyMessage }: { title: string; rows: Array<Record<string, unknown>>; emptyMessage: string }) {
+  return <section className="panel">
+    <div className="panel-heading"><h2>{title}</h2><p>{emptyMessage}</p></div>
+    {rows.length === 0 ? <p className="muted-text">No linked records yet.</p> : <div className="table-wrap"><table><thead><tr><th>ID</th><th>Code / Name</th><th>Status</th><th>Created</th></tr></thead><tbody>{rows.slice(0, 12).map((row, index) => <tr key={`${title}-${displayValue(row.id ?? row.calculation_run_id ?? row.evidence_file_id)}-${index}`}><td>{displayValue(row.id ?? row.calculation_run_id ?? row.evidence_file_id)}</td><td>{displayValue(row.code ?? row.run_id ?? row.input_name ?? row.title ?? row.original_filename)}</td><td><span className={badgeClass(String(row.status ?? row.validation_status ?? row.review_status ?? row.approval_status ?? ''))}>{displayValue(row.status ?? row.validation_status ?? row.review_status ?? row.approval_status)}</span></td><td>{dateValue(String(row.created_at ?? ''))}</td></tr>)}</tbody></table></div>}
+  </section>;
+}
+
 export default function NdtMeasurementDetailPage({ params }: DetailPageProps) {
   const [measurement, setMeasurement] = useState<NdtMeasurementDetail | null>(null);
+  const [readiness, setReadiness] = useState<NdtMeasurementReadiness | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -87,21 +111,30 @@ export default function NdtMeasurementDetailPage({ params }: DetailPageProps) {
     setPageError(null);
     setIssues([]);
     try {
-      const response = await apiFetch(`/api/v1/ndt/measurements/${params.measurementId}`, { cache: 'no-store' });
-      const payload = await response.json() as { data?: NdtMeasurementDetail } & ApiErrorPayload;
-      if (response.status === 401 || response.status === 403) {
+      const [detailResponse, readinessResponse] = await Promise.all([
+        apiFetch(`/api/v1/ndt/measurements/${params.measurementId}`, { cache: 'no-store' }),
+        apiFetch(`/api/v1/ndt/measurements/${params.measurementId}/readiness`, { cache: 'no-store' })
+      ]);
+      const detailPayload = await detailResponse.json() as { data?: NdtMeasurementDetail } & ApiErrorPayload;
+      const readinessPayload = await readinessResponse.json() as { data?: NdtMeasurementReadiness } & ApiErrorPayload;
+      if (detailResponse.status === 401 || detailResponse.status === 403 || readinessResponse.status === 401 || readinessResponse.status === 403) {
         setPermissionDenied(true);
         return;
       }
-      if (response.status === 404) {
+      if (detailResponse.status === 404 || readinessResponse.status === 404) {
         setNotFound(true);
         return;
       }
-      if (!response.ok) {
-        setIssues(payloadIssues(payload, 'NDT measurement detail could not be loaded.'));
-        throw new Error(payload.error?.message ?? 'NDT measurement detail could not be loaded.');
+      if (!detailResponse.ok) {
+        setIssues(payloadIssues(detailPayload, 'NDT measurement detail could not be loaded.'));
+        throw new Error(detailPayload.error?.message ?? 'NDT measurement detail could not be loaded.');
       }
-      setMeasurement(payload.data ?? null);
+      if (!readinessResponse.ok) {
+        setIssues(payloadIssues(readinessPayload, 'NDT measurement readiness could not be loaded.'));
+        throw new Error(readinessPayload.error?.message ?? 'NDT measurement readiness could not be loaded.');
+      }
+      setMeasurement(detailPayload.data ?? null);
+      setReadiness(readinessPayload.data ?? null);
     } catch (error) {
       setPageError(error instanceof Error ? error.message : 'NDT measurement detail could not be loaded.');
     } finally {
@@ -118,16 +151,20 @@ export default function NdtMeasurementDetailPage({ params }: DetailPageProps) {
   const gateStatus = measurement?.evidence_gate?.status ?? measurement?.validation_status;
   const missingEvidence = measurement ? evidenceIds.length === 0 : false;
   const blockingEvidence = measurement ? measurement.evidence_gate?.status === 'blocked' || (measurement.is_critical && missingEvidence) : false;
+  const linkedContext = readiness?.linked_context ?? {};
+  const linkedEvidence = readiness?.evidence_traceability?.linked_evidence ?? [];
+  const auditEvents = readiness?.audit_events ?? [];
 
   return <main className="app-shell">
     <header className="page-header">
       <div>
-        <p className="eyebrow">RC4-D</p>
-        <h1>NDT Measurement Detail</h1>
-        <p>Display-only measurement metadata, evidence linkage, missing-evidence state, and audit traceability.</p>
+        <p className="eyebrow">RC4-P</p>
+        <h1>NDT Measurement Detail + Inspection Traceability Readiness</h1>
+        <p>Display-only NDT measurement detail, inspection context, evidence coverage, downstream calculation/finding traceability, and readiness gates.</p>
       </div>
       <div className="action-row">
         <Link className="secondary-button" href="/ndt">NDT Data Room</Link>
+        <Link className="secondary-button" href="/ndt-data-room">NDT Visualization</Link>
         {measurement?.asset_id && <Link className="secondary-button" href={`/assets/${measurement.asset_id}`}>Asset</Link>}
         {measurement?.asset_id && <Link className="secondary-button" href={`/assets/${measurement.asset_id}/ndt`}>Asset NDT</Link>}
         <Link className="secondary-button" href={`/audit-logs?entity_type=ndt_measurement&entity_id=${params.measurementId}`}>Audit Trail</Link>
@@ -175,6 +212,26 @@ export default function NdtMeasurementDetailPage({ params }: DetailPageProps) {
         </section>
 
         <section className="panel">
+          <div className="panel-heading row-between">
+            <div>
+              <h2>Inspection Traceability Readiness</h2>
+              <p>Read-only RC4-P preview. Review and approval endpoints remain the authoritative mutation paths.</p>
+            </div>
+            <span className={readiness?.ready_for_downstream_calculation ? 'badge' : 'badge badge-warning'}>{readiness?.ready_for_downstream_calculation ? 'ready for downstream calculation' : 'attention required'}</span>
+          </div>
+          <dl className="metadata-grid">
+            <dt>Total Gates</dt><dd>{displayValue(readiness?.gate_summary?.total)}</dd>
+            <dt>Pass / Warning / Fail</dt><dd>{displayValue(readiness?.gate_summary?.pass)} / {displayValue(readiness?.gate_summary?.warning)} / {displayValue(readiness?.gate_summary?.fail)}</dd>
+            <dt>Blocking Gates</dt><dd><span className={readiness?.gate_summary?.blocking ? 'badge badge-danger' : 'badge'}>{displayValue(readiness?.gate_summary?.blocking, '0')}</span></dd>
+            <dt>Finding Triage Ready</dt><dd>{readiness?.ready_for_finding_triage ? 'yes' : 'no'}</dd>
+            <dt>Inspection Context</dt><dd>{readiness?.inspection_traceability?.has_same_asset_inspection_event ? 'same-asset inspection event linked' : 'not linked'}</dd>
+            <dt>Same-asset Evidence Count</dt><dd>{displayValue(readiness?.evidence_traceability?.same_asset_evidence_count)}</dd>
+          </dl>
+        </section>
+      </section>
+
+      <section className="grid-two">
+        <section className="panel">
           <div className="panel-heading">
             <h2>Evidence Linkage</h2>
             <p>Evidence links route to the RC4-C evidence detail page, where preview/open controls enforce malware and access status.</p>
@@ -189,18 +246,30 @@ export default function NdtMeasurementDetailPage({ params }: DetailPageProps) {
             <dt>Valid Linked Evidence</dt><dd>{(measurement.valid_linked_evidence_file_ids ?? []).length === 0 ? '-' : measurement.valid_linked_evidence_file_ids?.map((id) => <span key={id}><Link href={`/evidence/${id}`}>{id}</Link><br /></span>)}</dd>
             <dt>Invalid Cross-Asset Evidence</dt><dd>{(measurement.invalid_linked_evidence_file_ids ?? []).length === 0 ? '-' : measurement.invalid_linked_evidence_file_ids?.join(', ')}</dd>
           </dl>
-          <div className="action-row pagination-row">
-            {measurement.evidence_file_id && <Link className="secondary-button" href={`/evidence/${measurement.evidence_file_id}`}>Open Evidence Detail</Link>}
-            <Link className="secondary-button" href={`/calculations?ndt_measurement_id=${measurement.measurement_id}`}>Calculation Inputs</Link>
-            <Link className="secondary-button" href={`/audit-logs?entity_type=ndt_measurement&entity_id=${measurement.measurement_id}`}>Audit Logs</Link>
-            <Link className="secondary-button" href={`/findings?ndt_measurement_id=${measurement.measurement_id}`}>Findings</Link>
-          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading"><h2>Readiness Gates</h2><p>These gates preview whether the measurement is traceable enough for downstream use; they do not mutate NDT state.</p></div>
+          {(readiness?.readiness_gates ?? []).length === 0 ? <p className="muted-text">No readiness gates returned.</p> : <div className="table-wrap"><table><thead><tr><th>Gate</th><th>Status</th><th>Blocking</th><th>Message</th></tr></thead><tbody>{readiness?.readiness_gates?.map((gate) => <tr key={gate.gate_type}><td>{gate.gate_type}</td><td><span className={badgeClass(gate.gate_status)}>{gate.gate_status}</span></td><td>{gate.blocking ? 'yes' : 'no'}</td><td>{displayValue(gate.message)}</td></tr>)}</tbody></table></div>}
         </section>
       </section>
 
       <section className="panel wide-panel">
         <div className="panel-heading"><h2>Display-only Visualization</h2><p>Component/course/grid display uses existing stored measurement data and validation statuses only.</p></div>
         <div className="table-wrap"><table><thead><tr><th>Component</th><th>Course</th><th>CML/TML</th><th>Grid</th><th>Elevation</th><th>Orientation</th><th>Thickness</th><th>Evidence</th><th>Status</th></tr></thead><tbody><tr><td>{measurement.component}</td><td>{displayValue(measurement.shell_course_no)}</td><td>{displayValue(measurement.cml_tml_id)}</td><td>{displayValue(measurement.grid_ref)}</td><td>{displayValue(measurement.elevation)} {measurement.elevation_unit ?? 'm'}</td><td>{displayValue(measurement.orientation)}</td><td>{displayValue(measurement.measured_thickness)} {measurement.measured_thickness_unit ?? 'mm'}</td><td>{evidenceIds.length > 0 ? <span className="badge">linked</span> : <span className="badge badge-warning">missing</span>}</td><td><span className={badgeClass(measurement.validation_status)}>{displayValue(measurement.validation_status)}</span></td></tr></tbody></table></div>
+      </section>
+
+      <section className="grid-two">
+        <TraceTable title="Linked Evidence" rows={linkedEvidence} emptyMessage="Same-asset direct/linked evidence supporting this measurement." />
+        <TraceTable title="Findings / Anomalies" rows={linkedContext.findings ?? []} emptyMessage="Findings created from this NDT measurement appear here." />
+        <TraceTable title="Calculation Input Usage" rows={linkedContext.calculation_inputs ?? []} emptyMessage="Deterministic calculation inputs that consumed this measurement appear here." />
+        <TraceTable title="Review / Approval Trace" rows={[...(linkedContext.engineering_reviews ?? []), ...(linkedContext.approval_records ?? [])]} emptyMessage="Human engineering reviews and approvals for this measurement appear here." />
+      </section>
+
+      <section className="panel wide-panel">
+        <div className="panel-heading"><h2>Audit Timeline</h2><p>Recent audit events linked to this NDT measurement, its review, and its approval trace.</p></div>
+        {auditEvents.length === 0 ? <p className="muted-text">No audit events returned.</p> : <div className="table-wrap"><table><thead><tr><th>Event</th><th>Entity</th><th>Actor</th><th>Created</th></tr></thead><tbody>{auditEvents.map((event, index) => <tr key={`${displayValue(event.audit_log_id)}-${index}`}><td>{displayValue(event.event_type)}</td><td>{displayValue(event.entity_type)} / {displayValue(event.entity_id)}</td><td>{displayValue(event.actor_user_id)}</td><td>{dateValue(String(event.created_at ?? ''))}</td></tr>)}</tbody></table></div>}
+        <div className="notice"><strong>Governance:</strong> No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed on this page. AI/n8n/service actors cannot approve NDT measurements or final engineering decisions.</div>
       </section>
     </>}
   </main>;

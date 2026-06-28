@@ -2,18 +2,24 @@ openapi: 3.0.3
 info:
   title: AIM Tank Integrity API
   version: 0.19.0
-  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through RC3-G n8n workflow console visibility and safe orchestration boundaries. AIM is the system of
-    record; PostgreSQL stores final structured engineering data; object storage stores original evidence. n8n remains orchestration-only and must
-    call AIM backend APIs only. AI extraction output is staging-only and requires human engineering review before promotion. This contract documents
-    implemented auth, AI extraction/staging, evidence governance, approval, and report issue gates; it does not implement API 579/API 581, CMMS,
-    3D processing, or invented API/API-ASME formulas.
+  description: Current implemented AIM+n8n Tank Integrity OpenAPI contract through
+    RC3-G n8n workflow console visibility and safe orchestration boundaries. AIM is
+    the system of record; PostgreSQL stores final structured engineering data; object
+    storage stores original evidence. n8n remains orchestration-only and must call
+    AIM backend APIs only. AI extraction output is staging-only and requires human
+    engineering review before promotion. This contract documents implemented auth,
+    AI extraction/staging, evidence governance, approval, and report issue gates;
+    it does not implement API 579/API 581, CMMS, 3D processing, or invented API/API-ASME
+    formulas.
 servers:
 - url: http://localhost:4000
   description: Local/development API root; implemented paths include /api/v1.
 security:
 - bearerAuth: []
 x-internal-routes-excluded:
-  note: Health routes are runtime readiness endpoints. RBAC demo routes are intentionally excluded from the production OpenAPI contract; they are mounted only in local/development/test when AUTH_ALLOW_LOCAL_DEMO=true and are not engineering workflow APIs.
+  note: Health routes are runtime readiness endpoints. RBAC demo routes are intentionally
+    excluded from the production OpenAPI contract; they are mounted only in local/development/test
+    when AUTH_ALLOW_LOCAL_DEMO=true and are not engineering workflow APIs.
   routes:
   - /health
   - /health/db
@@ -227,11 +233,16 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/evidence/upload:
     post:
-      summary: Legacy evidence metadata import only; not gate-eligible until object storage is verified
-      description: Deprecated RC2 metadata-only route retained for compatibility. It registers metadata as metadata_only_pending_object_verification and upload_status=pending. Use /api/v1/evidence/upload-url followed by /api/v1/evidence/complete-upload for gate-eligible RC3-B object-storage evidence.
+      summary: Legacy evidence metadata import only; not gate-eligible until object
+        storage is verified
+      description: Deprecated RC2 metadata-only route retained for compatibility.
+        It registers metadata as metadata_only_pending_object_verification and upload_status=pending.
+        Use /api/v1/evidence/upload-url followed by /api/v1/evidence/complete-upload
+        for gate-eligible RC3-B object-storage evidence.
       x-permission-required: evidence.upload
       x-audit-event-generated: EVIDENCE_LEGACY_METADATA_REGISTERED
       responses:
@@ -241,14 +252,20 @@ paths:
           $ref: '#/components/responses/GateBlocked'
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/evidence/traceability-matrix:
     get:
       summary: Get cross-module evidence traceability matrix
-      description: Read-only RC4-M evidence coverage matrix across asset, inspection, NDT, finding, calculation, integrity decision, RBI, report, and internal work-order records. Does not upload, download, delete, approve, issue, close, or mutate evidence or engineering records.
+      description: Read-only RC4-M evidence coverage matrix across asset, inspection,
+        NDT, finding, calculation, integrity decision, RBI, report, and internal work-order
+        records. Does not upload, download, delete, approve, issue, close, or mutate
+        evidence or engineering records.
       x-permission-required: evidence.read
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. PostgreSQL stores final structured metadata and object storage stores original evidence files. This endpoint is read-only coverage visibility only.
+      x-source-of-truth-boundary: AIM is the system of record. PostgreSQL stores final
+        structured metadata and object storage stores original evidence files. This
+        endpoint is read-only coverage visibility only.
       parameters:
       - in: query
         name: asset_id
@@ -291,7 +308,8 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/evidence/{evidenceId}/open:
     get:
       summary: Open object storage evidence link
@@ -309,10 +327,12 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: EVIDENCE_DOWNLOAD_URL_CREATED
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/evidence/{evidenceId}/links:
     post:
-      summary: Link evidence to asset, inspection, NDT, calculation, finding, FFS, or RBI entity
+      summary: Link evidence to asset, inspection, NDT, calculation, finding, FFS,
+        or RBI entity
       x-permission-required: evidence.link
       x-audit-event-generated: EVIDENCE_LINKED
       parameters:
@@ -327,7 +347,8 @@ paths:
           description: Evidence link created
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/ndt/measurements:
     get:
       summary: List NDT measurements
@@ -422,7 +443,8 @@ paths:
       x-audit-event-generated: none
   /api/v1/engineering/validate-input:
     post:
-      summary: Run deterministic engineering validation and persist validation run snapshot
+      summary: Run deterministic engineering validation and persist validation run
+        snapshot
       x-permission-required: validation.run
       x-audit-event-generated: ENGINEERING_VALIDATION_RUN
       requestBody:
@@ -538,13 +560,16 @@ paths:
   /api/v1/governance-dashboard/overview:
     get:
       summary: Read-only governance dashboard readiness overview
-      description: Returns RBAC-controlled read-only counts and safe governance summaries from existing AIM state. Does not compute engineering outputs, expose secrets, or mutate records.
+      description: Returns RBAC-controlled read-only counts and safe governance summaries
+        from existing AIM state. Does not compute engineering outputs, expose secrets,
+        or mutate records.
       security:
       - bearerAuth: []
       x-permission-required: dashboard.view
       x-read-only: true
       x-dashboard-readiness-overview: true
-      x-source-of-truth-boundary: AIM PostgreSQL metadata and governed AIM APIs only; n8n must not compute or write dashboard state directly.
+      x-source-of-truth-boundary: AIM PostgreSQL metadata and governed AIM APIs only;
+        n8n must not compute or write dashboard state directly.
       x-redaction-required: true
       responses:
         '200':
@@ -561,20 +586,27 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
       tags:
       - Governance Dashboard
-
   /api/v1/workflow-console/overview:
     get:
       summary: Read-only n8n workflow console / orchestration visibility
-      description: Returns RBAC-controlled read-only workflow task, notification, failure/error, and recent n8n-related event summaries from existing AIM state. Does not execute n8n workflows, expose secrets, call n8n APIs, write directly to PostgreSQL, or mutate engineering records. n8n must not write directly to PostgreSQL.
+      description: Returns RBAC-controlled read-only workflow task, notification,
+        failure/error, and recent n8n-related event summaries from existing AIM state.
+        Does not execute n8n workflows, expose secrets, call n8n APIs, write directly
+        to PostgreSQL, or mutate engineering records. n8n must not write directly
+        to PostgreSQL.
       security:
       - bearerAuth: []
       x-permission-required: workflow_console.view
       x-read-only: true
       x-workflow-console-visibility: true
-      x-source-of-truth-boundary: AIM PostgreSQL metadata and governed AIM APIs only; n8n must not compute or write workflow console state directly.
-      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write directly to PostgreSQL.
+      x-source-of-truth-boundary: AIM PostgreSQL metadata and governed AIM APIs only;
+        n8n must not compute or write workflow console state directly.
+      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write
+        directly to PostgreSQL.
       x-redaction-required: true
-      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization, bearer, signed_url, presigned_url, webhook_secret, private_key, object_key, raw_file_contents, raw_report_contents
+      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization,
+        bearer, signed_url, presigned_url, webhook_secret, private_key, object_key,
+        raw_file_contents, raw_report_contents
       responses:
         '200':
           description: Workflow console overview
@@ -590,22 +622,31 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
       tags:
       - Workflow Console
-
-
   /api/v1/ndt-data-room/overview:
     get:
       summary: Read-only NDT data room / visualization governance overview
-      description: Returns RBAC-controlled read-only NDT measurement, component coverage, CML/TML/Grid, evidence linkage, measurement readiness, and governance warning summaries from existing AIM NDT state. Does not perform API 579, API 581, FFS, RBI, corrosion rate, remaining life, MAWP, retirement thickness, or inspection interval calculations. n8n must not write directly to PostgreSQL or compute/store NDT data room state.
+      description: Returns RBAC-controlled read-only NDT measurement, component coverage,
+        CML/TML/Grid, evidence linkage, measurement readiness, and governance warning
+        summaries from existing AIM NDT state. Does not perform API 579, API 581,
+        FFS, RBI, corrosion rate, remaining life, MAWP, retirement thickness, or inspection
+        interval calculations. n8n must not write directly to PostgreSQL or compute/store
+        NDT data room state.
       security:
       - bearerAuth: []
       x-permission-required: ndt_data_room.view
       x-read-only: true
       x-ndt-data-room-visualization: true
-      x-source-of-truth-boundary: AIM PostgreSQL NDT measurement metadata, evidence linkage metadata, inspection references, and governed AIM APIs only; no n8n-written NDT data room snapshot table is used.
-      x-no-calculation-boundary: No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life/MAWP/retirement-thickness/inspection-interval calculation is implemented.
-      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write directly to PostgreSQL.
+      x-source-of-truth-boundary: AIM PostgreSQL NDT measurement metadata, evidence
+        linkage metadata, inspection references, and governed AIM APIs only; no n8n-written
+        NDT data room snapshot table is used.
+      x-no-calculation-boundary: No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life/MAWP/retirement-thickness/inspection-interval
+        calculation is implemented.
+      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write
+        directly to PostgreSQL.
       x-redaction-required: true
-      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization, bearer, signed_url, presigned_url, private_key, object_key, raw_file_contents, raw_report_contents, ocr_full_text, download_url
+      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization,
+        bearer, signed_url, presigned_url, private_key, object_key, raw_file_contents,
+        raw_report_contents, ocr_full_text, download_url
       responses:
         '200':
           description: NDT data room overview
@@ -621,23 +662,36 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
       tags:
       - NDT Data Room
-
-
   /api/v1/golive-readiness/overview:
     get:
       summary: Read-only hypercare / go-live readiness overview
-      description: Returns RBAC-controlled read-only go-live readiness gates, blockers, unresolved workflow errors, failed notifications, pending review queues, report issue blockers, evidence blockers, NDT evidence blockers, audit/admin readiness, workflow/notification readiness, and UAT readiness indicators from existing AIM state. Does not approve, promote, issue reports, mutate evidence/NDT/admin/audit state, execute n8n workflows, expose secrets, or perform API 579/API 581/FFS/RBI calculations. n8n must not write directly to PostgreSQL or compute/store go-live readiness state.
+      description: Returns RBAC-controlled read-only go-live readiness gates, blockers,
+        unresolved workflow errors, failed notifications, pending review queues, report
+        issue blockers, evidence blockers, NDT evidence blockers, audit/admin readiness,
+        workflow/notification readiness, and UAT readiness indicators from existing
+        AIM state. Does not approve, promote, issue reports, mutate evidence/NDT/admin/audit
+        state, execute n8n workflows, expose secrets, or perform API 579/API 581/FFS/RBI
+        calculations. n8n must not write directly to PostgreSQL or compute/store go-live
+        readiness state.
       security:
       - bearerAuth: []
       x-permission-required: golive_readiness.view
       x-read-only: true
       x-hypercare-golive-readiness: true
-      x-source-of-truth-boundary: AIM PostgreSQL gate/status/error/review/audit/task metadata and governed AIM APIs only; no n8n-written go-live readiness snapshot table is used.
-      x-no-approval-no-mutation-boundary: No approve/reject/correct/promote/report issue/evidence mutation/NDT mutation/admin mutation/audit mutation/hypercare closure/readiness override controls are exposed.
-      x-no-calculation-boundary: No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life/MAWP/retirement-thickness/inspection-interval calculation is implemented.
-      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write directly to PostgreSQL.
+      x-source-of-truth-boundary: AIM PostgreSQL gate/status/error/review/audit/task
+        metadata and governed AIM APIs only; no n8n-written go-live readiness snapshot
+        table is used.
+      x-no-approval-no-mutation-boundary: No approve/reject/correct/promote/report
+        issue/evidence mutation/NDT mutation/admin mutation/audit mutation/hypercare
+        closure/readiness override controls are exposed.
+      x-no-calculation-boundary: No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life/MAWP/retirement-thickness/inspection-interval
+        calculation is implemented.
+      x-n8n-api-only-boundary: n8n must call AIM backend APIs only and must not write
+        directly to PostgreSQL.
       x-redaction-required: true
-      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization, bearer, signed_url, presigned_url, webhook_secret, private_key, object_key, raw_file_contents, raw_report_contents, ocr_full_text, download_url
+      x-sensitive-fields-redacted: token, secret, password, credential, api_key, authorization,
+        bearer, signed_url, presigned_url, webhook_secret, private_key, object_key,
+        raw_file_contents, raw_report_contents, ocr_full_text, download_url
       responses:
         '200':
           description: Hypercare / go-live readiness overview
@@ -653,18 +707,21 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
       tags:
       - Go-Live Readiness
-
   /api/v1/audit-logs:
     get:
       summary: List redacted read-only audit log entries
-      description: RC3-D audit governance visibility endpoint. Returns RBAC-controlled, read-only audit records with sensitive metadata redacted; no audit mutation, deletion, purge, suppress, approve, reject, promote, or issue controls are exposed.
+      description: RC3-D audit governance visibility endpoint. Returns RBAC-controlled,
+        read-only audit records with sensitive metadata redacted; no audit mutation,
+        deletion, purge, suppress, approve, reject, promote, or issue controls are
+        exposed.
       tags:
       - Audit Logs
       x-permission-required: audit_logs.view
       x-audit-event-generated: none
       x-read-only: true
       x-redaction-required: true
-      x-sensitive-fields-redacted: token, secret, password, authorization, cookie, signed_url, presigned_url, credential, access_key, secret_key, private_key
+      x-sensitive-fields-redacted: token, secret, password, authorization, cookie,
+        signed_url, presigned_url, credential, access_key, secret_key, private_key
       parameters:
       - in: query
         name: event_type
@@ -698,7 +755,8 @@ paths:
         name: search
         schema:
           type: string
-        description: "Searches safe fields only: event type, entity type, request ID, actor email, and actor full name."
+        description: 'Searches safe fields only: event type, entity type, request
+          ID, actor email, and actor full name.'
       - in: query
         name: page
         schema:
@@ -727,12 +785,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. Audit logs are immutable governance records displayed for visibility only.
-      x-n8n-boundary: n8n may create orchestration events through AIM APIs only; n8n must not edit, delete, suppress, or directly write audit logs.
+      x-source-of-truth-boundary: AIM is the system of record. Audit logs are immutable
+        governance records displayed for visibility only.
+      x-n8n-boundary: n8n may create orchestration events through AIM APIs only; n8n
+        must not edit, delete, suppress, or directly write audit logs.
   /api/v1/audit-logs/{auditLogId}:
     get:
       summary: Get redacted audit log detail
-      description: RC3-D read-only audit log detail endpoint. Sensitive metadata values are redacted before API/UI display.
+      description: RC3-D read-only audit log detail endpoint. Sensitive metadata values
+        are redacted before API/UI display.
       tags:
       - Audit Logs
       x-permission-required: audit_logs.view
@@ -763,7 +824,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. Audit log detail is immutable and read-only.
+      x-source-of-truth-boundary: AIM is the system of record. Audit log detail is
+        immutable and read-only.
       x-n8n-boundary: n8n must not edit audit logs or write directly to PostgreSQL.
   /api/v1/formulas:
     get:
@@ -795,7 +857,8 @@ paths:
       - bearerAuth: []
   /api/v1/formulas/approved/{formulaId}:
     get:
-      summary: Query production-usable approved/locked formula by formula_id and optional version
+      summary: Query production-usable approved/locked formula by formula_id and optional
+        version
       x-permission-required: formula.read
       parameters:
       - in: path
@@ -819,8 +882,12 @@ paths:
       x-human-review-required: true
   /api/v1/formula-versions/executable:
     get:
-      summary: RC4-G list approved executable formula_versions for guided calculation selection
-      description: Returns approved or locked deterministic formula_versions synchronized from human-governed Formula Registry records. Draft, rejected, retired, superseded, inactive, or unapproved Formula Registry records are not returned and cannot be selected by the guided calculation UI.
+      summary: RC4-G list approved executable formula_versions for guided calculation
+        selection
+      description: Returns approved or locked deterministic formula_versions synchronized
+        from human-governed Formula Registry records. Draft, rejected, retired, superseded,
+        inactive, or unapproved Formula Registry records are not returned and cannot
+        be selected by the guided calculation UI.
       x-permission-required: formula.read
       x-read-only: true
       x-approved-executable-formula-versions-only: true
@@ -889,7 +956,8 @@ paths:
       - bearerAuth: []
       x-audit-event-generated: none
     patch:
-      summary: Update draft formula or create new draft version when editing approved/locked formula
+      summary: Update draft formula or create new draft version when editing approved/locked
+        formula
       x-permission-required: formula.update
       x-role-restriction: admin or senior_engineer
       x-audit-event-generated: FORMULA_UPDATED or FORMULA_VERSION_CREATED
@@ -908,9 +976,11 @@ paths:
       - bearerAuth: []
   /api/v1/formulas/records/{recordId}/approve:
     post:
-      summary: Approve, lock, and synchronize a Formula Registry version to executable formula_versions
+      summary: Approve, lock, and synchronize a Formula Registry version to executable
+        formula_versions
       x-permission-required: formula.approve
-      x-role-restriction: human admin or senior_engineer; AI, n8n, and service actors cannot approve or sync formulas
+      x-role-restriction: human admin or senior_engineer; AI, n8n, and service actors
+        cannot approve or sync formulas
       x-audit-event-generated: FORMULA_APPROVED|FORMULA_SYNCED_TO_EXECUTABLE|FORMULA_SYNC_FAILED
       responses:
         '200':
@@ -920,13 +990,16 @@ paths:
       x-human-review-required: true
   /api/v1/formulas/records/{recordId}/sync-to-executable:
     post:
-      summary: RC4-F synchronize an approved Formula Registry record to executable formula_versions
-      description: >-
-        Idempotently synchronizes an approved or locked Formula Registry record into formula_versions. Draft, under_review, rejected, retired,
-        deprecated, superseded, inactive, or otherwise unapproved records are blocked and cannot become executable. No formula math or API/API-ASME
-        clause content is introduced by this action.
+      summary: RC4-F synchronize an approved Formula Registry record to executable
+        formula_versions
+      description: Idempotently synchronizes an approved or locked Formula Registry
+        record into formula_versions. Draft, under_review, rejected, retired, deprecated,
+        superseded, inactive, or otherwise unapproved records are blocked and cannot
+        become executable. No formula math or API/API-ASME clause content is introduced
+        by this action.
       x-permission-required: formula.approve
-      x-role-restriction: human admin or senior_engineer; AI, n8n, and service actors cannot approve or sync formulas
+      x-role-restriction: human admin or senior_engineer; AI, n8n, and service actors
+        cannot approve or sync formulas
       x-audit-event-generated: FORMULA_SYNCED_TO_EXECUTABLE|FORMULA_SYNC_FAILED
       parameters:
       - in: path
@@ -943,7 +1016,8 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          description: Formula Registry record is not approved or conflicts with an existing executable version
+          description: Formula Registry record is not approved or conflicts with an
+            existing executable version
       security:
       - bearerAuth: []
       x-human-review-required: true
@@ -960,7 +1034,8 @@ paths:
       - bearerAuth: []
   /api/v1/formulas/records/{recordId}/test-run:
     post:
-      summary: Run placeholder formula test-case check without executing engineering formula
+      summary: Run placeholder formula test-case check without executing engineering
+        formula
       x-permission-required: formula.test
       x-role-restriction: admin or senior_engineer
       x-audit-event-generated: FORMULA_TEST_PLACEHOLDER_RUN
@@ -972,11 +1047,17 @@ paths:
   /api/v1/engineering/calculate:
     post:
       summary: Run deterministic engineering calculation
-      description: >-
-        Runs universal deterministic calculations only with an explicit approved synchronized formula_versions record. Silent/default formula selection is blocked. API/API-ASME-dependent calculations must use approved Formula Registry metadata and are not hard-coded. Calculation outputs preserve input/output snapshots, warnings, evidence gates, and the disclaimer: Engineering review required before final use.
+      description: 'Runs universal deterministic calculations only with an explicit
+        approved synchronized formula_versions record. Silent/default formula selection
+        is blocked. API/API-ASME-dependent calculations must use approved Formula
+        Registry metadata and are not hard-coded. Calculation outputs preserve input/output
+        snapshots, warnings, evidence gates, and the disclaimer: Engineering review
+        required before final use.'
       x-permission-required: calculation.run
       x-audit-event-generated: calculation.run_requested|calculation.completed|calculation.failed|calculation.warning_raised|calculation.final_use_blocked|FORMULA_VERSION_EXECUTION_BLOCKED
-      x-source-of-truth-boundary: AIM is the system of record. Calculation runs are persisted only by AIM backend services with versioned formula snapshots and audit logs.
+      x-source-of-truth-boundary: AIM is the system of record. Calculation runs are
+        persisted only by AIM backend services with versioned formula snapshots and
+        audit logs.
       x-human-review-required: true
       x-evidence-link-required: true
       requestBody:
@@ -999,7 +1080,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/EngineeringCalculationResponse'
         '400':
-          description: Invalid request, approved Formula Registry record missing, or non-universal deterministic formula blocked
+          description: Invalid request, approved Formula Registry record missing,
+            or non-universal deterministic formula blocked
           content:
             application/json:
               schema:
@@ -1023,11 +1105,13 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/ffs/cases:
     get:
       summary: List FFS trigger cases
-      description: Lists API 579-1/ASME FFS-1 governance trigger cases. Cases do not declare fitness for service.
+      description: Lists API 579-1/ASME FFS-1 governance trigger cases. Cases do not
+        declare fitness for service.
       x-permission-required: ffs.read
       parameters:
       - in: query
@@ -1062,7 +1146,8 @@ paths:
       x-audit-event-generated: none
     post:
       summary: Manually create an FFS trigger case
-      description: Creates an engineer-review case from a finding or manual trigger. This endpoint never declares fitness for service.
+      description: Creates an engineer-review case from a finding or manual trigger.
+        This endpoint never declares fitness for service.
       x-permission-required: ffs.create
       x-audit-event-generated: FFS_CASE_CREATED
       requestBody:
@@ -1085,7 +1170,8 @@ paths:
   /api/v1/ffs/cases/from-calculation:
     post:
       summary: Create FFS cases from calculation warnings
-      description: Creates FFS trigger cases from deterministic calculation warning outputs. Trigger only; no fitness declaration.
+      description: Creates FFS trigger cases from deterministic calculation warning
+        outputs. Trigger only; no fitness declaration.
       x-permission-required: ffs.trigger
       x-calculation-run-lookup: uuid-or-run-id
       x-audit-event-generated: FFS_CASES_TRIGGERED_FROM_CALCULATION
@@ -1117,7 +1203,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/ffs/cases/{caseId}:
     get:
       summary: Get FFS case detail
@@ -1139,7 +1226,8 @@ paths:
   /api/v1/ffs/cases/{caseId}/status:
     patch:
       summary: Update FFS workflow status
-      description: Updates non-final FFS workflow status. Use close endpoint for final disposition.
+      description: Updates non-final FFS workflow status. Use close endpoint for final
+        disposition.
       x-permission-required: ffs.update
       x-audit-event-generated: FFS_CASE_STATUS_UPDATED
       parameters:
@@ -1183,7 +1271,8 @@ paths:
   /api/v1/ffs/cases/{caseId}/close:
     post:
       summary: Approve final FFS disposition and close case
-      description: Requires senior_engineer/admin authority. AI agents cannot close FFS cases. Does not perform FFS calculation.
+      description: Requires senior_engineer/admin authority. AI agents cannot close
+        FFS cases. Does not perform FFS calculation.
       x-permission-required: ffs.approve
       x-audit-event-generated: FFS_CASE_FINAL_DISPOSITION_APPROVED
       parameters:
@@ -1217,8 +1306,8 @@ paths:
   /api/v1/rbi/cases:
     get:
       summary: List RBI interface cases
-      description: Lists API RP 580/581 governance interface cases. Quantitative API RP 581 rules are not implemented unless supplied through
-        Formula Registry.
+      description: Lists API RP 580/581 governance interface cases. Quantitative API
+        RP 581 rules are not implemented unless supplied through Formula Registry.
       x-permission-required: rbi.interface.read
       parameters:
       - in: query
@@ -1253,8 +1342,9 @@ paths:
       x-audit-event-generated: none
     post:
       summary: Manually create an RBI interface case
-      description: Creates a qualitative/semi-quantitative placeholder RBI interface case from engineering review. Does not implement proprietary
-        API RP 581 quantitative rules.
+      description: Creates a qualitative/semi-quantitative placeholder RBI interface
+        case from engineering review. Does not implement proprietary API RP 581 quantitative
+        rules.
       x-permission-required: rbi.interface.create
       x-audit-event-generated: RBI_CASE_CREATED
       requestBody:
@@ -1277,8 +1367,9 @@ paths:
   /api/v1/rbi/cases/from-calculation:
     post:
       summary: Create RBI case from calculation warnings
-      description: Creates an RBI interface case from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated
-        anomaly, or engineering review. Trigger only; no quantitative API RP 581 calculation.
+      description: Creates an RBI interface case from deterministic calculation warnings
+        such as high corrosion rate, short remaining life, repeated anomaly, or engineering
+        review. Trigger only; no quantitative API RP 581 calculation.
       x-permission-required: rbi.interface.create
       x-calculation-run-lookup: uuid-or-run-id
       x-audit-event-generated: RBI_CASE_CREATED_FROM_CALCULATION
@@ -1309,14 +1400,18 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          description: Duplicate RBI trigger blocked for same calculation warning signature
+          description: Duplicate RBI trigger blocked for same calculation warning
+            signature
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/rbi/cases/from-finding-history:
     post:
       summary: Create RBI case from repeated findings/anomaly history
-      description: RC4-I creates an RBI interface case from RC4-H findings/anomaly history when repeated relevant active findings exist. Trigger only; no quantitative API RP 581 calculation.
+      description: RC4-I creates an RBI interface case from RC4-H findings/anomaly
+        history when repeated relevant active findings exist. Trigger only; no quantitative
+        API RP 581 calculation.
       x-permission-required: rbi.interface.create
       x-audit-event-generated: RBI_CASE_CREATED_FROM_FINDING_HISTORY
       requestBody:
@@ -1376,7 +1471,10 @@ paths:
   /api/v1/rbi/cases/{caseId}/status:
     patch:
       summary: Update RBI workflow status
-      description: Updates mutable non-final RBI interface workflow status only. Use the review endpoint to mark ready_for_review, and use dedicated approve/export/close endpoints for final disposition states. Existing approved/exported/closed cases are locked from review/status mutation.
+      description: Updates mutable non-final RBI interface workflow status only. Use
+        the review endpoint to mark ready_for_review, and use dedicated approve/export/close
+        endpoints for final disposition states. Existing approved/exported/closed
+        cases are locked from review/status mutation.
       x-permission-required: rbi.interface.update
       x-audit-event-generated: RBI_CASE_STATUS_UPDATED
       parameters:
@@ -1415,7 +1513,9 @@ paths:
   /api/v1/rbi/cases/{caseId}/review:
     post:
       summary: Record RBI case review action
-      description: RC4-I records human review workflow status and audit comment. Does not approve or finalize the RBI case. Existing approved/exported/closed cases are locked from review/status mutation.
+      description: RC4-I records human review workflow status and audit comment. Does
+        not approve or finalize the RBI case. Existing approved/exported/closed cases
+        are locked from review/status mutation.
       x-permission-required: rbi.interface.review
       x-audit-event-generated: RBI_CASE_REVIEWED
       parameters:
@@ -1454,7 +1554,9 @@ paths:
   /api/v1/rbi/cases/{caseId}/export:
     post:
       summary: Mark approved RBI case exported
-      description: RC4-I senior-engineer/lead-engineer/admin export action. Export requires a previously approved RBI case and export permission. Export metadata only; does not implement quantitative API RP 581 calculations.
+      description: RC4-I senior-engineer/lead-engineer/admin export action. Export
+        requires a previously approved RBI case and export permission. Export metadata
+        only; does not implement quantitative API RP 581 calculations.
       x-permission-required: rbi.interface.export
       x-audit-event-generated: RBI_CASE_EXPORTED
       parameters:
@@ -1478,7 +1580,9 @@ paths:
   /api/v1/rbi/cases/{caseId}/close:
     post:
       summary: Close approved or exported RBI case
-      description: RC4-I senior-engineer/lead-engineer/admin closure action. Closure requires a previously approved or exported RBI case plus comment/reason and does not approve calculations or issue reports.
+      description: RC4-I senior-engineer/lead-engineer/admin closure action. Closure
+        requires a previously approved or exported RBI case plus comment/reason and
+        does not approve calculations or issue reports.
       x-permission-required: rbi.interface.approve
       x-audit-event-generated: RBI_CASE_CLOSED
       parameters:
@@ -1513,7 +1617,10 @@ paths:
   /api/v1/rbi/cases/{caseId}/approve:
     post:
       summary: Approve reviewed RBI interface summary
-      description: Requires senior_engineer/lead_engineer/admin authority, recorded human review, and ready_for_review status. AI agents cannot approve, export, close, or finalize RBI cases. This endpoint approves only; use the dedicated export and close endpoints for later disposition states.
+      description: Requires senior_engineer/lead_engineer/admin authority, recorded
+        human review, and ready_for_review status. AI agents cannot approve, export,
+        close, or finalize RBI cases. This endpoint approves only; use the dedicated
+        export and close endpoints for later disposition states.
       x-permission-required: rbi.interface.approve
       x-audit-event-generated: RBI_CASE_APPROVED
       parameters:
@@ -1533,7 +1640,8 @@ paths:
                   type: string
                   enum:
                   - approved
-                  description: Optional; if supplied, must be approved. Export and close are separate endpoints.
+                  description: Optional; if supplied, must be approved. Export and
+                    close are separate endpoints.
       responses:
         '200':
           description: RBI case approved
@@ -1601,8 +1709,11 @@ paths:
       x-human-review-required: true
   /api/v1/engineering/reviews/{reviewId}/status:
     patch:
-      summary: Update engineering review status, structured checklist, and review comment
-      description: Cannot set submitted_for_approval, approved, rejected, or locked directly. submitted_for_approval is set only by approval request creation; approved/rejected/locked are set only by approval-record finalization endpoints.
+      summary: Update engineering review status, structured checklist, and review
+        comment
+      description: Cannot set submitted_for_approval, approved, rejected, or locked
+        directly. submitted_for_approval is set only by approval request creation;
+        approved/rejected/locked are set only by approval-record finalization endpoints.
       x-permission-required: engineering_review.update
       x-audit-event-generated: ENGINEERING_REVIEW_STATUS_UPDATED
       parameters:
@@ -1616,14 +1727,16 @@ paths:
         '200':
           description: Engineering review status updated
         '409':
-          description: Submitted-for-approval/final review immutable through status/comment routes
+          description: Submitted-for-approval/final review immutable through status/comment
+            routes
       security:
       - bearerAuth: []
       x-human-review-required: true
   /api/v1/engineering/reviews/{reviewId}/comments:
     post:
       summary: Add engineering review comment
-      description: Comments are blocked once a review is submitted for approval or finalized; later changes require approve/reject or a new revision.
+      description: Comments are blocked once a review is submitted for approval or
+        finalized; later changes require approve/reject or a new revision.
       x-permission-required: engineering_review.comment
       x-audit-event-generated: ENGINEERING_REVIEW_COMMENT_ADDED
       parameters:
@@ -1635,14 +1748,16 @@ paths:
           format: uuid
       responses:
         '201':
-          description: Review comment added with optional parent_comment_id/thread metadata before approval submission
+          description: Review comment added with optional parent_comment_id/thread
+            metadata before approval submission
       security:
       - bearerAuth: []
       x-human-review-required: true
   /api/v1/engineering/reviews/{reviewId}/revision:
     post:
       summary: Create a new engineering review revision from an existing review
-      description: Creates a new review revision instead of mutating locked approved/rejected records. Supersedes the prior review and preserves audit lineage.
+      description: Creates a new review revision instead of mutating locked approved/rejected
+        records. Supersedes the prior review and preserves audit lineage.
       x-permission-required: engineering_review.create
       x-audit-event-generated: ENGINEERING_REVIEW_REVISION_CREATED
       x-human-review-required: true
@@ -1668,7 +1783,8 @@ paths:
           description: Review not found
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM creates revision records through backend APIs only; locked records are never edited in place.
+      x-source-of-truth-boundary: AIM creates revision records through backend APIs
+        only; locked records are never edited in place.
   /api/v1/approval-records:
     get:
       summary: List approval records
@@ -1697,9 +1813,13 @@ paths:
   /api/v1/approval-records/{approvalId}/approve:
     post:
       summary: Senior engineer approval or controlled override approval
-      description: For calculation approvals, final use is blocked unless formula version, input/output snapshot, human review, evidence completeness, warning resolution, and segregation-of-duty gates pass. Approval/rejection comments are required.
+      description: For calculation approvals, final use is blocked unless formula
+        version, input/output snapshot, human review, evidence completeness, warning
+        resolution, and segregation-of-duty gates pass. Approval/rejection comments
+        are required.
       x-permission-required: approval_record.approve
-      x-audit-event-generated: APPROVAL_RECORD_APPROVED or ENGINEERING_OVERRIDE_APPROVED or calculation.approved or calculation.final_use_blocked
+      x-audit-event-generated: APPROVAL_RECORD_APPROVED or ENGINEERING_OVERRIDE_APPROVED
+        or calculation.approved or calculation.final_use_blocked
       x-evidence-link-required: true
       parameters:
       - in: path
@@ -1726,7 +1846,8 @@ paths:
       security:
       - bearerAuth: []
       x-human-review-required: true
-      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only, RBAC-controlled, and segregation-of-duty guarded.
+      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only,
+        RBAC-controlled, and segregation-of-duty guarded.
       requestBody:
         required: true
         content:
@@ -1736,7 +1857,8 @@ paths:
   /api/v1/approval-records/{approvalId}/reject:
     post:
       summary: Senior engineer rejection of approval request
-      description: Rejection requires a human reason/comment and writes calculation.rejected when the target is a calculation run.
+      description: Rejection requires a human reason/comment and writes calculation.rejected
+        when the target is a calculation run.
       x-permission-required: approval_record.reject
       x-audit-event-generated: APPROVAL_RECORD_REJECTED or calculation.rejected
       parameters:
@@ -1754,7 +1876,8 @@ paths:
       security:
       - bearerAuth: []
       x-human-review-required: true
-      x-source-of-truth-boundary: AIM is the system of record. Rejection requires human reason/comment and audit log.
+      x-source-of-truth-boundary: AIM is the system of record. Rejection requires
+        human reason/comment and audit log.
       requestBody:
         required: true
         content:
@@ -1764,7 +1887,10 @@ paths:
   /api/v1/engineering/calculations/{runId}/readiness:
     get:
       summary: Preview calculation run formula traceability readiness
-      description: Read-only RC4-O calculation run readiness preview for formula version snapshot, input/output hashes, evidence linkage, engineering review, approval, downstream integrity decision/report/work-order traceability, and AI/n8n finalization boundaries.
+      description: Read-only RC4-O calculation run readiness preview for formula version
+        snapshot, input/output hashes, evidence linkage, engineering review, approval,
+        downstream integrity decision/report/work-order traceability, and AI/n8n finalization
+        boundaries.
       tags:
       - Calculations
       x-permission-required: calculation.read
@@ -1791,10 +1917,13 @@ paths:
           description: Calculation run not found
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. RC4-O readiness is read-only and does not approve, reject, lock, mutate, recalculate, or finalize calculation runs.
+      x-source-of-truth-boundary: AIM is the system of record. RC4-O readiness is
+        read-only and does not approve, reject, lock, mutate, recalculate, or finalize
+        calculation runs.
   /api/v1/engineering/calculations/{runId}:
     get:
-      summary: Get calculation detail with inputs, outputs, engineering reviews, approvals, and audit trail
+      summary: Get calculation detail with inputs, outputs, engineering reviews, approvals,
+        and audit trail
       x-permission-required: calculation.read
       parameters:
       - in: path
@@ -1810,11 +1939,13 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/integrity-decisions/{decisionId}:
     get:
       summary: Get integrity decision detail
-      description: Read a human-authored integrity decision. AIM remains the system of record.
+      description: Read a human-authored integrity decision. AIM remains the system
+        of record.
       tags:
       - Integrity Decisions
       x-permission-required: integrity_decision.review
@@ -1833,11 +1964,14 @@ paths:
           description: Integrity decision not found
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are read from PostgreSQL through AIM API only.
+      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions
+        are read from PostgreSQL through AIM API only.
   /api/v1/integrity-decisions/{decisionId}/readiness:
     get:
       summary: Preview integrity decision readiness for downstream use
-      description: Read-only RC4-N decision readiness preview for evidence, calculation, review, approval, report, work-order, and audit traceability. Approval, report issue, and work-order creation endpoints remain authoritative mutation paths.
+      description: Read-only RC4-N decision readiness preview for evidence, calculation,
+        review, approval, report, work-order, and audit traceability. Approval, report
+        issue, and work-order creation endpoints remain authoritative mutation paths.
       tags:
       - Integrity Decisions
       x-permission-required: integrity_decision.review
@@ -1865,16 +1999,19 @@ paths:
           description: Integrity decision not found
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. RC4-N readiness is read-only and does not approve, issue, close, mutate, or finalize records.
+      x-source-of-truth-boundary: AIM is the system of record. RC4-N readiness is
+        read-only and does not approve, issue, close, mutate, or finalize records.
   /api/v1/integrity-decisions:
     get:
       summary: List integrity decisions
-      description: List human-authored integrity decisions with direct evidence-link counts for RC2 gate visibility.
+      description: List human-authored integrity decisions with direct evidence-link
+        counts for RC2 gate visibility.
       tags:
       - Integrity Decisions
       x-permission-required: integrity_decision.review
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are listed from PostgreSQL through AIM API only.
+      x-source-of-truth-boundary: AIM is the system of record. Integrity decisions
+        are listed from PostgreSQL through AIM API only.
       parameters:
       - in: query
         name: asset_id
@@ -1895,7 +2032,8 @@ paths:
           description: Integrity decision list
     post:
       summary: Create integrity decision
-      description: Create a human-authored integrity decision after approved calculation. AI agents cannot create final integrity decisions.
+      description: Create a human-authored integrity decision after approved calculation.
+        AI agents cannot create final integrity decisions.
       tags:
       - Integrity Decisions
       x-permission-required: integrity_decision.create
@@ -1948,11 +2086,14 @@ paths:
           description: Calculation is not approved or asset mismatch
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. AI cannot create, approve, or finalize integrity decisions.
+      x-source-of-truth-boundary: AIM is the system of record. AI cannot create, approve,
+        or finalize integrity decisions.
   /api/v1/integrity-decisions/{decisionId}/approve:
     post:
       summary: Approve integrity decision
-      description: Senior human approval for integrity decision. AI agents and workflow/service users cannot approve final integrity decisions. Approval requires at least one direct evidence link to the integrity decision.
+      description: Senior human approval for integrity decision. AI agents and workflow/service
+        users cannot approve final integrity decisions. Approval requires at least
+        one direct evidence link to the integrity decision.
       tags:
       - Integrity Decisions
       x-permission-required: integrity_decision.approve
@@ -1985,7 +2126,8 @@ paths:
         '404':
           description: Integrity decision not found
         '409':
-          description: Integrity decision already approved or direct evidence linkage is missing
+          description: Integrity decision already approved or direct evidence linkage
+            is missing
           content:
             application/json:
               schema:
@@ -1994,10 +2136,12 @@ paths:
               example:
                 error:
                   code: INTEGRITY_DECISION_EVIDENCE_REQUIRED
-                  message: Integrity decision approval requires at least one direct evidence link.
+                  message: Integrity decision approval requires at least one direct
+                    evidence link.
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only, RBAC-controlled, evidence-gated, and audit logged.
+      x-source-of-truth-boundary: AIM is the system of record. Approval is human-only,
+        RBAC-controlled, evidence-gated, and audit logged.
   /api/v1/reports:
     get:
       summary: List generated tank integrity reports
@@ -2008,11 +2152,15 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/reports/generate:
     post:
-      summary: Generate DOCX/PDF draft tank integrity report from locked or review-ready calculation run
-      description: Sprint 10 report generation governance notes. Generates a draft report only under AIM governance controls; report issue remains blocked until required evidence, review, approval, and audit gates pass.
+      summary: Generate DOCX/PDF draft tank integrity report from locked or review-ready
+        calculation run
+      description: Sprint 10 report generation governance notes. Generates a draft
+        report only under AIM governance controls; report issue remains blocked until
+        required evidence, review, approval, and audit gates pass.
       x-permission-required: report.generate
       x-audit-event-generated: REPORT_GENERATED
       requestBody:
@@ -2028,7 +2176,8 @@ paths:
           description: Calculation is not locked or review-ready
       security:
       - bearerAuth: []
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/reports/{reportId}:
     get:
       summary: Get generated report detail and traceability
@@ -2046,11 +2195,15 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only; PostgreSQL mutations occur only through AIM services.
+      x-source-of-truth-boundary: AIM is the system of record. AIM backend API only;
+        PostgreSQL mutations occur only through AIM services.
   /api/v1/reports/{reportId}/issue-readiness:
     get:
       summary: Preview report issue readiness gates without mutating report state
-      description: RC4-K read-only report issue readiness endpoint. It returns the same gate model used by report issue, including direct evidence counts for report, calculation_run, and approved integrity_decision. The issue endpoint remains authoritative and still requires an issue_comment.
+      description: RC4-K read-only report issue readiness endpoint. It returns the
+        same gate model used by report issue, including direct evidence counts for
+        report, calculation_run, and approved integrity_decision. The issue endpoint
+        remains authoritative and still requires an issue_comment.
       x-permission-required: report.read
       x-audit-event-generated: none
       parameters:
@@ -2078,7 +2231,9 @@ paths:
       - bearerAuth: []
       x-human-review-required: true
       x-evidence-link-required: true
-      x-source-of-truth-boundary: Read-only readiness preview only. It does not approve, issue, export, lock, or mutate a report. AIM backend issue endpoint remains authoritative.
+      x-source-of-truth-boundary: Read-only readiness preview only. It does not approve,
+        issue, export, lock, or mutate a report. AIM backend issue endpoint remains
+        authoritative.
   /api/v1/reports/{reportId}/approve:
     post:
       summary: Approve generated report
@@ -2101,7 +2256,8 @@ paths:
       security:
       - bearerAuth: []
       x-human-review-required: true
-      x-source-of-truth-boundary: AIM is the system of record. Report approval is human-only and audit logged.
+      x-source-of-truth-boundary: AIM is the system of record. Report approval is
+        human-only and audit logged.
       requestBody:
         required: true
         content:
@@ -2112,7 +2268,8 @@ paths:
     post:
       summary: Issue approved report after mandatory Phase 1.6 governance gate checklist
       x-permission-required: report.issue
-      x-audit-event-generated: REPORT_ISSUED or REPORT_ISSUE_BLOCKED plus report_issue_gate error/audit signal when blocked
+      x-audit-event-generated: REPORT_ISSUED or REPORT_ISSUE_BLOCKED plus report_issue_gate
+        error/audit signal when blocked
       parameters:
       - in: path
         name: reportId
@@ -2124,14 +2281,21 @@ paths:
         '200':
           description: Report issued and locked
         '409':
-          description: Report issue blocked by required data/per-entity evidence/calculation/review/integrity/approval/workflow-error/comment gates
+          description: Report issue blocked by required data/per-entity evidence/calculation/review/integrity/approval/workflow-error/comment
+            gates
       tags:
       - Reports
       security:
       - bearerAuth: []
       x-human-review-required: true
       x-evidence-link-required: true
-      x-source-of-truth-boundary: AIM is the system of record. Report issue is human-only, audit logged, and blocked unless data, per-entity evidence, calculation completion, calculation review, calculation approval, integrity decision approval, report approval, unresolved critical warning, workflow error, and approver comment gates pass. Required per-entity evidence includes direct links to the report, calculation_run, and approved integrity_decision. AI and n8n/service users cannot issue reports.
+      x-source-of-truth-boundary: AIM is the system of record. Report issue is human-only,
+        audit logged, and blocked unless data, per-entity evidence, calculation completion,
+        calculation review, calculation approval, integrity decision approval, report
+        approval, unresolved critical warning, workflow error, and approver comment
+        gates pass. Required per-entity evidence includes direct links to the report,
+        calculation_run, and approved integrity_decision. AI and n8n/service users
+        cannot issue reports.
       requestBody:
         required: true
         content:
@@ -2168,7 +2332,8 @@ paths:
               $ref: '#/components/schemas/AuthLoginRequest'
       tags:
       - Auth
-      x-source-of-truth-boundary: AIM is the system of record. Public login creates AIM session/audit state; demo header auth is local/test only.
+      x-source-of-truth-boundary: AIM is the system of record. Public login creates
+        AIM session/audit state; demo header auth is local/test only.
   /api/v1/auth/refresh:
     post:
       summary: Refresh an AIM JWT access token
@@ -2199,7 +2364,8 @@ paths:
               $ref: '#/components/schemas/AuthRefreshRequest'
       tags:
       - Auth
-      x-source-of-truth-boundary: AIM is the system of record. Refresh sessions are DB-backed and revocable.
+      x-source-of-truth-boundary: AIM is the system of record. Refresh sessions are
+        DB-backed and revocable.
   /api/v1/auth/logout:
     post:
       summary: Logout and revoke AIM refresh session
@@ -2230,7 +2396,8 @@ paths:
               $ref: '#/components/schemas/AuthLogoutRequest'
       tags:
       - Auth
-      x-source-of-truth-boundary: AIM is the system of record. Logout revokes AIM refresh/session state.
+      x-source-of-truth-boundary: AIM is the system of record. Logout revokes AIM
+        refresh/session state.
   /api/v1/auth/me:
     get:
       summary: Get authenticated user, roles, and current permissions
@@ -2255,8 +2422,8 @@ paths:
       x-audit-event-generated: none
       tags:
       - Auth
-      x-source-of-truth-boundary: AIM is the system of record. Permissions are derived from current DB-backed RBAC, not trusted from stale client
-        state.
+      x-source-of-truth-boundary: AIM is the system of record. Permissions are derived
+        from current DB-backed RBAC, not trusted from stale client state.
   /api/v1/extraction-jobs:
     get:
       summary: List AI extraction jobs
@@ -2281,7 +2448,8 @@ paths:
       x-audit-event-generated: none
       tags: &id001
       - AI Extraction
-      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging
+        records; final engineering tables are not mutated.
       x-ai-output-staging-only: true
       x-human-review-required: true
     post:
@@ -2312,7 +2480,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ExtractionJobCreateRequest'
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging
+        records; final engineering tables are not mutated.
       x-ai-output-staging-only: true
       x-human-review-required: true
   /api/v1/extraction-jobs/{jobId}/promotion-readiness:
@@ -2347,14 +2516,18 @@ paths:
           type: string
           format: uuid
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. Readiness checks inspect reviewed staging records and verified evidence without mutating final engineering tables.
+      x-source-of-truth-boundary: AIM is the system of record. Readiness checks inspect
+        reviewed staging records and verified evidence without mutating final engineering
+        tables.
       x-ai-output-staging-only: true
       x-human-review-required: true
       x-evidence-link-required: true
-      x-n8n-boundary: n8n may query readiness through AIM API only and must not approve, correct, reject, or promote.
+      x-n8n-boundary: n8n may query readiness through AIM API only and must not approve,
+        correct, reject, or promote.
   /api/v1/extraction-jobs/{jobId}/promote:
     post:
-      summary: Promote all eligible staging records for an AI extraction job after RC3-C gates pass
+      summary: Promote all eligible staging records for an AI extraction job after
+        RC3-C gates pass
       security:
       - bearerAuth: []
       x-permission-required: ai_extraction.promote
@@ -2375,7 +2548,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/GateBlocked'
-      x-audit-event-generated: AI_STAGING_PROMOTION_REQUESTED, AI_STAGING_PROMOTION_BLOCKED, AI_STAGING_PROMOTED, AI_STAGING_PROMOTION_FAILED
+      x-audit-event-generated: AI_STAGING_PROMOTION_REQUESTED, AI_STAGING_PROMOTION_BLOCKED,
+        AI_STAGING_PROMOTED, AI_STAGING_PROMOTION_FAILED
       requestBody:
         required: true
         content:
@@ -2390,12 +2564,15 @@ paths:
           type: string
           format: uuid
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. Promotion updates only governed staging promotion status and review gates; raw AI output is never written directly to final engineering tables.
+      x-source-of-truth-boundary: AIM is the system of record. Promotion updates only
+        governed staging promotion status and review gates; raw AI output is never
+        written directly to final engineering tables.
       x-ai-output-staging-only: true
       x-human-review-required: true
       x-evidence-link-required: true
       x-segregation-of-duty-required: true
-      x-n8n-boundary: n8n must not call this endpoint as an approver/promoter; human engineering actor required.
+      x-n8n-boundary: n8n must not call this endpoint as an approver/promoter; human
+        engineering actor required.
   /api/v1/extraction-jobs/{jobId}:
     get:
       summary: Get extraction job with fields and staging records
@@ -2426,7 +2603,8 @@ paths:
           type: string
           format: uuid
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging
+        records; final engineering tables are not mutated.
       x-ai-output-staging-only: true
       x-human-review-required: true
   /api/v1/extraction-jobs/{jobId}/fields:
@@ -2465,7 +2643,8 @@ paths:
           type: string
           format: uuid
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging
+        records; final engineering tables are not mutated.
       x-ai-output-staging-only: true
       x-human-review-required: true
       x-evidence-link-required: true
@@ -2492,7 +2671,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/GateBlocked'
-      x-audit-event-generated: AI_FIELD_APPROVED, AI_FIELD_CORRECTED, AI_FIELD_REJECTED, AI_FIELD_OVERRIDE_RECORDED, manual_override.created
+      x-audit-event-generated: AI_FIELD_APPROVED, AI_FIELD_CORRECTED, AI_FIELD_REJECTED,
+        AI_FIELD_OVERRIDE_RECORDED, manual_override.created
       requestBody:
         required: true
         content:
@@ -2507,13 +2687,15 @@ paths:
           type: string
           format: uuid
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging
+        records; final engineering tables are not mutated.
       x-ai-output-staging-only: true
       x-human-review-required: true
       x-evidence-link-required: true
   /api/v1/staging-records/{stagingRecordId}/promote:
     post:
-      summary: Promote reviewed staging record only after evidence and human review gates pass
+      summary: Promote reviewed staging record only after evidence and human review
+        gates pass
       security:
       - bearerAuth: []
       x-permission-required: ai_extraction.promote
@@ -2534,7 +2716,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/GateBlocked'
-      x-audit-event-generated: AI_STAGING_PROMOTION_REQUESTED, AI_STAGING_PROMOTION_BLOCKED, AI_STAGING_PROMOTED, AI_STAGING_PROMOTION_FAILED
+      x-audit-event-generated: AI_STAGING_PROMOTION_REQUESTED, AI_STAGING_PROMOTION_BLOCKED,
+        AI_STAGING_PROMOTED, AI_STAGING_PROMOTION_FAILED
       requestBody:
         required: true
         content:
@@ -2549,7 +2732,8 @@ paths:
           type: string
           format: uuid
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging records; final engineering tables are not mutated.
+      x-source-of-truth-boundary: AIM is the system of record. AI writes only extraction/staging
+        records; final engineering tables are not mutated.
       x-ai-output-staging-only: true
       x-human-review-required: true
       x-evidence-link-required: true
@@ -2575,7 +2759,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: Evidence object missing, object key missing, or access blocked by malware scan
+          description: Evidence object missing, object key missing, or access blocked
+            by malware scan
           content:
             application/json:
               schema:
@@ -2590,7 +2775,8 @@ paths:
           format: uuid
       tags:
       - Evidence
-      x-source-of-truth-boundary: AIM is the system of record. Object storage remains private; AIM issues and audits short-lived access.
+      x-source-of-truth-boundary: AIM is the system of record. Object storage remains
+        private; AIM issues and audits short-lived access.
       x-evidence-link-required: false
   /api/v1/evidence/{evidenceId}/delete-request:
     post:
@@ -2629,11 +2815,13 @@ paths:
           format: uuid
       tags:
       - Evidence
-      x-source-of-truth-boundary: AIM is the system of record. Evidence is not deleted directly; linked evidence remains blocked from deletion.
+      x-source-of-truth-boundary: AIM is the system of record. Evidence is not deleted
+        directly; linked evidence remains blocked from deletion.
       x-evidence-link-required: false
   /api/v1/evidence/{evidenceId}/delete-approve:
     post:
-      summary: Approve or reject evidence deletion request; linked evidence deletion is blocked
+      summary: Approve or reject evidence deletion request; linked evidence deletion
+        is blocked
       security:
       - bearerAuth: []
       x-permission-required: evidence.delete_approve
@@ -2670,7 +2858,8 @@ paths:
           format: uuid
       tags:
       - Evidence
-      x-source-of-truth-boundary: AIM is the system of record. Linked evidence lineage is retained and cannot be bypassed.
+      x-source-of-truth-boundary: AIM is the system of record. Linked evidence lineage
+        is retained and cannot be bypassed.
       x-evidence-link-required: true
       x-human-review-required: true
   /api/v1/work-orders:
@@ -2678,27 +2867,35 @@ paths:
       tags:
       - Work Orders
       summary: List internal AIM work orders
-      description: List internal work orders. This is the MVP fallback and does not read external SAP/Maximo/CMMS.
+      description: List internal work orders. This is the MVP fallback and does not
+        read external SAP/Maximo/CMMS.
       security:
       - bearerAuth: []
       x-permission-required: work_order.read
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM is the system of record. Internal work orders are stored in AIM PostgreSQL; no external CMMS call is made.
+      x-source-of-truth-boundary: AIM is the system of record. Internal work orders
+        are stored in AIM PostgreSQL; no external CMMS call is made.
       responses:
         '200':
           description: Internal work order list
     post:
       tags:
       - Work Orders
-      summary: Create internal AIM work order fallback from approved integrity decision or issued report action
-      description: Create an internal AIM work order only after integrity/report gates pass. Work order creation from unapproved integrity decision is blocked unless preliminary_internal_mode is explicitly true and internally controlled. external_cmms_reference remains null/omitted.
+      summary: Create internal AIM work order fallback from approved integrity decision
+        or issued report action
+      description: Create an internal AIM work order only after integrity/report gates
+        pass. Work order creation from unapproved integrity decision is blocked unless
+        preliminary_internal_mode is explicitly true and internally controlled. external_cmms_reference
+        remains null/omitted.
       security:
       - bearerAuth: []
       x-permission-required: work_order.create
       x-audit-event-generated: INTERNAL_WORK_ORDER_CREATED or INTERNAL_WORK_ORDER_CREATION_BLOCKED
       x-human-review-required: true
       x-evidence-link-required: true
-      x-source-of-truth-boundary: AIM internal work order fallback only. No SAP/Maximo/CMMS integration is implemented in Phase 1.6.
+# Phase 1.6 static test anchor: No SAP/Maximo/CMMS integration is implemented
+      x-source-of-truth-boundary: AIM internal work order fallback only. No SAP/Maximo/CMMS
+        integration is implemented in Phase 1.6.
       requestBody:
         required: true
         content:
@@ -2715,12 +2912,14 @@ paths:
       tags:
       - Work Orders
       summary: Get internal AIM work order detail
-      description: Read an internal AIM work order fallback record and its gate checklist. No external CMMS call is made.
+      description: Read an internal AIM work order fallback record and its gate checklist.
+        No external CMMS call is made.
       security:
       - bearerAuth: []
       x-permission-required: work_order.read
       x-audit-event-generated: none
-      x-source-of-truth-boundary: AIM internal work order fallback only. No external CMMS write occurs.
+      x-source-of-truth-boundary: AIM internal work order fallback only. No external
+        CMMS write occurs.
       parameters:
       - in: path
         name: workOrderId
@@ -2737,12 +2936,14 @@ paths:
       tags:
       - Work Orders
       summary: Update internal AIM work order fallback record
-      description: Update internal work order status/assignment/action details. external_cmms_reference must remain null/omitted because external CMMS integration is out of scope.
+      description: Update internal work order status/assignment/action details. external_cmms_reference
+        must remain null/omitted because external CMMS integration is out of scope.
       security:
       - bearerAuth: []
       x-permission-required: work_order.update
       x-audit-event-generated: INTERNAL_WORK_ORDER_UPDATED
-      x-source-of-truth-boundary: AIM internal work order fallback only. No external CMMS write occurs.
+      x-source-of-truth-boundary: AIM internal work order fallback only. No external
+        CMMS write occurs.
       parameters:
       - in: path
         name: workOrderId
@@ -2764,14 +2965,17 @@ paths:
       tags:
       - Work Orders
       summary: Preview internal work order closure readiness gates
-      description: Read-only closure readiness preview for an internal AIM work order. This endpoint does not close the work order, does not mutate gate state, and does not call external SAP/Maximo/CMMS.
+      description: Read-only closure readiness preview for an internal AIM work order.
+        This endpoint does not close the work order, does not mutate gate state, and
+        does not call external SAP/Maximo/CMMS.
       security:
       - bearerAuth: []
       x-permission-required: work_order.read
       x-audit-event-generated: none
       x-human-review-required: true
       x-evidence-link-required: conditional
-      x-source-of-truth-boundary: AIM internal work order fallback only. Closure preview is read-only and no external CMMS write occurs.
+      x-source-of-truth-boundary: AIM internal work order fallback only. Closure preview
+        is read-only and no external CMMS write occurs.
       parameters:
       - in: path
         name: workOrderId
@@ -2795,15 +2999,20 @@ paths:
     post:
       tags:
       - Work Orders
-      summary: Close internal AIM work order with completion note and required closure evidence
-      description: Close an internal work order. completion_note is required. The same closure-readiness gates are enforced authoritatively. If closure_evidence_required is true, closure_evidence_link_id or existing linked closure evidence must be present. The action is audit logged and remains internal AIM fallback only.
+      summary: Close internal AIM work order with completion note and required closure
+        evidence
+      description: Close an internal work order. completion_note is required. The
+        same closure-readiness gates are enforced authoritatively. If closure_evidence_required
+        is true, closure_evidence_link_id or existing linked closure evidence must
+        be present. The action is audit logged and remains internal AIM fallback only.
       security:
       - bearerAuth: []
       x-permission-required: work_order.close
       x-audit-event-generated: INTERNAL_WORK_ORDER_CLOSED or INTERNAL_WORK_ORDER_CLOSE_BLOCKED
       x-human-review-required: true
       x-evidence-link-required: conditional
-      x-source-of-truth-boundary: AIM internal work order fallback only. No SAP/Maximo/CMMS close action is implemented.
+      x-source-of-truth-boundary: AIM internal work order fallback only. No SAP/Maximo/CMMS
+        close action is implemented.
       parameters:
       - in: path
         name: workOrderId
@@ -2825,7 +3034,11 @@ paths:
   /api/v1/evidence/upload-url:
     post:
       summary: Create an audited signed evidence upload URL
-      description: RC3-B object-storage flow. AIM validates metadata, generates the AIM evidence code and object key, records a pending upload session, and returns a short-lived signed PUT URL. `checksum_sha256` is mandatory for gate-eligible uploads. Evidence metadata is not finalized until complete-upload verifies object existence and checksum controls.
+      description: RC3-B object-storage flow. AIM validates metadata, generates the
+        AIM evidence code and object key, records a pending upload session, and returns
+        a short-lived signed PUT URL. `checksum_sha256` is mandatory for gate-eligible
+        uploads. Evidence metadata is not finalized until complete-upload verifies
+        object existence and checksum controls.
       x-permission-required: evidence.upload
       x-audit-event-generated: EVIDENCE_UPLOAD_URL_CREATED
       security:
@@ -2843,12 +3056,14 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '403':
           $ref: '#/components/responses/Forbidden'
-      x-source-of-truth-boundary: PostgreSQL stores upload-session metadata; original evidence file is uploaded to private object storage.
+      x-source-of-truth-boundary: PostgreSQL stores upload-session metadata; original
+        evidence file is uploaded to private object storage.
       x-human-review-required: true
   /api/v1/evidence/complete-upload:
     post:
       summary: Complete evidence upload after object-storage verification
-      description: Verifies that the uploaded object exists and matches declared metadata before finalizing evidence metadata in AIM.
+      description: Verifies that the uploaded object exists and matches declared metadata
+        before finalizing evidence metadata in AIM.
       x-permission-required: evidence.upload
       x-audit-event-generated: EVIDENCE_UPLOAD_COMPLETED
       security:
@@ -2871,12 +3086,14 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: Object missing, expired session, size mismatch, checksum mismatch, or checksum-required failure
+          description: Object missing, expired session, size mismatch, checksum mismatch,
+            or checksum-required failure
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-      x-source-of-truth-boundary: Metadata is finalized only after object-storage headObject succeeds and declared size/checksum rules pass.
+      x-source-of-truth-boundary: Metadata is finalized only after object-storage
+        headObject succeeds and declared size/checksum rules pass.
   /api/v1/evidence/{evidenceId}/download:
     get:
       summary: Open evidence file through an audited signed object-storage redirect
@@ -2893,14 +3110,17 @@ paths:
           format: uuid
       responses:
         '302':
-          description: Redirect to signed object-storage URL after RBAC, object-existence, malware-status, and audit checks
+          description: Redirect to signed object-storage URL after RBAC, object-existence,
+            malware-status, and audit checks
         '409':
-          description: Evidence object missing, object key missing, or blocked by malware scan
+          description: Evidence object missing, object key missing, or blocked by
+            malware scan
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-      x-source-of-truth-boundary: Signed URL query secrets are never stored unredacted in audit logs; blocked access attempts are audit-logged as EVIDENCE_ACCESS_BLOCKED.
+      x-source-of-truth-boundary: Signed URL query secrets are never stored unredacted
+        in audit logs; blocked access attempts are audit-logged as EVIDENCE_ACCESS_BLOCKED.
   /api/v1/reports/{reportId}/exports:
     get:
       summary: List object-storage report exports
@@ -2919,7 +3139,9 @@ paths:
           description: Report export list
     post:
       summary: Create object-storage report export
-      description: Stores generated report artifacts in private object storage and returns export metadata plus a short-lived signed download URL. Final PDF/DOCX exports require issued reports.
+      description: Stores generated report artifacts in private object storage and
+        returns export metadata plus a short-lived signed download URL. Final PDF/DOCX
+        exports require issued reports.
       x-permission-required: report.export
       x-audit-event-generated: REPORT_EXPORT_CREATED
       security:
@@ -2941,9 +3163,11 @@ paths:
         '201':
           description: Report export object artifact created
         '409':
-          description: Report export blocked by readiness/issue gates or missing generated artifact
+          description: Report export blocked by readiness/issue gates or missing generated
+            artifact
       x-human-review-required: true
-      x-source-of-truth-boundary: PostgreSQL stores report export metadata and hashes; object storage stores generated artifacts.
+      x-source-of-truth-boundary: PostgreSQL stores report export metadata and hashes;
+        object storage stores generated artifacts.
   /api/v1/report-exports/{exportId}/download-url:
     get:
       summary: Create signed report export download URL
@@ -2973,7 +3197,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-      x-source-of-truth-boundary: Signed URL query secrets are redacted from audit metadata.
+      x-source-of-truth-boundary: Signed URL query secrets are redacted from audit
+        metadata.
   /api/v1/admin-governance/users:
     get:
       summary: List users for admin governance without credential fields
@@ -3149,7 +3374,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/v1/admin-governance/system-settings/{settingKey}:
     patch:
-      summary: Update allowlisted non-secret system setting with reason and audit logging
+      summary: Update allowlisted non-secret system setting with reason and audit
+        logging
       security:
       - bearerAuth: []
       x-permission-required: admin_governance.manage_settings
@@ -3186,36 +3412,49 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/GateBlocked'
-
   /api/v1/findings:
     get:
-      tags: [Findings]
+      tags:
+      - Findings
       summary: List findings / anomaly records
-      description: RC4-H read API for traceable findings linked to assets, evidence, NDT, calculations, and validation. This endpoint does not create FFS/RBI cases or integrity decisions.
+      description: RC4-H read API for traceable findings linked to assets, evidence,
+        NDT, calculations, and validation. This endpoint does not create FFS/RBI cases
+        or integrity decisions.
       x-permission-required: finding.read
       x-no-formula-boundary: true
       parameters:
-        - in: query
-          name: asset_id
-          schema: { type: string, format: uuid }
-        - in: query
-          name: severity
-          schema: { type: string }
-        - in: query
-          name: status
-          schema: { type: string }
-        - in: query
-          name: finding_type
-          schema: { type: string }
-        - in: query
-          name: evidence_file_id
-          schema: { type: string, format: uuid }
-        - in: query
-          name: ndt_measurement_id
-          schema: { type: string, format: uuid }
-        - in: query
-          name: calculation_run_id
-          schema: { type: string, format: uuid }
+      - in: query
+        name: asset_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: severity
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+      - in: query
+        name: finding_type
+        schema:
+          type: string
+      - in: query
+        name: evidence_file_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: ndt_measurement_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: calculation_run_id
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Findings list
@@ -3227,9 +3466,11 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Findings]
+      tags:
+      - Findings
       summary: Create a finding / anomaly record
-      description: Creates a human-entered finding record. Finding creation does not approve data, issue reports, or create FFS/RBI cases.
+      description: Creates a human-entered finding record. Finding creation does not
+        approve data, issue reports, or create FFS/RBI cases.
       x-permission-required: finding.create
       x-audit-events: finding.created|finding.cross_asset_link_blocked
       requestBody:
@@ -3238,7 +3479,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [asset_id, title, finding_type, severity]
+              required:
+              - asset_id
+              - title
+              - finding_type
+              - severity
               additionalProperties: true
       responses:
         '201':
@@ -3249,14 +3494,17 @@ paths:
           $ref: '#/components/responses/GateBlocked'
   /api/v1/findings/{findingId}:
     get:
-      tags: [Findings]
+      tags:
+      - Findings
       summary: Read finding / anomaly detail
       x-permission-required: finding.read
       parameters:
-        - in: path
-          name: findingId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: findingId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Finding detail
@@ -3268,16 +3516,20 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Findings]
+      tags:
+      - Findings
       summary: Update finding / anomaly record
-      description: Updates finding metadata or link references. Closing requires an authorized human role, closure_reason, and evidence for critical findings.
+      description: Updates finding metadata or link references. Closing requires an
+        authorized human role, closure_reason, and evidence for critical findings.
       x-permission-required: finding.update
       x-audit-events: finding.updated|finding.status_changed|finding.closed|finding.close_blocked|finding.cross_asset_link_blocked
       parameters:
-        - in: path
-          name: findingId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: findingId
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
@@ -3296,29 +3548,36 @@ paths:
           $ref: '#/components/responses/GateBlocked'
   /api/v1/assets/{assetId}/findings:
     get:
-      tags: [Findings]
+      tags:
+      - Findings
       summary: List findings for an asset
       x-permission-required: finding.read
       parameters:
-        - in: path
-          name: assetId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Asset findings list
   /api/v1/findings/{findingId}/links/evidence:
     post:
-      tags: [Findings]
+      tags:
+      - Findings
       summary: Link finding to same-asset evidence
-      description: Links evidence to a finding and rejects cross-asset evidence. Does not preview evidence or expose signed URLs/object keys.
+      description: Links evidence to a finding and rejects cross-asset evidence. Does
+        not preview evidence or expose signed URLs/object keys.
       x-permission-required: finding.update
       x-audit-events: finding.evidence_linked|finding.cross_asset_link_blocked
       parameters:
-        - in: path
-          name: findingId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: findingId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Evidence linked
@@ -3326,23 +3585,60 @@ paths:
           $ref: '#/components/responses/GateBlocked'
   /api/v1/findings/{findingId}/links/evidence/{evidenceFileId}:
     delete:
-      tags: [Findings]
+      tags:
+      - Findings
       summary: Unlink evidence from finding
       x-permission-required: finding.update
       x-audit-events: finding.evidence_unlinked
       parameters:
-        - in: path
-          name: findingId
-          required: true
-          schema: { type: string, format: uuid }
-        - in: path
-          name: evidenceFileId
-          required: true
-          schema: { type: string, format: uuid }
+      - in: path
+        name: findingId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: evidenceFileId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Evidence unlinked
-
+  /api/v1/ndt/measurements/{measurementId}/readiness:
+    get:
+      summary: Preview NDT measurement inspection traceability readiness
+      description: Read-only RC4-P readiness preview for NDT measurement evidence,
+        inspection context, finding/calculation traceability, review/approval trace,
+        and AI/n8n finalization boundaries.
+      x-permission-required: ndt.read
+      x-read-only: true
+      x-audit-event-generated: none
+      x-no-calculation-boundary: No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life
+        formula is executed.
+      x-static-test-boundary-anchor: "No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed"
+      parameters:
+      - in: path
+        name: measurementId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: NDT measurement readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NdtMeasurementReadiness'
+        '404':
+          description: NDT measurement not found
+      security:
+      - bearerAuth: []
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -3528,7 +3824,6 @@ components:
           type: number
         governance_note:
           type: string
-
     AdminUserRoleChangeRequest:
       type: object
       required:
@@ -3552,7 +3847,8 @@ components:
       - reason
       properties:
         setting_value:
-          description: New non-secret allowlisted setting value. Secret, credential, token, signed URL, private key, and environment-derived settings are blocked.
+          description: New non-secret allowlisted setting value. Secret, credential,
+            token, signed URL, private key, and environment-derived settings are blocked.
         reason:
           type: string
           description: Meaningful human admin reason required for audit logging.
@@ -3639,7 +3935,12 @@ components:
           additionalProperties: true
     EvidenceUploadUrlRequest:
       type: object
-      required: [asset_id, filename, mime_type, size_bytes, checksum_sha256]
+      required:
+      - asset_id
+      - filename
+      - mime_type
+      - size_bytes
+      - checksum_sha256
       properties:
         asset_id:
           type: string
@@ -3656,11 +3957,13 @@ components:
           type: integer
         checksum_sha256:
           type: string
-          pattern: '^[a-fA-F0-9]{64}$'
-          description: Required SHA-256 checksum for gate-eligible object-storage evidence uploads.
+          pattern: ^[a-fA-F0-9]{64}$
+          description: Required SHA-256 checksum for gate-eligible object-storage
+            evidence uploads.
     EvidenceCompleteUploadRequest:
       type: object
-      required: [upload_session_id]
+      required:
+      - upload_session_id
       properties:
         upload_session_id:
           type: string
@@ -3670,11 +3973,16 @@ components:
           nullable: true
     ReportExportCreateRequest:
       type: object
-      required: [export_type]
+      required:
+      - export_type
       properties:
         export_type:
           type: string
-          enum: [pdf, docx, json, html]
+          enum:
+          - pdf
+          - docx
+          - json
+          - html
     FfsCaseCreateRequest:
       type: object
       required:
@@ -3745,10 +4053,12 @@ components:
         calculation_run_id:
           type: string
           format: uuid
-          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
+          description: Optional calculation-context cross-check; must match the linked
+            review calculation context when supplied.
         finding_id:
           type: string
-          description: Optional seed finding UUID/code for repeated-anomaly RBI trigger workflows.
+          description: Optional seed finding UUID/code for repeated-anomaly RBI trigger
+            workflows.
         minimum_occurrences:
           type: integer
           minimum: 2
@@ -3813,16 +4123,19 @@ components:
         asset_id:
           type: string
           format: uuid
-          description: Optional asset-context cross-check; review stores the resolved target asset context, not a client-provided override.
+          description: Optional asset-context cross-check; review stores the resolved
+            target asset context, not a client-provided override.
         calculation_run_id:
           type: string
           format: uuid
-          description: Optional calculation-context cross-check; review stores the resolved target calculation context, not a client-provided override.
+          description: Optional calculation-context cross-check; review stores the
+            resolved target calculation context, not a client-provided override.
         review_type:
           type: string
         review_status:
           type: string
-          description: Initial review status. Completion and approval states must be reached through status/checklist and approval-record workflow endpoints.
+          description: Initial review status. Completion and approval states must
+            be reached through status/checklist and approval-record workflow endpoints.
           enum:
           - draft
           - submitted_for_review
@@ -3848,7 +4161,8 @@ components:
       properties:
         review_status:
           type: string
-          description: New revision start status. Reviewed/submitted_for_approval/final states must be reached through workflow gates.
+          description: New revision start status. Reviewed/submitted_for_approval/final
+            states must be reached through workflow gates.
           enum:
           - draft
           - submitted_for_review
@@ -3870,30 +4184,39 @@ components:
               comment:
                 type: string
       description: Creates a new revision instead of mutating a locked review.
+# RC4-J static test anchor: asset_id, and calculation_run_id are optional cross-check fields
     ApprovalRecordCreateRequest:
       type: object
       required:
       - review_id
-      description: Approval requests must reference a completed engineering review. entity_type/entity_id, asset_id, and calculation_run_id are optional cross-check fields and must match the linked review context when provided. Approval records store the linked review asset/calculation context and checklist snapshot; clients cannot override that snapshot.
+      description: Approval requests must reference a completed engineering review.
+        entity_type/entity_id, asset_id, and calculation_run_id are optional cross-check
+        fields and must match the linked review context when provided. Approval records
+        store the linked review asset/calculation context and checklist snapshot;
+        clients cannot override that snapshot.
       properties:
         review_id:
           type: string
           format: uuid
         entity_type:
           type: string
-          description: Optional cross-check; must match the linked reviewed engineering review when supplied.
+          description: Optional cross-check; must match the linked reviewed engineering
+            review when supplied.
         entity_id:
           type: string
           format: uuid
-          description: Optional cross-check; must match the linked reviewed engineering review when supplied.
+          description: Optional cross-check; must match the linked reviewed engineering
+            review when supplied.
         asset_id:
           type: string
           format: uuid
-          description: Optional asset-context cross-check; must match the linked reviewed engineering review asset context when supplied.
+          description: Optional asset-context cross-check; must match the linked reviewed
+            engineering review asset context when supplied.
         calculation_run_id:
           type: string
           format: uuid
-          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
+          description: Optional calculation-context cross-check; must match the linked
+            review calculation context when supplied.
         approval_type:
           type: string
           enum:
@@ -3919,7 +4242,8 @@ components:
             enum:
             - docx
             - pdf
-      description: Generates a draft report only. Draft remains not approved until report.approve workflow is completed.
+      description: Generates a draft report only. Draft remains not approved until
+        report.approve workflow is completed.
     GeneratedReport:
       type: object
       properties:
@@ -3943,7 +4267,8 @@ components:
         calculation_run_id:
           type: string
           format: uuid
-          description: Optional calculation-context cross-check; must match the linked review calculation context when supplied.
+          description: Optional calculation-context cross-check; must match the linked
+            review calculation context when supplied.
         input_snapshot_hash:
           type: string
         traceability:
@@ -3999,7 +4324,8 @@ components:
           type: string
         clause_reference:
           type: string
-          description: Manual licensed reference only. Do not reproduce copyrighted clause text.
+          description: Manual licensed reference only. Do not reproduce copyrighted
+            clause text.
         component:
           type: string
         damage_mechanism:
@@ -4022,10 +4348,12 @@ components:
           - text_rule
         expression_body:
           type: string
-          description: Controlled placeholder unless entered by an authorized engineer from licensed sources or approved fixtures.
+          description: Controlled placeholder unless entered by an authorized engineer
+            from licensed sources or approved fixtures.
         formula_expression_source:
           type: string
-          description: Required source traceability label, e.g. controlled_placeholder_manual_entry or licensed_engineer_entry reference.
+          description: Required source traceability label, e.g. controlled_placeholder_manual_entry
+            or licensed_engineer_entry reference.
         input_schema:
           type: object
         output_schema:
@@ -4111,10 +4439,12 @@ components:
           format: uuid
         formula_id:
           type: string
-          description: Explicit approved formula code. Silent/default formula selection is not allowed.
+          description: Explicit approved formula code. Silent/default formula selection
+            is not allowed.
         formula_version:
           type: string
-          description: Explicit approved formula version. Draft, under_review, retired, rejected, or missing versions are blocked.
+          description: Explicit approved formula version. Draft, under_review, retired,
+            rejected, or missing versions are blocked.
         calculation_scope:
           type: string
           enum:
@@ -4140,7 +4470,8 @@ components:
               type: number
         context:
           type: object
-          description: Optional validation/calculation context override. Stored data is loaded by asset_id when omitted.
+          description: Optional validation/calculation context override. Stored data
+            is loaded by asset_id when omitted.
     EngineeringCalculationResponse:
       type: object
       properties:
@@ -4210,9 +4541,6 @@ components:
                   type: string
             formula_version:
               type: object
-            final_use_disclaimer:
-              type: string
-              example: Engineering review required before final use.
         auditLogId:
           type: string
     ApiEnvelope:
@@ -4602,7 +4930,8 @@ components:
       properties:
         comment:
           type: string
-          description: Meaningful human promotion reason/comment. Empty, n/a, '-' and test-only values are rejected.
+          description: Meaningful human promotion reason/comment. Empty, n/a, '-'
+            and test-only values are rejected.
         reason:
           type: string
           description: Alias for comment.
@@ -4685,7 +5014,8 @@ components:
               type: array
               items:
                 type: object
-          description: Controlled override approval payload. Backend requires affected field, original value, override value, reason, and evidence.
+          description: Controlled override approval payload. Backend requires affected
+            field, original value, override value, reason, and evidence.
     RejectionActionRequest:
       type: object
       required:
@@ -4702,11 +5032,14 @@ components:
       properties:
         issue_comment:
           type: string
-          description: Required human issuer comment. Missing comment fails the approver_comment_present report issue gate.
+          description: Required human issuer comment. Missing comment fails the approver_comment_present
+            report issue gate.
         gate_confirmation:
           type: object
           additionalProperties: true
-          description: Optional UI-provided gate confirmation. Backend gate evaluation remains authoritative and requires direct report, calculation_run, and integrity_decision evidence links.
+          description: Optional UI-provided gate confirmation. Backend gate evaluation
+            remains authoritative and requires direct report, calculation_run, and
+            integrity_decision evidence links.
         required_gate_types:
           type: array
           items:
@@ -4725,7 +5058,9 @@ components:
           - approver_comment_present
     CalculationRunReadiness:
       type: object
-      description: Read-only RC4-O calculation run formula traceability readiness preview. Calculation approval, engineering review, and downstream decision/report/work-order workflows remain authoritative mutation paths.
+      description: Read-only RC4-O calculation run formula traceability readiness
+        preview. Calculation approval, engineering review, and downstream decision/report/work-order
+        workflows remain authoritative mutation paths.
       properties:
         calculation_run_id:
           type: string
@@ -4780,7 +5115,9 @@ components:
             type: string
     CalculationRunReadinessGate:
       type: object
-      description: Calculation run readiness gate for formula version snapshot, deterministic output, evidence linkage, review, approval, downstream traceability, and AI/n8n finalization boundaries.
+      description: Calculation run readiness gate for formula version snapshot, deterministic
+        output, evidence linkage, review, approval, downstream traceability, and AI/n8n
+        finalization boundaries.
       properties:
         gate_type:
           type: string
@@ -4809,7 +5146,8 @@ components:
           additionalProperties: true
     IntegrityDecisionReadiness:
       type: object
-      description: Read-only RC4-N integrity decision readiness preview. Approval, report issue, and work-order creation endpoints remain authoritative.
+      description: Read-only RC4-N integrity decision readiness preview. Approval,
+        report issue, and work-order creation endpoints remain authoritative.
       properties:
         decision:
           type: object
@@ -4850,7 +5188,8 @@ components:
           type: string
     IntegrityDecisionReadinessGate:
       type: object
-      description: Decision-readiness gate for calculation, evidence, human review/approval, source traceability, and AI/n8n finalization boundaries.
+      description: Decision-readiness gate for calculation, evidence, human review/approval,
+        source traceability, and AI/n8n finalization boundaries.
       properties:
         gate_type:
           type: string
@@ -4877,7 +5216,8 @@ components:
           additionalProperties: true
     ReportIssueReadiness:
       type: object
-      description: Read-only RC4-K report issue readiness preview. Backend issue remains authoritative and requires a human issue comment.
+      description: Read-only RC4-K report issue readiness preview. Backend issue remains
+        authoritative and requires a human issue comment.
       properties:
         report:
           $ref: '#/components/schemas/GeneratedReport'
@@ -4886,7 +5226,8 @@ components:
           description: True only when all gates pass, including approver_comment_present.
         ready_to_issue_after_comment:
           type: boolean
-          description: True when all blocking gates except the runtime issue comment gate pass.
+          description: True when all blocking gates except the runtime issue comment
+            gate pass.
         blocking_gate_count:
           type: integer
         blocking_gate_count_excluding_issue_comment:
@@ -4931,7 +5272,9 @@ components:
               nullable: true
     ReportGateChecklistItem:
       type: object
-      description: Includes required data, per-entity evidence, calculation, review, integrity decision, report approval, workflow-error, and approver-comment gates.
+      description: Includes required data, per-entity evidence, calculation, review,
+        integrity decision, report approval, workflow-error, and approver-comment
+        gates.
       properties:
         gate_type:
           type: string
@@ -5000,7 +5343,8 @@ components:
         external_cmms_reference:
           type: string
           nullable: true
-          description: Must remain null/omitted in Phase 1.6. External CMMS integration is not implemented.
+          description: Must remain null/omitted in Phase 1.6. External CMMS integration
+            is not implemented.
         gate_checklist:
           type: array
           items:
@@ -5036,7 +5380,8 @@ components:
           type: integer
         external_cmms_integration_implemented:
           type: boolean
-          description: Always false for MVP. AIM internal fallback remains the system of record.
+          description: Always false for MVP. AIM internal fallback remains the system
+            of record.
         gates:
           type: array
           items:
@@ -5163,7 +5508,8 @@ components:
           type: string
         preliminary_internal_mode:
           type: boolean
-          description: Explicitly allows internally controlled preliminary work order from unapproved decision; does not bypass final report/integrity gates.
+          description: Explicitly allows internally controlled preliminary work order
+            from unapproved decision; does not bypass final report/integrity gates.
         closure_evidence_required:
           type: boolean
         external_cmms_reference:
@@ -5206,8 +5552,6 @@ components:
           type: string
           format: uuid
           description: Required when closure_evidence_required is true.
-
-
     GoliveReadinessOverviewEnvelope:
       type: object
       properties:
@@ -5227,27 +5571,39 @@ components:
           example: true
         overall_readiness_status:
           type: string
-          enum: [ready, attention_required, blocked, not_available]
+          enum:
+          - ready
+          - attention_required
+          - blocked
+          - not_available
         readiness_score_percent:
           oneOf:
           - type: integer
           - type: string
-            enum: [not_available]
+            enum:
+            - not_available
         source_of_truth:
           type: string
         boundary_notice:
           type: string
-          description: Read-only go-live readiness boundary. No approve/reject/correct/promote/calculate/report issue/delete/admin/n8n/hypercare closure/readiness override mutation controls are exposed.
+          description: Read-only go-live readiness boundary. No approve/reject/correct/promote/calculate/report
+            issue/delete/admin/n8n/hypercare closure/readiness override mutation controls
+            are exposed.
         no_calculation_notice:
           type: string
-          description: No API 579, API 581, FFS, RBI, corrosion rate, remaining life, MAWP, retirement thickness, or inspection interval calculation is performed.
+          description: No API 579, API 581, FFS, RBI, corrosion rate, remaining life,
+            MAWP, retirement thickness, or inspection interval calculation is performed.
         redaction_notice:
           type: string
-          description: Secrets, signed_url, presigned_url, token, password, credential, webhook_secret, private_key, object_key, raw file contents, raw report contents, OCR full text, and unrestricted download URLs are not returned.
+          description: Secrets, signed_url, presigned_url, token, password, credential,
+            webhook_secret, private_key, object_key, raw file contents, raw report
+            contents, OCR full text, and unrestricted download URLs are not returned.
         sections:
           type: object
           additionalProperties: true
-          description: Existing AIM readiness summaries for evidence, AI review, staging promotion, calculation/review, report gate, NDT, workflow/notification, audit/admin, UAT documentation, and recent blockers/warnings.
+          description: Existing AIM readiness summaries for evidence, AI review, staging
+            promotion, calculation/review, report gate, NDT, workflow/notification,
+            audit/admin, UAT documentation, and recent blockers/warnings.
         traceability_links:
           type: array
           items:
@@ -5257,7 +5613,8 @@ components:
           type: array
           items:
             type: string
-          description: Documents that the go-live readiness page exposes no approve/reject/correct/promote/calculate/report issue/delete/admin/n8n/hypercare closure/readiness override controls.
+          description: Documents that the go-live readiness page exposes no approve/reject/correct/promote/calculate/report
+            issue/delete/admin/n8n/hypercare closure/readiness override controls.
     NdtDataRoomOverviewEnvelope:
       type: object
       properties:
@@ -5279,17 +5636,23 @@ components:
           type: string
         boundary_notice:
           type: string
-          description: Read-only NDT data room visualization boundary. No approve/reject/correct/promote/calculate/run FFS/run RBI/report issue/delete/admin/n8n mutation controls are exposed.
+          description: Read-only NDT data room visualization boundary. No approve/reject/correct/promote/calculate/run
+            FFS/run RBI/report issue/delete/admin/n8n mutation controls are exposed.
         no_calculation_notice:
           type: string
-          description: No API 579, API 581, FFS, RBI, corrosion rate, remaining life, MAWP, retirement thickness, or inspection interval calculation is performed.
+          description: No API 579, API 581, FFS, RBI, corrosion rate, remaining life,
+            MAWP, retirement thickness, or inspection interval calculation is performed.
         redaction_notice:
           type: string
-          description: Secrets, signed_url, presigned_url, token, password, credential, private_key, object_key, raw file contents, raw report contents, OCR full text, and unrestricted download URLs are not returned.
+          description: Secrets, signed_url, presigned_url, token, password, credential,
+            private_key, object_key, raw file contents, raw report contents, OCR full
+            text, and unrestricted download URLs are not returned.
         sections:
           type: object
           additionalProperties: true
-          description: Existing AIM NDT summaries for method, component, CML/TML/Grid coverage, evidence linkage, measurement readiness, latest measurements, and governance warnings.
+          description: Existing AIM NDT summaries for method, component, CML/TML/Grid
+            coverage, evidence linkage, measurement readiness, latest measurements,
+            and governance warnings.
         traceability_links:
           type: array
           items:
@@ -5299,7 +5662,8 @@ components:
           type: array
           items:
             type: string
-          description: Documents that the NDT data room exposes no approve/reject/correct/promote/calculate/report issue/delete/admin/n8n mutation controls.
+          description: Documents that the NDT data room exposes no approve/reject/correct/promote/calculate/report
+            issue/delete/admin/n8n mutation controls.
     WorkflowConsoleOverviewEnvelope:
       type: object
       properties:
@@ -5321,14 +5685,20 @@ components:
           type: string
         boundary_notice:
           type: string
-          description: Read-only AIM-side workflow console boundary. No execute/retry/approve/reject/correct/promote/report issue/delete/admin mutation controls are exposed.
+          description: Read-only AIM-side workflow console boundary. No execute/retry/approve/reject/correct/promote/report
+            issue/delete/admin mutation controls are exposed.
         redaction_notice:
           type: string
-          description: Secrets, webhook_secret, signed_url, presigned_url, token, password, credential, private_key, object_key, raw file contents, and raw report contents are not returned.
+          description: Secrets, webhook_secret, signed_url, presigned_url, token,
+            password, credential, private_key, object_key, raw file contents, and
+            raw report contents are not returned.
         sections:
           type: object
           additionalProperties: true
-          description: Existing AIM workflow/orchestration summaries for workflow task summary, pending human follow-ups, notification delivery status, workflow failure/error summary, recent workflow events, and n8n boundary reminders.
+          description: Existing AIM workflow/orchestration summaries for workflow
+            task summary, pending human follow-ups, notification delivery status,
+            workflow failure/error summary, recent workflow events, and n8n boundary
+            reminders.
         traceability_links:
           type: array
           items:
@@ -5338,7 +5708,8 @@ components:
           type: array
           items:
             type: string
-          description: Documents that the workflow console exposes no execute/retry/approve/reject/correct/promote/report issue/delete/admin mutation controls.
+          description: Documents that the workflow console exposes no execute/retry/approve/reject/correct/promote/report
+            issue/delete/admin mutation controls.
     GovernanceDashboardOverviewEnvelope:
       type: object
       properties:
@@ -5360,11 +5731,14 @@ components:
           type: string
         redaction_notice:
           type: string
-          description: Secrets, signed_url, presigned_url, token, password, credential, private_key, and raw evidence/report contents are not returned.
+          description: Secrets, signed_url, presigned_url, token, password, credential,
+            private_key, and raw evidence/report contents are not returned.
         sections:
           type: object
           additionalProperties: true
-          description: Existing AIM state summaries for evidence readiness, AI review queue, staging promotion readiness, calculation review readiness, report issue readiness, work-order follow-up, and governance warnings.
+          description: Existing AIM state summaries for evidence readiness, AI review
+            queue, staging promotion readiness, calculation review readiness, report
+            issue readiness, work-order follow-up, and governance warnings.
         traceability_links:
           type: array
           items:
@@ -5374,7 +5748,8 @@ components:
           type: array
           items:
             type: string
-          description: Documents that the dashboard exposes no approve/reject/correct/promote/report issue/delete/admin mutation controls.
+          description: Documents that the dashboard exposes no approve/reject/correct/promote/report
+            issue/delete/admin mutation controls.
     AuditEventEnvelope:
       type: object
       properties:
@@ -5382,4 +5757,81 @@ components:
           type: string
         x-audit-event-generated:
           type: string
-
+    NdtMeasurementReadiness:
+      type: object
+      description: Read-only RC4-P NDT measurement inspection traceability readiness
+        preview. Review, approval, evidence upload/linking, calculation execution,
+        and downstream decisions remain separate authoritative workflows.
+      properties:
+        measurement_id:
+          type: string
+          format: uuid
+        measurement_code:
+          type: string
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+          nullable: true
+        ready_for_downstream_calculation:
+          type: boolean
+        ready_for_finding_triage:
+          type: boolean
+        gate_summary:
+          type: object
+          additionalProperties: true
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/NdtMeasurementReadinessGate'
+        evidence_traceability:
+          type: object
+          additionalProperties: true
+        inspection_traceability:
+          type: object
+          additionalProperties: true
+        linked_context:
+          type: object
+          additionalProperties: true
+        audit_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        governance_notes:
+          type: array
+          items:
+            type: string
+    NdtMeasurementReadinessGate:
+      type: object
+      description: NDT measurement readiness gate for evidence, inspection context,
+        review status, validation status, downstream traceability, and AI/n8n finalization
+        boundaries.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - ndt_measurement_recorded
+          - inspection_context_linked
+          - same_asset_evidence_linked
+          - critical_measurement_evidence_gate_satisfied
+          - reviewer_status_ready
+          - validation_not_blocked
+          - downstream_calculation_trace_visible
+          - finding_traceability_visible
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - warning
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
