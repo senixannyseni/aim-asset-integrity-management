@@ -181,3 +181,31 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory.
+
+
+## RC4-G Source-of-Truth Alignment
+
+- [ ] RC4-G adds guided calculation UI and golden dataset fixtures only.
+- [ ] `apps/web/app/calculations/page.tsx` exists or equivalent calculation overview route exists.
+- [ ] `apps/web/app/calculations/[runId]/page.tsx` exists or equivalent calculation detail route exists.
+- [ ] `apps/web/app/assets/[assetId]/calculations/page.tsx` exists.
+- [ ] Guided calculation form shows asset, approved executable formula version, evidence, NDT, validation/readiness, and unit fields where supported.
+- [ ] Formula selector uses approved executable `formula_versions` only.
+- [ ] Draft, unapproved, rejected, retired, superseded, inactive, or unsynchronized Formula Registry records are not exposed for calculation execution.
+- [ ] Calculation detail shows formula snapshot, input snapshot, output snapshot, warnings, blockers, evidence/NDT links, and audit link.
+- [ ] Calculation comparison is display-only and does not infer engineering acceptability.
+- [ ] Golden dataset fixtures use synthetic internal MVP data only.
+- [ ] Golden dataset tests prove deterministic calculation output for existing MVP behavior.
+- [ ] Calculation output remains deterministic, versioned, and auditable.
+- [ ] Calculation results require engineering review before final use.
+- [ ] No new database tables are introduced by RC4-G.
+- [ ] No new database migration is introduced by RC4-G.
+- [ ] No new engineering formulas are introduced by RC4-G.
+- [ ] RC4-G does not change deterministic formula math outputs.
+- [ ] RC4-G does not introduce API 579/API 581/FFS/RBI formulas or FFS/RBI trigger logic.
+- [ ] RC4-G does not change AI, n8n, approval, report, evidence upload, NDT import, or object-storage behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory.

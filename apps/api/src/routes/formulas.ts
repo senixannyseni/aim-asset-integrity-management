@@ -235,6 +235,35 @@ function mapFormulaVersion(row: Record<string, unknown>): Record<string, unknown
   };
 }
 
+function mapExecutableFormulaVersion(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    formula_version_id: row.id,
+    formula_registry_id: row.formula_registry_id,
+    formula_code: row.formula_code,
+    formula_name: row.formula_name,
+    version: row.version,
+    formula_status: row.formula_status,
+    deterministic_flag: row.deterministic_flag,
+    formula_expression_source: row.formula_expression_source,
+    input_schema: row.input_schema,
+    output_schema: row.output_schema,
+    unit_rules: row.unit_rules,
+    validation_rules: row.validation_rules,
+    approved_by: row.approved_by,
+    approved_at: row.approved_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    registry_status: row.registry_status,
+    registry_formula_id: row.registry_formula_id,
+    registry_formula_type: row.registry_formula_type,
+    code_basis: row.code_basis,
+    code_edition: row.code_edition ?? row.edition,
+    clause_reference: row.clause_reference,
+    sync_status: 'synchronized_to_executable',
+    execution_eligible: row.formula_status === 'approved' || row.formula_status === 'locked'
+  };
+}
+
 async function auditFormulaSyncFailure(client: PoolClient, req: Request, recordId: string, formula: DbRow | undefined, error: unknown): Promise<void> {
   const message = error instanceof Error ? error.message : 'Formula sync failed.';
   await writeAudit(client, req, 'FORMULA_SYNC_FAILED', 'formula_registry', recordId, formula ? mapFormula(formula) : null, null, {
@@ -244,6 +273,40 @@ async function auditFormulaSyncFailure(client: PoolClient, req: Request, recordI
     code: typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'FORMULA_SYNC_FAILED'
   });
 }
+
+formulasRouter.get('/formula-versions/executable', requirePermission('formula.read'), async (_req, res, next) => {
+  try {
+    const result = await pool.query<DbRow>(
+      `select
+         fv.*,
+         fr.status as registry_status,
+         fr.formula_id as registry_formula_id,
+         fr.formula_type as registry_formula_type,
+         fr.code_basis,
+         fr.code_edition,
+         fr.edition,
+         fr.clause_reference
+       from formula_versions fv
+       join formula_registry fr on fr.id = fv.formula_registry_id
+       where fv.formula_status in ('approved','locked')
+         and fv.deterministic_flag = true
+         and coalesce(fr.status, 'draft') in ('approved','approved_active','locked')
+       order by fv.formula_code asc, fv.version desc, fv.approved_at desc nulls last, fv.updated_at desc`
+    );
+    res.json({
+      data: result.rows.map(mapExecutableFormulaVersion),
+      governance: {
+        approved_executable_formula_versions_only: true,
+        silent_formula_default_blocked: true,
+        formula_approval_human_governed: true,
+        engineering_review_required_before_final_use: true,
+        no_api_asme_formula_content_exposed: true
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 formulasRouter.get('/formulas', requirePermission('formula.read'), async (req, res, next) => {
   try {

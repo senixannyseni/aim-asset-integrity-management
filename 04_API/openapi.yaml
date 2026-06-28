@@ -785,6 +785,25 @@ paths:
       - bearerAuth: []
       x-audit-event-generated: required
       x-human-review-required: true
+  /api/v1/formula-versions/executable:
+    get:
+      summary: RC4-G list approved executable formula_versions for guided calculation selection
+      description: Returns approved or locked deterministic formula_versions synchronized from human-governed Formula Registry records. Draft, rejected, retired, superseded, inactive, or unapproved Formula Registry records are not returned and cannot be selected by the guided calculation UI.
+      x-permission-required: formula.read
+      x-read-only: true
+      x-approved-executable-formula-versions-only: true
+      x-no-silent-formula-default: true
+      x-human-governed-formula-approval-required: true
+      responses:
+        '200':
+          description: List of approved executable formula_versions
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      x-audit-event-generated: none
   /api/v1/formulas/{formulaId}/versions:
     get:
       summary: List versions for a formula_id
