@@ -38,14 +38,18 @@ describe('RC4-L work order detail and closure readiness workflow', () => {
 
   it('adds a read-only backend closure readiness endpoint and aligned close gates', () => {
     const route = readRepoFile('apps/api/src/routes/work-orders.ts');
-    expect(route).toContain("workOrdersRouter.get(\n  \"/work-orders/:workOrderId/closure-readiness\"");
+    const normalizedRoute = route.replace(/\r\n/g, '\n');
+    expect(normalizedRoute).toContain("workOrdersRouter.get(\n  \"/work-orders/:workOrderId/closure-readiness\"");
     expect(route).toContain("requirePermission(\"work_order.read\")");
     expect(route).toContain('buildWorkOrderClosureReadiness');
     expect(route).toContain('ready_to_close_after_completion_note');
     expect(route).toContain('blocking_gate_count_excluding_completion_note');
     expect(route).toContain('WORK_ORDER_CLOSURE_GATES_NOT_SATISFIED');
     expect(route).toContain('WORK_ORDER_ALREADY_CLOSED');
-    const readinessRoute = route.slice(route.indexOf('"/work-orders/:workOrderId/closure-readiness"'), route.indexOf('workOrdersRouter.post(\n  \"/work-orders\"'));
+    const readinessRoute = normalizedRoute.slice(
+      normalizedRoute.indexOf('"/work-orders/:workOrderId/closure-readiness"'),
+      normalizedRoute.indexOf('workOrdersRouter.post(\n  \"/work-orders\"'),
+    );
     expect(readinessRoute).not.toContain('INTERNAL_WORK_ORDER_CLOSED');
     expect(readinessRoute).not.toContain('update internal_work_orders set');
     expect(readinessRoute).not.toContain('insert into review_gates');

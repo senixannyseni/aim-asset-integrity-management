@@ -1803,6 +1803,38 @@ paths:
       security:
       - bearerAuth: []
       x-source-of-truth-boundary: AIM is the system of record. Integrity decisions are read from PostgreSQL through AIM API only.
+  /api/v1/integrity-decisions/{decisionId}/readiness:
+    get:
+      summary: Preview integrity decision readiness for downstream use
+      description: Read-only RC4-N decision readiness preview for evidence, calculation, review, approval, report, work-order, and audit traceability. Approval, report issue, and work-order creation endpoints remain authoritative mutation paths.
+      tags:
+      - Integrity Decisions
+      x-permission-required: integrity_decision.review
+      x-audit-event-generated: none
+      x-human-review-required: true
+      x-read-only: true
+      parameters:
+      - in: path
+        name: decisionId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Integrity decision readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IntegrityDecisionReadiness'
+        '404':
+          description: Integrity decision not found
+      security:
+      - bearerAuth: []
+      x-source-of-truth-boundary: AIM is the system of record. RC4-N readiness is read-only and does not approve, issue, close, mutate, or finalize records.
   /api/v1/integrity-decisions:
     get:
       summary: List integrity decisions
@@ -4660,6 +4692,74 @@ components:
           - unresolved_critical_warnings_absent
           - workflow_errors_resolved
           - approver_comment_present
+    IntegrityDecisionReadiness:
+      type: object
+      description: Read-only RC4-N integrity decision readiness preview. Approval, report issue, and work-order creation endpoints remain authoritative.
+      properties:
+        decision:
+          type: object
+          additionalProperties: true
+        ready_for_downstream_use:
+          type: boolean
+        blocking_gate_count:
+          type: integer
+        gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrityDecisionReadinessGate'
+        blocking_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrityDecisionReadinessGate'
+        linked_evidence:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        evidence_counts:
+          type: object
+          properties:
+            direct_integrity_decision:
+              type: integer
+        linked_context:
+          type: object
+          additionalProperties: true
+        audit_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        read_only:
+          type: boolean
+        governance_boundary:
+          type: string
+    IntegrityDecisionReadinessGate:
+      type: object
+      description: Decision-readiness gate for calculation, evidence, human review/approval, source traceability, and AI/n8n finalization boundaries.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - decision_recorded
+          - approved_calculation_linked
+          - calculation_reviewed
+          - direct_evidence_linked
+          - human_review_or_approval_trace_present
+          - decision_approved_for_downstream_use
+          - source_traceability_present
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
     ReportIssueReadiness:
       type: object
       description: Read-only RC4-K report issue readiness preview. Backend issue remains authoritative and requires a human issue comment.

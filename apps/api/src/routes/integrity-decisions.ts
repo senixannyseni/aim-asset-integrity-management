@@ -118,6 +118,265 @@ async function countLinkedEvidence(client: PoolClient, entityType: string, entit
   return Number(result.rows[0]?.count ?? '0');
 }
 
+
+type IntegrityDecisionReadinessGate = {
+  gate_type: string;
+  gate_status: 'pass' | 'fail';
+  blocking: boolean;
+  message: string;
+  metadata?: Record<string, unknown>;
+};
+
+function readinessGate(
+  gateType: string,
+  pass: boolean,
+  message: string,
+  metadata: Record<string, unknown> = {}
+): IntegrityDecisionReadinessGate {
+  return {
+    gate_type: gateType,
+    gate_status: pass ? 'pass' : 'fail',
+    blocking: true,
+    message,
+    metadata
+  };
+}
+
+function mapEvidenceLink(row: DbRow): Record<string, unknown> {
+  return {
+    evidence_link_id: row.evidence_link_id ?? row.id,
+    evidence_file_id: row.evidence_file_id,
+    evidence_code: row.evidence_code,
+    original_filename: row.original_filename,
+    checksum_sha256: row.checksum_sha256,
+    upload_status: row.upload_status,
+    evidence_status: row.evidence_status,
+    link_reason: row.link_reason,
+    linked_by: row.linked_by,
+    created_at: row.created_at
+  };
+}
+
+function mapAuditEvent(row: DbRow): Record<string, unknown> {
+  return {
+    audit_log_id: row.audit_log_id ?? row.id,
+    event_type: row.event_type,
+    actor_user_id: row.actor_user_id,
+    actor_role_codes: row.actor_role_codes,
+    created_at: row.created_at,
+    metadata: row.metadata ?? row.metadata_json
+  };
+}
+
+async function loadIntegrityDecision(client: PoolClient, decisionId: string): Promise<DbRow | undefined> {
+  const result = await client.query<DbRow>('select * from integrity_decisions where id = $1', [decisionId]);
+  return result.rows[0];
+}
+
+async function loadIntegrityDecisionEvidenceLinks(client: PoolClient, decisionId: string): Promise<DbRow[]> {
+  const result = await client.query<DbRow>(
+    `select
+       el.id as evidence_link_id,
+       el.evidence_file_id,
+       el.link_reason,
+       el.linked_by,
+       el.created_at,
+       ef.evidence_code,
+       ef.original_filename,
+       ef.checksum_sha256,
+       ef.status as evidence_status,
+       coalesce(ef.upload_status, 'verified') as upload_status
+     from evidence_links el
+     join evidence_files ef on ef.id = el.evidence_file_id
+     where el.linked_entity_type = 'integrity_decision'
+       and el.linked_entity_id = $1::uuid
+     order by el.created_at desc`,
+    [decisionId]
+  );
+  return result.rows;
+}
+
+async function loadIntegrityDecisionAuditEvents(client: PoolClient, decisionId: string): Promise<DbRow[]> {
+  const result = await client.query<DbRow>(
+    `select
+       id as audit_log_id,
+       event_type,
+       actor_user_id,
+       actor_role_codes,
+       created_at,
+       metadata_json as metadata
+     from audit_logs
+     where entity_type = 'integrity_decision'
+       and entity_id = $1::uuid
+     order by created_at desc
+     limit 25`,
+    [decisionId]
+  );
+  return result.rows;
+}
+
+async function buildIntegrityDecisionReadiness(client: PoolClient, decision: DbRow): Promise<Record<string, unknown>> {
+  const decisionId = String(decision.id);
+  const calculationRunId = asString(decision.calculation_run_id);
+  const evidenceLinks = await loadIntegrityDecisionEvidenceLinks(client, decisionId);
+  const auditEvents = await loadIntegrityDecisionAuditEvents(client, decisionId);
+
+  const [calculationResult, reviewResult, approvalResult, reportResult, workOrderResult, gateResult] = await Promise.all([
+    calculationRunId
+      ? client.query<DbRow>(
+          `select id, run_id, asset_id, inspection_event_id, run_status, status, review_status, approval_status, approved_at, locked_flag, final_use_status, created_at
+           from calculation_runs
+           where id = $1`,
+          [calculationRunId]
+        )
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    calculationRunId
+      ? client.query<DbRow>(
+          `select id, review_code, entity_type, entity_id, calculation_run_id, review_status, review_comment, reviewer_id, reviewed_at, created_at
+           from engineering_reviews
+           where (entity_type = 'integrity_decision' and entity_id = $1::uuid)
+              or (entity_type = 'calculation_run' and entity_id = $2::uuid)
+              or calculation_run_id = $2::uuid
+           order by reviewed_at desc nulls last, created_at desc
+           limit 25`,
+          [decisionId, calculationRunId]
+        )
+      : client.query<DbRow>(
+          `select id, review_code, entity_type, entity_id, calculation_run_id, review_status, review_comment, reviewer_id, reviewed_at, created_at
+           from engineering_reviews
+           where entity_type = 'integrity_decision' and entity_id = $1::uuid
+           order by reviewed_at desc nulls last, created_at desc
+           limit 25`,
+          [decisionId]
+        ),
+    calculationRunId
+      ? client.query<DbRow>(
+          `select id, approval_code, review_id, entity_type, entity_id, calculation_run_id, approval_status, approver_id, approval_comment, approved_at, created_at
+           from approval_records
+           where (entity_type = 'integrity_decision' and entity_id = $1::uuid)
+              or (entity_type = 'calculation_run' and entity_id = $2::uuid)
+              or calculation_run_id = $2::uuid
+           order by approved_at desc nulls last, created_at desc
+           limit 25`,
+          [decisionId, calculationRunId]
+        )
+      : client.query<DbRow>(
+          `select id, approval_code, review_id, entity_type, entity_id, calculation_run_id, approval_status, approver_id, approval_comment, approved_at, created_at
+           from approval_records
+           where entity_type = 'integrity_decision' and entity_id = $1::uuid
+           order by approved_at desc nulls last, created_at desc
+           limit 25`,
+          [decisionId]
+        ),
+    calculationRunId
+      ? client.query<DbRow>(
+          `select id, report_code, report_title, report_status, issue_gate_status, asset_id, calculation_run_id, approved_at, issued_at, created_at
+           from reports
+           where calculation_run_id = $1::uuid
+           order by created_at desc
+           limit 25`,
+          [calculationRunId]
+        )
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    client.query<DbRow>(
+      `select id, work_order_code, title, status, priority, action_source, source_entity_type, source_entity_id, integrity_decision_id, report_id, gate_status, due_date, created_at
+       from internal_work_orders
+       where integrity_decision_id = $1::uuid
+          or (source_entity_type = 'integrity_decision' and source_entity_id = $1::uuid)
+       order by created_at desc
+       limit 25`,
+      [decisionId]
+    ),
+    client.query<DbRow>(
+      `select gate_type, gate_status, blocking, evidence_link_required, checked_at, metadata_json
+       from review_gates
+       where entity_type = 'integrity_decision'
+         and entity_id = $1::uuid
+       order by updated_at desc, created_at desc
+       limit 25`,
+      [decisionId]
+    )
+  ]);
+
+  const calculation = calculationResult.rows[0];
+  const calculationApprovalStatus = asString(calculation?.approval_status) ?? asString(calculation?.status);
+  const calculationReviewStatus = asString(calculation?.review_status) ?? asString(calculation?.status);
+  const decisionStatus = asString(decision.decision_status);
+  const reviewedAt = decision.reviewed_at ? String(decision.reviewed_at) : undefined;
+  const approvedAt = decision.approved_at ? String(decision.approved_at) : undefined;
+  const humanTracePresent = Boolean(reviewedAt || approvedAt || reviewResult.rows.length > 0 || approvalResult.rows.some((row) => row.entity_type === 'integrity_decision'));
+  const evidenceCount = evidenceLinks.length;
+
+  const gates: IntegrityDecisionReadinessGate[] = [
+    readinessGate('decision_recorded', true, 'Integrity decision exists in AIM PostgreSQL.', { integrity_decision_id: decisionId }),
+    readinessGate('approved_calculation_linked', Boolean(calculation && ['approved', 'locked'].includes(calculationApprovalStatus ?? '')), 'Integrity decision must trace to an approved or locked deterministic calculation.', {
+      calculation_run_id: calculationRunId ?? null,
+      calculation_approval_status: calculationApprovalStatus ?? null
+    }),
+    readinessGate('calculation_reviewed', Boolean(calculation && ['reviewed', 'approved', 'locked'].includes(calculationReviewStatus ?? '')), 'Linked calculation must be reviewed before downstream report or work-order use.', {
+      calculation_review_status: calculationReviewStatus ?? null
+    }),
+    readinessGate('direct_evidence_linked', evidenceCount > 0, 'Integrity decision must have at least one direct evidence link before senior approval or downstream use.', {
+      evidence_count: evidenceCount,
+      linked_entity_type: 'integrity_decision',
+      failure_code: evidenceCount === 0 ? 'INTEGRITY_DECISION_EVIDENCE_REQUIRED' : null
+    }),
+    readinessGate('human_review_or_approval_trace_present', humanTracePresent, 'Decision must retain human review or approval traceability. AI/n8n cannot finalize integrity decisions.', {
+      reviewed_at: reviewedAt ?? null,
+      approved_at: approvedAt ?? null,
+      engineering_review_count: reviewResult.rows.length,
+      approval_record_count: approvalResult.rows.length
+    }),
+    readinessGate('decision_approved_for_downstream_use', decisionStatus === 'approved', 'Decision must be approved by a senior human role before report issue or internal work-order fallback.', {
+      decision_status: decisionStatus ?? null,
+      approved_by: decision.approved_by ?? null
+    }),
+    readinessGate('source_traceability_present', Boolean(decision.asset_id && decision.calculation_run_id), 'Decision must retain asset and calculation source traceability.', {
+      asset_id: decision.asset_id,
+      inspection_event_id: decision.inspection_event_id ?? null,
+      calculation_run_id: decision.calculation_run_id ?? null
+    }),
+    readinessGate('ai_n8n_finalization_absent', true, 'AI and n8n/service actors cannot approve, issue, close, or finalize the integrity decision.', {
+      ai_approval_allowed: false,
+      n8n_finalization_allowed: false
+    })
+  ];
+
+  const blockingGates = gates.filter((item) => item.blocking && item.gate_status !== 'pass');
+  const downstreamReports = reportResult.rows;
+  const downstreamWorkOrders = workOrderResult.rows;
+
+  return {
+    decision: mapDecision(decision),
+    ready_for_downstream_use: blockingGates.length === 0,
+    blocking_gate_count: blockingGates.length,
+    gates,
+    blocking_gates: blockingGates,
+    linked_evidence: evidenceLinks.map(mapEvidenceLink),
+    evidence_counts: {
+      direct_integrity_decision: evidenceCount
+    },
+    linked_context: {
+      asset_id: decision.asset_id,
+      inspection_event_id: decision.inspection_event_id ?? calculation?.inspection_event_id ?? null,
+      calculation_run_id: calculationRunId ?? null,
+      calculation,
+      engineering_reviews: reviewResult.rows,
+      approval_records: approvalResult.rows,
+      review_gates: gateResult.rows,
+      downstream_reports: downstreamReports,
+      downstream_work_orders: downstreamWorkOrders,
+      missing_downstream_links: [
+        downstreamReports.length > 0 ? null : 'report',
+        downstreamWorkOrders.length > 0 ? null : 'internal_work_order'
+      ].filter(Boolean)
+    },
+    audit_events: auditEvents.map(mapAuditEvent),
+    read_only: true,
+    governance_boundary: 'RC4-N decision-readiness preview is read-only; approval/report/work-order endpoints remain authoritative.'
+  };
+}
+
 async function persistIntegrityDecisionApprovalGate(
   client: PoolClient,
   req: Request,
@@ -214,6 +473,30 @@ integrityDecisionsRouter.get('/integrity-decisions', requirePermission('integrit
   }
 });
 
+integrityDecisionsRouter.get('/integrity-decisions/:decisionId/readiness', requirePermission('integrity_decision.review'), async (req, res, next) => {
+  const decisionId = req.params.decisionId;
+  if (!isUuid(decisionId)) {
+    validationError(res, 'decisionId', 'decisionId must be a valid UUID.');
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    const decision = await loadIntegrityDecision(client, decisionId);
+    if (!decision) {
+      res.status(404).json({ error: { code: 'INTEGRITY_DECISION_NOT_FOUND', message: 'Integrity decision not found.' } });
+      return;
+    }
+
+    const readiness = await buildIntegrityDecisionReadiness(client, decision);
+    res.json({ data: readiness });
+  } catch (error) {
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
 integrityDecisionsRouter.get('/integrity-decisions/:decisionId', requirePermission('integrity_decision.review'), async (req, res, next) => {
   const decisionId = req.params.decisionId;
   if (!isUuid(decisionId)) {
@@ -221,18 +504,27 @@ integrityDecisionsRouter.get('/integrity-decisions/:decisionId', requirePermissi
     return;
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query<DbRow>('select * from integrity_decisions where id = $1', [decisionId]);
-    const decision = result.rows[0];
-
+    const decision = await loadIntegrityDecision(client, decisionId);
     if (!decision) {
       res.status(404).json({ error: { code: 'INTEGRITY_DECISION_NOT_FOUND', message: 'Integrity decision not found.' } });
       return;
     }
 
-    res.json({ data: mapDecision(decision) });
+    const readiness = await buildIntegrityDecisionReadiness(client, decision);
+    res.json({
+      data: {
+        ...mapDecision(decision),
+        linked_evidence: readiness.linked_evidence,
+        audit_events: readiness.audit_events,
+        linked_context: readiness.linked_context
+      }
+    });
   } catch (error) {
     next(error);
+  } finally {
+    client.release();
   }
 });
 
