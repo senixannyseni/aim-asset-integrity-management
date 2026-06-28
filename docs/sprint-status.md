@@ -385,3 +385,21 @@ Implemented RC4-G controls:
 - Golden dataset fixtures verify existing deterministic calculation behavior with synthetic internal data.
 
 RC4-G adds no new engineering formulas, no calculation math changes, no FFS/RBI trigger logic, no migrations, no backend schema changes, no AI/n8n/service actor governance changes, and no governance boundary weakening. Calculation results require engineering review before final use.
+
+## RC4-H Findings / Anomaly Foundation
+
+Status: Implemented as findings/anomaly foundation package.
+
+RC4-H adds the Findings / Anomaly module without reopening RC3 or RC4-A through RC4-G.
+
+Implemented RC4-H controls:
+
+- `findings` table foundation for asset-linked, evidence-linked, NDT-linked, calculation-linked, and validation-linked anomalies.
+- Findings API supports list, detail, create, update, asset-scoped list, same-asset evidence link, and evidence unlink.
+- Findings reject cross-asset evidence/NDT/calculation linkage.
+- Finding actions write audit logs for create, update, status change, evidence link/unlink, close, close block, and cross-asset link block.
+- Only authorized human roles may close findings; AI/n8n/service actors are blocked from closure/finalization.
+- Critical finding closure requires a closure reason and traceable evidence linkage.
+- Frontend provides `/findings`, `/findings/[findingId]`, and `/assets/[assetId]/findings` for create/list/detail/asset-scoped UX.
+
+RC4-H adds no new engineering formulas, no calculation engine changes, no FFS/RBI trigger logic or automatic case creation, no report/approval workflow changes, no AI/n8n/service actor governance boundary weakening, and no direct n8n/database access.

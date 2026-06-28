@@ -131,6 +131,7 @@ export default function NdtMeasurementDetailPage({ params }: DetailPageProps) {
         {measurement?.asset_id && <Link className="secondary-button" href={`/assets/${measurement.asset_id}`}>Asset</Link>}
         {measurement?.asset_id && <Link className="secondary-button" href={`/assets/${measurement.asset_id}/ndt`}>Asset NDT</Link>}
         <Link className="secondary-button" href={`/audit-logs?entity_type=ndt_measurement&entity_id=${params.measurementId}`}>Audit Trail</Link>
+        <Link className="secondary-button" href={`/findings?ndt_measurement_id=${params.measurementId}`}>Findings</Link>
       </div>
     </header>
 
@@ -192,6 +193,7 @@ export default function NdtMeasurementDetailPage({ params }: DetailPageProps) {
             {measurement.evidence_file_id && <Link className="secondary-button" href={`/evidence/${measurement.evidence_file_id}`}>Open Evidence Detail</Link>}
             <Link className="secondary-button" href={`/calculations?ndt_measurement_id=${measurement.measurement_id}`}>Calculation Inputs</Link>
             <Link className="secondary-button" href={`/audit-logs?entity_type=ndt_measurement&entity_id=${measurement.measurement_id}`}>Audit Logs</Link>
+            <Link className="secondary-button" href={`/findings?ndt_measurement_id=${measurement.measurement_id}`}>Findings</Link>
           </div>
         </section>
       </section>

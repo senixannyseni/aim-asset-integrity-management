@@ -597,3 +597,19 @@ RC4-G adds a guided calculation workflow without changing the deterministic calc
 - Golden dataset fixtures and tests for existing MVP deterministic calculation behavior in `apps/api/tests/fixtures/calculation-golden-datasets.ts` and `apps/api/tests/rc4-g-calculation-guided-ui-golden-datasets.test.ts`.
 
 Only approved executable `formula_versions` can be selected. Calculation output remains deterministic, versioned, auditable, and subject to engineering review before final use. RC4-G introduces no new calculations, no API/ASME formulas, no FFS/RBI trigger logic, no AI/n8n/service actor governance changes, no migrations, and no backend schema changes.
+
+## RC4-H Findings / Anomaly Foundation
+
+Status: Implemented as findings/anomaly foundation package.
+
+RC4-H adds a controlled place for engineers to record inspection, NDT, calculation, evidence-review, and validation anomalies without automatically creating FFS/RBI cases or final integrity decisions. It adds/updates:
+
+- `db/migrations/0027_findings_anomaly_foundation.sql` for the `findings` table, linkage columns, status/severity/type/source controls, and finding RBAC permissions.
+- `apps/api/src/routes/findings.ts` for findings list/detail/create/update, asset-scoped listing, same-asset evidence linkage, evidence unlinking, audit logs, cross-asset link rejection, and human-governed closure controls.
+- `apps/web/app/findings/page.tsx`, `apps/web/app/findings/[findingId]/page.tsx`, and `apps/web/app/assets/[assetId]/findings/page.tsx` for create/list/detail/asset-scoped findings UX with evidence/NDT/calculation linkage markers and critical missing-evidence warnings.
+- Safe links from asset, evidence, NDT, and calculation pages to findings where appropriate.
+- Manual UAT coverage in `docs/uat/uat_rc4h_findings_anomaly_foundation.md` and release report in `docs/release/AIM_RC4H_findings_anomaly_foundation_report.md`.
+
+Findings are traceable engineering records linked to assets, evidence, NDT, calculations, and validation where available. Critical findings require governance controls before closure. Finding closure does not approve engineering data, issue reports, create FFS/RBI cases, or make final integrity decisions.
+
+RC4-H introduces no engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculation content, no FFS/RBI case automation, no calculation engine changes, no Formula Registry changes, no AI/n8n/service actor authority expansion, and no direct n8n/database access.

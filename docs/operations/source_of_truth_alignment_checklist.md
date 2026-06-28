@@ -209,3 +209,33 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory.
+
+## RC4-H Source-of-Truth Alignment
+
+- [ ] RC4-H adds Findings / Anomaly foundation only.
+- [ ] `db/migrations/0027_findings_anomaly_foundation.sql` exists and creates minimal findings/anomaly foundation.
+- [ ] `apps/api/src/routes/findings.ts` exists and is mounted from `apps/api/src/app.ts`.
+- [ ] Findings API supports list, detail, create, update, same-asset evidence link/unlink, and asset-scoped listing.
+- [ ] Findings reject cross-asset evidence linkage.
+- [ ] Findings reject cross-asset NDT linkage where NDT linkage is supplied.
+- [ ] Findings reject cross-asset calculation linkage where calculation linkage is supplied.
+- [ ] Finding create/update/link/unlink/status/close actions write audit logs.
+- [ ] AI, n8n, and service actors cannot close or finalize findings.
+- [ ] Closing a finding requires `closure_reason`.
+- [ ] Critical finding closure requires evidence linkage.
+- [ ] Finding closure does not approve calculations, approve engineering data, issue reports, create final integrity decisions, or create FFS/RBI cases.
+- [ ] `/findings` exists or equivalent overview route exists.
+- [ ] `/findings/[findingId]` exists or equivalent detail route exists.
+- [ ] `/assets/[assetId]/findings` exists.
+- [ ] Frontend shows evidence/NDT/calculation linkage markers and missing-evidence/critical warning states.
+- [ ] OpenAPI documents findings endpoints.
+- [ ] Data dictionary and ERD are updated because RC4-H adds a findings table.
+- [ ] No engineering formulas are introduced by RC4-H.
+- [ ] RC4-H does not change deterministic calculation behavior.
+- [ ] RC4-H does not introduce API 579/API 581/FFS/RBI formulas or FFS/RBI case automation.
+- [ ] RC4-H does not change AI, n8n, approval, report, evidence upload, NDT import, Formula Registry, or calculation engine behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory for engineering findings and anomalies.

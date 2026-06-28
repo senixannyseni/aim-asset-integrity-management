@@ -109,6 +109,10 @@ export const PERMISSIONS = [
   'validation.run',
   'audit.read',
   'audit_logs.view',
+  'finding.read',
+  'finding.create',
+  'finding.update',
+  'finding.close',
   'admin_governance.view',
   'admin_governance.manage_roles',
   'admin_governance.manage_settings',
@@ -142,7 +146,8 @@ const readOnlyPermissions: Permission[] = [
   'engineering_review.read',
   'approval_record.read',
   'report.read',
-  'work_order.read'
+  'work_order.read',
+  'finding.read'
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -162,7 +167,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'golive_readiness.view',
     'ndt.import',
     'ndt.create',
-    'validation.read'
+    'validation.read',
+    'finding.read',
+    'finding.create'
   ],
   inspector: [
     'asset.read',
@@ -182,7 +189,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.run',
     'work_order.read',
     'work_order.create',
-    'work_order.update'
+    'work_order.update',
+    'finding.read',
+    'finding.create',
+    'finding.update'
   ],
   engineer: [
     'asset.read',
@@ -234,7 +244,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'report.review',
     'work_order.read',
     'work_order.create',
-    'work_order.update'
+    'work_order.update',
+    'finding.read',
+    'finding.create',
+    'finding.update'
   ],
   senior_engineer: [
     'asset.read',
@@ -321,7 +334,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.read',
     'validation.run',
     'audit.read',
-    'audit_logs.view'
+    'audit_logs.view',
+    'finding.read',
+    'finding.create',
+    'finding.update',
+    'finding.close'
   ],
   qa_qc: [
     'asset.read',
@@ -351,7 +368,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.run',
     'error_log.read',
     'audit.read',
-    'audit_logs.view'
+    'audit_logs.view',
+    'finding.read',
+    'finding.create',
+    'finding.update'
   ],
   lead_engineer: [
     'asset.read',
@@ -438,7 +458,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'validation.read',
     'validation.run',
     'audit.read',
-    'audit_logs.view'
+    'audit_logs.view',
+    'finding.read',
+    'finding.create',
+    'finding.update',
+    'finding.close'
   ],
   approver: [
     'asset.read',
@@ -465,7 +489,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'work_order.close',
     'dashboard.view',
     'audit.read',
-    'audit_logs.view'
+    'audit_logs.view',
+    'finding.read'
   ],
   management: [
     ...readOnlyPermissions,
@@ -496,6 +521,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'admin_governance.manage_settings',
     'admin.manage',
     'asset.read',
+    'finding.read',
     'evidence.read',
     'report.read',
     'dashboard.view',

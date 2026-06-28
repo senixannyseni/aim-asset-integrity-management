@@ -2854,6 +2854,162 @@ paths:
         '409':
           $ref: '#/components/responses/GateBlocked'
 
+  /api/v1/findings:
+    get:
+      tags: [Findings]
+      summary: List findings / anomaly records
+      description: RC4-H read API for traceable findings linked to assets, evidence, NDT, calculations, and validation. This endpoint does not create FFS/RBI cases or integrity decisions.
+      x-permission-required: finding.read
+      x-no-formula-boundary: true
+      parameters:
+        - in: query
+          name: asset_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: severity
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: finding_type
+          schema: { type: string }
+        - in: query
+          name: evidence_file_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: ndt_measurement_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: calculation_run_id
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Findings list
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Findings]
+      summary: Create a finding / anomaly record
+      description: Creates a human-entered finding record. Finding creation does not approve data, issue reports, or create FFS/RBI cases.
+      x-permission-required: finding.create
+      x-audit-events: finding.created|finding.cross_asset_link_blocked
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [asset_id, title, finding_type, severity]
+              additionalProperties: true
+      responses:
+        '201':
+          description: Finding created
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+  /api/v1/findings/{findingId}:
+    get:
+      tags: [Findings]
+      summary: Read finding / anomaly detail
+      x-permission-required: finding.read
+      parameters:
+        - in: path
+          name: findingId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Finding detail
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Findings]
+      summary: Update finding / anomaly record
+      description: Updates finding metadata or link references. Closing requires an authorized human role, closure_reason, and evidence for critical findings.
+      x-permission-required: finding.update
+      x-audit-events: finding.updated|finding.status_changed|finding.closed|finding.close_blocked|finding.cross_asset_link_blocked
+      parameters:
+        - in: path
+          name: findingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Finding updated
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+  /api/v1/assets/{assetId}/findings:
+    get:
+      tags: [Findings]
+      summary: List findings for an asset
+      x-permission-required: finding.read
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Asset findings list
+  /api/v1/findings/{findingId}/links/evidence:
+    post:
+      tags: [Findings]
+      summary: Link finding to same-asset evidence
+      description: Links evidence to a finding and rejects cross-asset evidence. Does not preview evidence or expose signed URLs/object keys.
+      x-permission-required: finding.update
+      x-audit-events: finding.evidence_linked|finding.cross_asset_link_blocked
+      parameters:
+        - in: path
+          name: findingId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Evidence linked
+        '409':
+          $ref: '#/components/responses/GateBlocked'
+  /api/v1/findings/{findingId}/links/evidence/{evidenceFileId}:
+    delete:
+      tags: [Findings]
+      summary: Unlink evidence from finding
+      x-permission-required: finding.update
+      x-audit-events: finding.evidence_unlinked
+      parameters:
+        - in: path
+          name: findingId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: evidenceFileId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Evidence unlinked
+
 components:
   securitySchemes:
     DemoRoleHeaders:

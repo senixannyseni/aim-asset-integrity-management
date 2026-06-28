@@ -407,6 +407,7 @@ export default function TankAssetDetailPage({ params }: PageParams) {
           <Link className="secondary-button" href={`/evidence?asset_id=${assetId}`}>Evidence</Link>
           <Link className="secondary-button" href={`/ndt?asset_id=${assetId}`}>NDT</Link>
           <Link className="secondary-button" href={`/calculations?asset_id=${assetId}`}>Calculations</Link>
+          <Link className="secondary-button" href={`/assets/${assetId}/findings`}>Findings</Link>
           <Link className="secondary-button" href={`/reports?asset_id=${assetId}`}>Reports</Link>
         </div>
       </header>
@@ -614,6 +615,7 @@ export default function TankAssetDetailPage({ params }: PageParams) {
               <Link className="secondary-button" href={`/evidence?asset_id=${assetId}`}>Evidence</Link>
               <Link className="secondary-button" href={`/ndt?asset_id=${assetId}`}>NDT</Link>
               <Link className="secondary-button" href={`/calculations?asset_id=${assetId}`}>Calculation</Link>
+              <Link className="secondary-button" href={`/assets/${assetId}/findings`}>Findings</Link>
               <Link className="secondary-button" href={`/reports?asset_id=${assetId}`}>Report</Link>
             </div>
           </section>
