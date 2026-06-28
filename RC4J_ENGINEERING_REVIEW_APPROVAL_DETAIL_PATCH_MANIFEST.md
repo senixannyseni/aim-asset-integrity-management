@@ -63,3 +63,7 @@ Additional review hardening applied after final static review:
 - Approved, rejected, or locked approval records are immutable and cannot be re-approved or re-rejected.
 - Approval/rejection actions require the approval record to be `submitted_for_approval`.
 - Rejected approval records are locked, and the linked review is marked rejected/locked so later changes require a revision.
+
+## RC4-J DB Final-State Lock Hotfix
+
+Final-state immutability was hardened so approved, rejected, and locked review/approval records cannot be changed through generic status routes or direct database updates. Existing final records are backfilled to `locked_flag = true` in the RC4-J migration, and final transitions remain restricted to approval-record endpoints.

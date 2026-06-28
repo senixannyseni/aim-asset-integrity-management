@@ -43,7 +43,7 @@ update engineering_reviews
 set review_code = coalesce(review_code, 'REV-' || id::text),
     asset_id = coalesce(asset_id, (case when entity_type = 'asset' then entity_id else null end)),
     calculation_run_id = coalesce(calculation_run_id, (case when entity_type = 'calculation_run' then entity_id else null end)),
-    locked_flag = coalesce(locked_flag, review_status in ('approved','locked'));
+    locked_flag = (locked_flag or review_status in ('approved','rejected','locked')); -- RC4-J: existing final reviews are immutable at DB level
 
 alter table engineering_reviews
   alter column review_status set default 'draft',
@@ -87,7 +87,7 @@ update approval_records
 set approval_code = coalesce(approval_code, 'APR-' || id::text),
     asset_id = coalesce(asset_id, (case when entity_type = 'asset' then entity_id else null end)),
     calculation_run_id = coalesce(calculation_run_id, (case when entity_type = 'calculation_run' then entity_id else null end)),
-    locked_flag = coalesce(locked_flag, approval_status in ('approved','locked'));
+    locked_flag = (locked_flag or approval_status in ('approved','rejected','locked')); -- RC4-J: existing final approvals are immutable at DB level
 
 alter table approval_records
   alter column approval_status set default 'draft',
@@ -102,7 +102,7 @@ create index if not exists idx_approval_records_asset_id on approval_records(ass
 create or replace function prevent_locked_engineering_review_change()
 returns trigger as $$
 begin
-  if (old.locked_flag = true or old.review_status = 'locked') then
+  if (old.locked_flag = true or old.review_status in ('approved','rejected','locked')) then
     raise exception 'Locked engineering_review records cannot be modified or deleted. Create a new revision.';
   end if;
   if (tg_op = 'DELETE') then
@@ -125,7 +125,7 @@ for each row execute function prevent_locked_engineering_review_change();
 create or replace function prevent_locked_approval_record_change()
 returns trigger as $$
 begin
-  if (old.locked_flag = true or old.approval_status = 'locked') then
+  if (old.locked_flag = true or old.approval_status in ('approved','rejected','locked')) then
     raise exception 'Locked approval_record records cannot be modified or deleted. Create a new revision.';
   end if;
   if (tg_op = 'DELETE') then

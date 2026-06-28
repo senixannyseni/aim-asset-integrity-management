@@ -37,3 +37,7 @@ Verify that Engineering Review and Approval can be completed through review deta
 - Attempt to create an approval request with a `review_id` that points to a different entity; expected: `APPROVAL_REVIEW_ENTITY_MISMATCH`.
 - Attempt to approve or reject an already approved/rejected/locked approval record; expected: `FINAL_APPROVAL_STATE_LOCKED`.
 - Attempt to change status or add comment to an approved/rejected/locked review; expected: final review state lock response.
+
+## RC4-J DB Final-State Lock Hotfix
+
+Final-state immutability was hardened so approved, rejected, and locked review/approval records cannot be changed through generic status routes or direct database updates. Existing final records are backfilled to `locked_flag = true` in the RC4-J migration, and final transitions remain restricted to approval-record endpoints.

@@ -19,6 +19,8 @@ describe('Engineering review and approval workflow governance', () => {
     expect(migration).toContain('approval_record.approve');
     expect(migration).toContain('prevent_locked_engineering_review_change');
     expect(migration).toContain('prevent_locked_approval_record_change');
+    expect(migration).toContain("review_status in ('approved','rejected','locked')");
+    expect(migration).toContain("approval_status in ('approved','rejected','locked')");
   });
 
   it('registers engineering review routes in the API app', () => {

@@ -50,3 +50,7 @@ pnpm -r test
 ## Final Review Hardening Addendum
 
 The approval request flow was hardened so approval records require a reviewed `review_id`, entity context cannot be changed during approval request creation, and approved/rejected/locked review or approval records are immutable. Rejected approvals are locked and further changes require a new review revision.
+
+## RC4-J DB Final-State Lock Hotfix
+
+Final-state immutability was hardened so approved, rejected, and locked review/approval records cannot be changed through generic status routes or direct database updates. Existing final records are backfilled to `locked_flag = true` in the RC4-J migration, and final transitions remain restricted to approval-record endpoints.

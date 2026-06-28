@@ -335,8 +335,8 @@ engineeringReviewsRouter.post('/engineering/reviews', requirePermission('enginee
     validationError(res, 'review_status', `review_status must be one of ${REVIEW_STATUSES.join(', ')}.`);
     return;
   }
-  if (['approved', 'locked'].includes(reviewStatus)) {
-    validationError(res, 'review_status', 'Use the approval workflow to approve or lock engineering results.', 'APPROVAL_WORKFLOW_REQUIRED');
+  if (['approved', 'rejected', 'locked'].includes(reviewStatus)) {
+    validationError(res, 'review_status', 'Use the approval workflow to approve, reject, or lock engineering results.', 'APPROVAL_WORKFLOW_REQUIRED');
     return;
   }
 
@@ -433,8 +433,8 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
     validationError(res, 'review_status', `review_status must be one of ${REVIEW_STATUSES.join(', ')}.`);
     return;
   }
-  if (['approved', 'locked'].includes(status)) {
-    validationError(res, 'review_status', 'Use approval_records endpoints for approved or locked status.', 'APPROVAL_ENDPOINT_REQUIRED');
+  if (['approved', 'rejected', 'locked'].includes(status)) {
+    validationError(res, 'review_status', 'Use approval_records endpoints for approved, rejected, or locked status.', 'APPROVAL_ENDPOINT_REQUIRED');
     return;
   }
 
@@ -589,7 +589,7 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', require
     );
     const nextRevision = Number(revisionResult.rows[0]?.next_revision ?? '1');
     const status = asString(req.body.review_status ?? req.body.status) ?? 'draft';
-    if (!isReviewStatus(status) || ['approved', 'locked'].includes(status)) {
+    if (!isReviewStatus(status) || ['approved', 'rejected', 'locked'].includes(status)) {
       await client.query('rollback');
       validationError(res, 'review_status', 'New revision must start as draft, submitted_for_review, returned_for_revision, or reviewed.', 'REVISION_START_STATUS_INVALID');
       return;
