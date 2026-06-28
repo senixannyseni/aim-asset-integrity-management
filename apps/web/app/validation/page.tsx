@@ -1,5 +1,5 @@
-import ValidationPanelClient from './ValidationPanelClient';
+import ValidationOverviewClient from './ValidationOverviewClient';
 
 export default function ValidationPage() {
-  return <ValidationPanelClient />;
+  return <ValidationOverviewClient />;
 }

@@ -88,6 +88,64 @@ function mapDictionaryRow(row: DbRow): Record<string, unknown> {
   };
 }
 
+
+function asPositiveInteger(value: unknown, fallback: number, max: number): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, max);
+}
+
+function asUuid(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : undefined;
+}
+
+function issueGroup(value: unknown): string | null {
+  if (!isPlainObject(value)) return null;
+  const group = value.group;
+  return typeof group === 'string' && group.length > 0 ? group : null;
+}
+
+function validationStatusFromCounts(row: DbRow): string {
+  const blocking = Number(row.blocking_count ?? 0);
+  const warning = Number(row.warning_count ?? 0);
+  if (blocking > 0) return 'blocked';
+  if (warning > 0) return 'warning';
+  return 'passed';
+}
+
+function mapValidationRunRow(row: DbRow, includeDetail = false): Record<string, unknown> {
+  const resultJson = isPlainObject(row.result_json) ? row.result_json : {};
+  const requestPayload = isPlainObject(row.request_payload_json) ? row.request_payload_json : {};
+  const issues = Array.isArray(resultJson.issues) ? resultJson.issues.filter(isPlainObject) : [];
+  const affectedGroups = Array.from(new Set(issues.map(issueGroup).filter((group): group is string => Boolean(group))));
+  const mapped: Record<string, unknown> = {
+    validation_run_id: row.id,
+    run_code: row.run_code,
+    validation_scope: row.validation_scope,
+    asset_id: row.asset_id,
+    status: validationStatusFromCounts(row),
+    blocking_count: Number(row.blocking_count ?? 0),
+    warning_count: Number(row.warning_count ?? 0),
+    info_count: Number(row.info_count ?? 0),
+    issue_count: issues.length,
+    affected_entity_types: affectedGroups,
+    source: requestPayload.source ?? requestPayload.trigger_source ?? 'manual_or_system',
+    checked_by: row.run_by,
+    triggered_by: row.run_by,
+    checked_at: row.created_at,
+    created_at: row.created_at,
+    latest_message: issues[0]?.message ?? (Number(row.blocking_count ?? 0) > 0 ? 'Blocking validation issues detected.' : 'Validation completed.')
+  };
+  if (includeDetail) {
+    mapped.request_payload = requestPayload;
+    mapped.result = resultJson;
+    mapped.issues = issues;
+    mapped.grouped = isPlainObject(resultJson.grouped) ? resultJson.grouped : {};
+  }
+  return mapped;
+}
+
 function mapAsset(row: DbRow | undefined): Record<string, unknown> | null {
   if (!row) return null;
   return {
@@ -141,6 +199,92 @@ engineeringValidationRouter.get('/engineering/data-dictionary', requirePermissio
        order by group_name, field_name`
     );
     res.json({ data: result.rows.map(mapDictionaryRow) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+engineeringValidationRouter.get('/engineering/validation-history', requirePermission('validation.read'), async (req, res, next) => {
+  try {
+    const assetId = asUuid(req.query.asset_id);
+    const limit = asPositiveInteger(req.query.limit, 50, 200);
+    const values: unknown[] = [];
+    let where = '';
+    if (assetId) {
+      values.push(assetId);
+      where = `where asset_id = $${values.length}`;
+    }
+    values.push(limit);
+    const result = await pool.query<DbRow>(
+      `select * from validation_runs
+       ${where}
+       order by created_at desc
+       limit $${values.length}`,
+      values
+    );
+
+    let runs = result.rows.map((row) => mapValidationRunRow(row));
+    const status = asString(req.query.status);
+    const severity = asString(req.query.severity);
+    const entityType = asString(req.query.entity_type);
+    if (status) runs = runs.filter((run) => run.status === status);
+    if (severity) runs = runs.filter((run) => run.status === severity || (Array.isArray(run.affected_entity_types) && run.affected_entity_types.includes(severity)));
+    if (entityType) runs = runs.filter((run) => Array.isArray(run.affected_entity_types) && run.affected_entity_types.includes(entityType));
+
+    res.json({ data: runs });
+  } catch (error) {
+    next(error);
+  }
+});
+
+engineeringValidationRouter.get('/engineering/validation-history/:validationRunId', requirePermission('validation.read'), async (req, res, next) => {
+  try {
+    const validationRunId = asUuid(req.params.validationRunId);
+    if (!validationRunId) {
+      validationError(res, 'validationRunId', 'validationRunId must be a UUID.');
+      return;
+    }
+    const result = await pool.query<DbRow>('select * from validation_runs where id = $1', [validationRunId]);
+    const row = result.rows[0];
+    if (!row) {
+      res.status(404).json({ error: { code: 'VALIDATION_RUN_NOT_FOUND', message: 'Validation run was not found.' } });
+      return;
+    }
+    res.json({ data: mapValidationRunRow(row, true) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+engineeringValidationRouter.get('/assets/:assetId/validation', requirePermission('validation.read'), async (req, res, next) => {
+  try {
+    const assetId = asUuid(req.params.assetId);
+    if (!assetId) {
+      validationError(res, 'assetId', 'assetId must be a UUID.');
+      return;
+    }
+    const assetResult = await pool.query<DbRow>('select * from assets where id = $1 and deleted_at is null', [assetId]);
+    const asset = assetResult.rows[0];
+    if (!asset) {
+      res.status(404).json({ error: { code: 'ASSET_NOT_FOUND', message: 'Asset was not found.' } });
+      return;
+    }
+    const historyResult = await pool.query<DbRow>(
+      `select * from validation_runs
+       where asset_id = $1
+       order by created_at desc
+       limit 25`,
+      [assetId]
+    );
+    const history = historyResult.rows.map((row) => mapValidationRunRow(row, true));
+    res.json({
+      data: {
+        asset: mapAsset(asset),
+        latest_validation_run: history[0] ?? null,
+        history
+      }
+    });
   } catch (error) {
     next(error);
   }

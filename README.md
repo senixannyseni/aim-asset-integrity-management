@@ -1,6 +1,6 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed; RC4-E validation-by-asset, validation history, and data dictionary UX completed**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
@@ -549,4 +549,19 @@ RC4-D completes the NDT bulk import and measurement detail frontend using existi
 NDT manual entry remains available. NDT bulk import supports CSV preview and row-level validation before commit through the existing `POST /api/v1/ndt/measurements/bulk-import` API. XLSX file selection is surfaced for workflow visibility, but no heavy XLSX parser dependency is added; users should convert XLSX workbooks to CSV unless a future approved parser dependency is introduced. NDT visualizations are display-only and use only stored measurement values, existing validation statuses, and existing evidence gate outputs.
 
 RC4-D introduces no new engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculations, no FFS/RBI trigger logic, no calculation engine changes, no AI/n8n/service actor governance changes, no approval/report/evidence upload behavior changes, no backend schema changes, and no new backend API routes. Frontend validation is UX-only; backend validation, RBAC, audit logging, evidence linkage, and persistence remain authoritative.
+
+## RC4-E Validation-by-Asset UX, Validation History, and Data Dictionary Expansion
+
+Status: Implemented as frontend-focused validation/data-dictionary completion package with a minimal read-only validation-history API adapter.
+
+RC4-E completes the validation-by-asset workflow, validation history visibility, and searchable data dictionary frontend using existing AIM validation foundations. It adds/updates:
+
+- `apps/web/app/validation/page.tsx` for validation dashboard summary, status counts, rule categories, affected entity counts, latest runs, asset validation launcher, and links to history/asset-specific validation.
+- `apps/web/app/assets/[assetId]/validation/page.tsx` for asset context, run/refresh validation, grouped field-level messages, unit warnings/errors, material completeness visibility, evidence/NDT/calculation/report readiness visibility where backend data is available, related links, and asset-specific history.
+- `apps/web/app/validation/history/page.tsx` for read-only validation run history with asset/entity/status/severity/date filters and expandable detail.
+- `apps/web/app/data-dictionary/page.tsx` for searchable, grouped engineering data dictionary coverage across asset, geometry, shell-course, material, inspection, evidence, NDT, validation, calculation, formula, review, decision, report, and audit domains.
+- Minimal read-only backend adapters for validation history visibility: `GET /api/v1/engineering/validation-history`, `GET /api/v1/engineering/validation-history/{validationRunId}`, and `GET /api/v1/assets/{assetId}/validation`.
+- Manual UAT coverage in `docs/uat/uat_rc4e_validation_by_asset_history_data_dictionary.md` and release report in `docs/release/AIM_RC4E_validation_by_asset_history_data_dictionary_report.md`.
+
+Validation is a control/readiness layer. It may flag, warn, block, and route records to human review, but it does not approve engineering data and does not execute new calculations. RC4-E introduces no engineering formulas, no API/ASME/API 579/API 581/FFS/RBI calculations, no FFS/RBI trigger logic, no calculation engine changes, no AI/n8n/service actor governance changes, and no backend schema changes.
 

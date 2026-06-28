@@ -123,3 +123,29 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] AI extraction remains staging-first and cannot bypass human review.
 - [ ] Evidence linkage remains mandatory.
 
+
+## RC4-E Source-of-Truth Alignment
+
+- [ ] RC4-E completes validation-by-asset UX, validation history visibility, and data dictionary expansion only.
+- [ ] `apps/web/app/validation/page.tsx` exists.
+- [ ] `apps/web/app/validation/history/page.tsx` exists.
+- [ ] `apps/web/app/assets/[assetId]/validation/page.tsx` exists.
+- [ ] `apps/web/app/data-dictionary/page.tsx` exists.
+- [ ] Validation overview shows summary/status categories, latest runs, affected domains, and links to asset-specific validation.
+- [ ] Asset validation page shows grouped checks, field-level messages, unit warnings/errors, material completeness visibility, evidence/NDT/calculation/report readiness where available, and related links.
+- [ ] Validation history page is read-only and supports practical filters.
+- [ ] Data dictionary page is searchable and grouped by domain.
+- [ ] `03_Database/data_dictionary_current.md` is expanded for asset, evidence, NDT, validation, calculation, formula, review, report, and audit traceability.
+- [ ] Validation may flag/warn/block/route to review but must not approve engineering data automatically.
+- [ ] Frontend validation is UX-only and does not weaken backend validation.
+- [ ] No new database tables are introduced by RC4-E.
+- [ ] No new database migration is introduced by RC4-E.
+- [ ] No new engineering formulas are introduced by RC4-E.
+- [ ] RC4-E does not change runtime engineering calculation behavior.
+- [ ] RC4-E does not introduce API 579/API 581/FFS/RBI formulas or FFS/RBI trigger logic.
+- [ ] RC4-E does not change AI, n8n, approval, report, evidence upload, NDT import, or object-storage backend behavior.
+- [ ] No governance boundaries are weakened.
+- [ ] AIM remains the system of record.
+- [ ] n8n remains orchestration-only and must not write directly to PostgreSQL.
+- [ ] AI extraction remains staging-first and cannot bypass human review.
+- [ ] Evidence linkage remains mandatory.

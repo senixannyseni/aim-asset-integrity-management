@@ -332,3 +332,20 @@ Implemented RC4-D controls:
 
 RC4-D adds no backend schema, no migrations, no new formulas, no calculation engine changes, no FFS/RBI trigger logic, no AI/n8n/service actor governance changes, no approval/report/evidence upload behavior changes, and no governance boundary weakening. Frontend validation is UX-only; backend validation remains authoritative.
 
+
+## RC4-E Validation-by-Asset UX, Validation History, and Data Dictionary Expansion
+
+Status: Implemented as frontend-focused validation/data-dictionary completion package.
+
+RC4-E completes validation-by-asset UX, validation history visibility, and data dictionary expansion without reopening RC3, RC4-A, RC4-B, RC4-C, or RC4-D.
+
+Implemented RC4-E controls:
+
+- `apps/web/app/validation/page.tsx` exists and shows validation dashboard summary, rule categories, latest validation runs, status counts, affected entity counts, links to validation history, and links to asset-specific validation pages.
+- `apps/web/app/assets/[assetId]/validation/page.tsx` exists and shows asset context, latest result, grouped field-level validation checks, unit issue readability, material completeness visibility, evidence/NDT/calculation/report readiness visibility where returned by backend validation, related links, and asset-specific history.
+- `apps/web/app/validation/history/page.tsx` exists and shows read-only validation run history with filters by asset, entity type, status, severity, and date range where practical.
+- `apps/web/app/data-dictionary/page.tsx` exists and shows searchable, grouped data dictionary coverage by domain, required/optional indicator, data type, units, validation rule summary, source-of-truth entity, evidence linkage requirement, frontend/API usage, and governance note.
+- Minimal read-only API adapters expose validation history and asset-specific validation visibility without adding schema or formulas.
+- `03_Database/data_dictionary_current.md` is expanded for asset, geometry, shell-course, material, inspection, evidence, object-storage governance, evidence linkage, NDT, validation run/history, calculation snapshot, formula version, review gate, integrity decision, report, and audit domains.
+
+RC4-E adds no backend schema, no migrations, no new formulas, no calculation engine changes, no FFS/RBI trigger logic, no AI/n8n/service actor governance changes, no approval/report/evidence/NDT behavior changes, and no governance boundary weakening. Validation remains a control/readiness layer and does not approve engineering data.
