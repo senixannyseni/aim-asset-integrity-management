@@ -126,3 +126,9 @@ Any of these conditions triggers **No-Go** unless formally resolved and retested
 | Security Owner |  | Pending |  |  |
 | UAT Lead |  | Pending |  |  |
 | Operations / Hypercare Owner |  | Pending |  |  |
+
+## RC4-Y Operations Evidence Gate
+
+Before selecting Go or Conditional Go, reviewers must confirm that `docs/release/final_release_operations_evidence_collection.md` is complete or formally marked not applicable with owner approval for every EV-OPS item. Missing evidence for tests, lint/typecheck, repository hygiene, migration/seed, environment validation, backup/restore, security, monitoring, UAT signoff, governance denial proof, report issue gates, work-order closure, final decision, or hypercare handoff is a No-Go condition unless the item is explicitly non-applicable and approved.
+
+AI/n8n/service actors cannot approve this evidence gate or replace human signoff.

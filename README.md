@@ -1,12 +1,20 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A through RC4-W implemented and post-review closed; RC4-X Final Release Decision Pack Cleanup prepared as a documentation/evidence-control closure package. Current state is MVP release-candidate complete, with final production go-live still conditional on human go/no-go signoff and external evidence attachment.**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A through RC4-W implemented and post-review closed; RC4-X Final Release Decision Pack Cleanup complete; RC4-Y Final Release Operations Evidence Collection prepared as a documentation/evidence-control closure package. Current state is MVP release-candidate complete, with final production go-live still conditional on attached operations evidence and human go/no-go signoff.**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, approved Formula Registry to formula_versions synchronization, guided universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
 RC4-A adds Sprint 0 foundation polish only: dedicated health endpoint tests, Sprint 0 closure checklist documentation, historical clarification that Sprint 0 had no calculation runtime at that time, role evolution notes, and seed idempotency documentation. RC4-A does not change runtime engineering calculation behavior, does not add formulas, and does not change AI, n8n, approval, report, FFS, RBI, NDT, evidence, object-storage, or frontend behavior.
 
 RC4-B completes the user-facing Tank Asset Register frontend. The `/assets` and `/assets/[assetId]` routes now expose asset list/create, asset detail/edit, tank geometry input, shell-course table editing, material master selection, validation messages, related links, loading/empty/error/permission-denied states, and manual UAT documentation. RC4-B uses existing backend APIs only, introduces no new formulas, no calculation behavior, no AI/n8n behavior changes, no approval/report/FFS/RBI/NDT/evidence behavior changes, and no backend schema changes.
+
+## RC4-Y Final Release Operations Evidence Collection
+
+Status: Documentation/evidence-control closure package.
+
+RC4-Y adds the final operations evidence collection layer for release decisioning. It provides a single runbook, evidence collection matrix, and cutover/rollback evidence record for attaching proof of test/lint, repository hygiene, migration/seed validation, environment validation, backup/restore, security scan, monitoring/alert routing, UAT signoff, final go/no-go, and hypercare ownership. RC4-Y does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration.
+
+Production go-live remains conditional until every required RC4-Y evidence item is attached or formally marked not applicable with owner approval. AI/n8n/service actors cannot approve the final release decision or substitute for human signoff.
 
 ## Non-negotiable Architecture Boundary
 
