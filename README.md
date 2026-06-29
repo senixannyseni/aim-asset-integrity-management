@@ -728,3 +728,14 @@ RC4-P adds a read-only NDT measurement readiness workflow:
 - readiness gates for evidence, validation, review status, downstream traceability, and AI/n8n finalization boundaries
 
 RC4-P does not add formulas, does not calculate corrosion rate/remaining life/FFS/RBI/API 579/API 581 outputs, does not approve or reject NDT data, does not mutate object storage, and does not allow AI/n8n/service actors to finalize engineering records.
+
+### RC4-Q Inspection Event Detail + Inspection Package Readiness
+
+RC4-Q adds the inspection package workspace:
+
+- `GET /api/v1/inspections`
+- `GET /api/v1/inspections/{inspectionEventId}/readiness`
+- `/inspections`
+- `/inspections/[inspectionEventId]`
+
+The readiness endpoint is read-only and summarizes inspection scope, package evidence, NDT coverage, findings, deterministic calculation traceability, review/approval trace, downstream decisions/reports/work-orders, and audit events. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize inspection package readiness.

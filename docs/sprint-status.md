@@ -520,3 +520,7 @@ Status: implemented in patch package.
 - Added read-only NDT measurement readiness endpoint.
 - Enhanced NDT measurement detail page with inspection traceability, evidence, findings, calculation input usage, review/approval trace, and audit timeline.
 - Preserved no-formula/no-AI-finalization/no-n8n-direct-write boundaries.
+
+## RC4-Q — Inspection Event Detail + Inspection Package Readiness
+
+Status: implemented in this patch. Adds read-only inspection package readiness API and `/inspections` detail workspace for evidence, NDT, findings, calculation, review/approval, downstream, and audit traceability.

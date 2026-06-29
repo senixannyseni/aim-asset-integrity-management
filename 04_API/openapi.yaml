@@ -3639,6 +3639,65 @@ paths:
           description: NDT measurement not found
       security:
       - bearerAuth: []
+  /api/v1/inspections:
+    get:
+      summary: List inspection events
+      description: Read-only RC4-Q inspection event list used by the Inspection Package Readiness workspace.
+      x-permission-required: inspection.read
+      x-read-only: true
+      x-audit-event-generated: none
+      parameters:
+      - in: query
+        name: asset_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Inspection event list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InspectionEventSummary'
+      security:
+      - bearerAuth: []
+  /api/v1/inspections/{inspectionEventId}/readiness:
+    get:
+      summary: Preview inspection package readiness
+      description: Read-only RC4-Q readiness preview for inspection scope, evidence coverage, NDT coverage, findings, calculation traceability, review/approval trace, downstream decisions/reports/work-orders, audit events, and AI/n8n finalization boundaries.
+      x-permission-required: inspection.read
+      x-read-only: true
+      x-audit-event-generated: none
+      x-no-calculation-boundary: "No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed"
+      x-ai-n8n-boundary: AI/n8n/service actors cannot finalize inspection package readiness.
+      parameters:
+      - in: path
+        name: inspectionEventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Inspection package readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InspectionPackageReadiness'
+        '404':
+          description: Inspection event not found
+      security:
+      - bearerAuth: []
+
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -5821,6 +5880,108 @@ components:
           - validation_not_blocked
           - downstream_calculation_trace_visible
           - finding_traceability_visible
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - warning
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    InspectionEventSummary:
+      type: object
+      properties:
+        inspection_event_id:
+          type: string
+          format: uuid
+        inspection_code:
+          type: string
+        asset_id:
+          type: string
+          format: uuid
+        asset_tag:
+          type: string
+        asset_name:
+          type: string
+        inspection_type:
+          type: string
+        inspection_date:
+          type: string
+          format: date
+        status:
+          type: string
+        summary:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    InspectionPackageReadiness:
+      type: object
+      description: Read-only RC4-Q inspection package readiness preview. It summarizes inspection scope, evidence coverage, NDT coverage, findings, deterministic calculation traceability, human review/approval trace, downstream decisions/reports/work-orders, and audit events. It does not approve, reject, close, calculate, issue reports, upload evidence, or finalize engineering records.
+      properties:
+        inspection_event_id:
+          type: string
+          format: uuid
+        inspection_code:
+          type: string
+        asset_id:
+          type: string
+          format: uuid
+        ready_for_downstream_use:
+          type: boolean
+        gate_summary:
+          type: object
+          additionalProperties: true
+        inspection_event:
+          $ref: '#/components/schemas/InspectionEventSummary'
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/InspectionPackageReadinessGate'
+        evidence_traceability:
+          type: object
+          additionalProperties: true
+        package_counts:
+          type: object
+          additionalProperties: true
+        linked_context:
+          type: object
+          additionalProperties: true
+        audit_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        governance_notes:
+          type: array
+          items:
+            type: string
+    InspectionPackageReadinessGate:
+      type: object
+      description: Inspection package readiness gate for package evidence, NDT coverage, findings, deterministic calculation traceability, review/approval trace, downstream engineering outputs, and AI/n8n finalization boundaries.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - inspection_event_recorded
+          - asset_context_linked
+          - inspection_status_ready
+          - package_evidence_linked
+          - ndt_measurement_coverage_present
+          - finding_triage_visible
+          - calculation_traceability_visible
+          - review_or_approval_trace_present
+          - downstream_traceability_visible
           - ai_n8n_finalization_absent
         gate_status:
           type: string
