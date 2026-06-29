@@ -265,3 +265,19 @@ The Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack
 | P5-042 | CS-OPS-011 / CS-OPS-012 | Evidence archive, audit readiness, and customer lifecycle closure traceability |
 
 AI/n8n/service actors cannot accept customer success evidence, approve customer success readiness, approve renewal readiness, approve expansion readiness, approve commercial operations handoff, approve SLA exceptions, accept customer lifecycle risks, waive customer success evidence, or sign customer lifecycle closure.
+
+
+## Commercial Governance and Scale Readiness Backlog Mapping
+
+The Commercial Governance, Sales Enablement, and Scale Readiness Evidence Pack maps enterprise/commercial readiness backlog items into controlled commercial scale-readiness evidence:
+
+| Backlog area | Commercial governance evidence mapping | Notes |
+|---|---|---|
+| Commercial packaging assessment | COMM-GOV-001 / COMM-GOV-003 / COMM-GOV-004 / COMM-GOV-005 | Sales, pricing, discount, proposal, and package boundary evidence |
+| SLA/SLO framework | COMM-GOV-010 | Support/SLA scale readiness and approved customer communication boundary |
+| Support onboarding/offboarding runbook | COMM-GOV-009 / COMM-GOV-010 | Implementation scale model, training, and support escalation ownership |
+| Tenant/customer model | COMM-GOV-007 / COMM-GOV-008 | Customer qualification and partner/channel boundary evidence |
+| Legal/compliance evidence strategy | COMM-GOV-006 / COMM-GOV-011 / COMM-GOV-012 | Compliance posture, residual risk, and final human signoff |
+| Enterprise readiness | COMM-GOV-008 / COMM-GOV-009 / COMM-GOV-010 / COMM-GOV-011 | Partner, implementation, support, and residual risk scale evidence |
+
+AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, or sign commercial governance closure.

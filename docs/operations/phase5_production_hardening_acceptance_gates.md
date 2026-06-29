@@ -301,3 +301,22 @@ Exit gate requirements:
 - AI/n8n/service actors cannot accept customer success evidence, approve customer success readiness, approve renewal readiness, approve expansion readiness, approve commercial operations handoff, approve SLA exceptions, accept customer lifecycle risks, or sign customer lifecycle closure.
 
 This gate is documentation/evidence-control only and does not authorize runtime implementation, tenant billing, payment processing, contract execution, external CMMS integration, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
+
+
+## Commercial Governance and Scale Readiness Gate
+
+The commercial governance and scale readiness gate requires `COMM-GOV-001 through COMM-GOV-012` before broader sales, partner/channel activity, implementation scale, or commercial scale-readiness claims can be treated as controlled evidence.
+
+Required gate evidence:
+
+- commercial governance baseline and final customer success/commercial operations dependency;
+- safe sales/demo material review using approved demo/sandbox data only;
+- sales enablement approval by named humans;
+- pricing, discount, proposal/SOW, legal, and compliance authority records;
+- customer qualification/intake no-go criteria;
+- partner/channel readiness boundary;
+- implementation scale model and support/SLA scale readiness;
+- residual commercial scale risk register;
+- final human commercial governance and scale-readiness signoff.
+
+AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, waive commercial governance evidence, or sign commercial governance closure.

@@ -767,3 +767,14 @@ The customer success/commercial operations pack adds `CS-OPS-001` through `CS-OP
 This package is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, tenant billing, payment processing, contract execution, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept customer success evidence, approve customer success readiness, approve renewal readiness, approve expansion readiness, approve commercial operations handoff, approve SLA exceptions, accept customer lifecycle risks, or sign customer lifecycle closure.
+
+
+## Commercial Governance, Sales Enablement, and Scale Readiness Evidence Pack
+
+Status: Documentation/evidence-control package prepared.
+
+The commercial governance and scale readiness pack adds `COMM-GOV-001` through `COMM-GOV-012` to convert customer success/commercial operations readiness into controlled sales enablement, commercial governance, partner/channel readiness, implementation scale, support/SLA scale, residual commercial risk, and final human commercial scale-readiness signoff.
+
+Commercial governance and scale readiness does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, tenant billing, payment processing, contract execution, partner contract execution, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, or sign commercial governance closure.
