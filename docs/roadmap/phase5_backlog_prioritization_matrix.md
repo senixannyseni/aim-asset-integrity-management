@@ -207,3 +207,19 @@ The Post-Go-Live Hypercare Closure and BAU Transition Authorization Pack maps po
 | P5-030 | BAU-007 / BAU-011 / BAU-012 | Governance continuity, audit archive, and transition traceability |
 
 AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, approve support handoff, accept residual BAU risks, close BAU defects, waive BAU transition evidence, or sign BAU transition authorization.
+
+## Final Production Operations Closure Backlog Mapping
+
+The Final Production Operations Closure and Continuous Improvement Backlog Pack maps post-BAU operations into controlled closure and improvement evidence records:
+
+| Backlog ID | Operations closure mapping | Notes |
+|---|---|---|
+| P5-021 | OPS-CLOSE-001 / OPS-CLOSE-012 | Final production operations baseline and human closure signoff |
+| P5-022 | OPS-CLOSE-005 / OPS-CLOSE-009 | Residual operational risk, security/access watch, and approved carryover |
+| P5-026 | OPS-CLOSE-002 / OPS-CLOSE-003 / OPS-CLOSE-006 | BAU ownership, KPI/SLA operating state, and improvement backlog priority |
+| P5-027 | OPS-CLOSE-003 / OPS-CLOSE-004 / OPS-CLOSE-010 | Monitoring, incidents/problems, and recovery ownership |
+| P5-028 | OPS-CLOSE-002 / OPS-CLOSE-007 / OPS-CLOSE-012 | Support ownership, governance continuity, and closure signoff |
+| P5-029 | OPS-CLOSE-006 / OPS-CLOSE-011 | Continuous-improvement and commercial/enterprise-readiness carryover |
+| P5-030 | OPS-CLOSE-007 / OPS-CLOSE-008 / OPS-CLOSE-012 | Governance continuity, evidence archive, and closure traceability |
+
+AI/n8n/service actors cannot accept operations closure evidence, approve continuous improvement priority, approve KPI/SLA exceptions, close operations closure gaps, accept residual operational risks, waive operations closure evidence, or sign final operations closure.

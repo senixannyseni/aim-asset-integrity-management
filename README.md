@@ -1014,3 +1014,13 @@ It adds `BAU-001` through `BAU-012` and reconciles hypercare evidence completion
 BAU transition authorization does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, report/work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, approve support handoff, accept residual BAU risks, close BAU defects, waive BAU transition evidence, or sign BAU transition authorization.
+
+## Final Production Operations Closure and Continuous Improvement Backlog Pack
+
+Status: Documentation/evidence-control package prepared after Post-Go-Live Hypercare Closure and BAU Transition Authorization Pack.
+
+The Final Production Operations Closure and Continuous Improvement Backlog Pack adds `OPS-CLOSE-001` through `OPS-CLOSE-012` to close the production operations evidence-control baseline and move governed work into a continuous-improvement backlog. It verifies final production operations baseline, BAU ownership, KPI/SLA operating-state review, incident/problem reconciliation, residual operational risk, continuous-improvement prioritization, governance continuity, evidence/data lifecycle archive ownership, security/access watch, backup/restore/DR ownership, enterprise-readiness carryover, and final human operations closure signoff.
+
+Operations closure does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept operations closure evidence, approve continuous improvement priority, approve KPI/SLA exceptions, close operations closure gaps, accept residual operational risks, or sign final operations closure.

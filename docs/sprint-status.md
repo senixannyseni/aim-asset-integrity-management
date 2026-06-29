@@ -732,3 +732,11 @@ Status: Documentation/evidence-control package prepared.
 The BAU transition pack adds `BAU-001` through `BAU-012` to close the post-go-live hypercare evidence-control track into named human BAU transition authorization. It verifies hypercare evidence completion, incident/defect carryover, support ownership, monitoring handoff, governance continuity, security/access handoff, backup/restore/DR ownership, performance/capacity ownership, evidence archive readiness, and final BAU transition signoff.
 
 BAU transition authorization is not runtime implementation and is not an AI/n8n/service-actor decision. AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, close BAU transition gaps, accept residual BAU risks, approve support handoff, or sign BAU transition authorization.
+
+## Final Production Operations Closure and Continuous Improvement Backlog Pack
+
+Status: Documentation/evidence-control package prepared.
+
+The operations closure pack adds `OPS-CLOSE-001` through `OPS-CLOSE-012` to close the production operations evidence-control track after go-live, hypercare, and BAU transition. It records BAU ownership, KPI/SLA review, incident/problem reconciliation, residual operational risk, continuous-improvement backlog priority, governance continuity, archive/data lifecycle ownership, security/access watch, recovery ownership, enterprise-readiness carryover, and final human operations closure signoff.
+
+This package is documentation/evidence-control only. AI/n8n/service actors cannot accept operations closure evidence, approve continuous improvement priority, approve KPI/SLA exceptions, close operations closure gaps, accept residual operational risks, or sign final operations closure.
