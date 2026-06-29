@@ -131,3 +131,20 @@ The Final Production Operations Closure and Continuous Improvement Backlog Pack 
 This package is not a runtime feature package and does not reopen the production go-live baseline. It introduces `OPS-CLOSE-001` through `OPS-CLOSE-012` as the final production operations closure evidence set.
 
 AI/n8n/service actors cannot accept operations closure evidence, approve continuous improvement priority, approve KPI/SLA exceptions, close operations closure gaps, accept residual operational risks, or sign final operations closure.
+
+## Final Productization and Commercial Readiness Roadmap Pack
+
+After final production operations closure, AIM enters a controlled productization/commercial-readiness planning track. This track is documented through `PROD-READY-001 through PROD-READY-012`.
+
+Roadmap objectives:
+
+- preserve the final production operations baseline;
+- define commercial product packaging and explicit exclusions;
+- define tenant/customer model assumptions before implementation;
+- define commercial support/SLA assumptions and operational ownership;
+- define compliance, data residency, legal, retention, confidentiality, and demo safety posture;
+- define enterprise-readiness gap backlog with owners and target releases/dates;
+- define future change-control requirements for commercial enhancements;
+- obtain final human productization roadmap signoff or a no-go/carryover decision.
+
+This roadmap pack does not add runtime APIs, tenant billing, payment processing, full API 579, full API 581, 3D processing, copied API/API-ASME formulas, or external CMMS implementation. AI/n8n/service actors cannot approve commercial readiness, accept productization evidence, accept enterprise readiness gaps, approve customer onboarding readiness, or sign productization roadmap approval.
