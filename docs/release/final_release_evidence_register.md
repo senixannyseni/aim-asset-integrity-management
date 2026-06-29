@@ -148,3 +148,18 @@ The P5-3 evidence set expands `EV-FINAL-014`, `EV-FINAL-015`, and `EV-FINAL-016`
 
 AI/n8n/service actors cannot accept observability evidence, close incidents, accept residual operational risk, waive missing evidence, approve hypercare handoff, sign observability readiness, or authorize production go-live.
 
+## 10. P5-4 Backup, Restore, and DR Mapping
+
+P5-4 adds detailed backup, restore, and disaster-recovery evidence maintained in:
+
+```text
+docs/operations/p5_4_backup_restore_dr_pack.md
+docs/operations/p5_4_backup_restore_evidence_record.md
+docs/operations/p5_4_dr_rehearsal_rpo_rto_record.md
+docs/operations/p5_4_recovery_ownership_escalation_record.md
+docs/operations/p5_4_backup_restore_dr_runbook.md
+```
+
+The P5-4 evidence set expands `EV-FINAL-009`, `EV-FINAL-014`, `EV-FINAL-015`, and `EV-FINAL-017` with `P5-DR-001` through `P5-DR-012`, covering backup ownership, PostgreSQL backup evidence, PostgreSQL restore rehearsal, object-storage backup evidence, object-storage restore rehearsal, configuration and secret recovery ownership, RPO/RTO definition and measurement, disaster recovery scenario rehearsal, governance recovery validation, recovery escalation, DR accepted-risk review, and final human DR signoff.
+
+AI/n8n/service actors cannot accept backup evidence, approve restore readiness, approve DR signoff, accept residual DR risk, close DR gaps, waive missing recovery evidence, sign recovery readiness, or authorize production go-live.

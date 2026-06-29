@@ -77,3 +77,16 @@ P5-3 addresses the evidence-control portion of these backlog items:
 
 P5-3 is evidence-control only; future runtime automation may still be needed for dashboards, alert integrations, incident tooling, log pipelines, and SLO automation.
 
+## P5-4 Backlog Mapping
+
+P5-4 addresses the evidence-control portion of these backlog items:
+
+| Backlog ID | P5-4 evidence mapping |
+|---|---|
+| P5-011 | `P5-DR-001`, `P5-DR-002`, `P5-DR-003`, `P5-DR-004`, `P5-DR-005`, `P5-DR-007` |
+| P5-012 | `P5-DR-006`, `P5-DR-008`, `P5-DR-010`, `P5-DR-011`, `P5-DR-012` |
+| P5-019 | `P5-DR-008`, `P5-DR-010`, `P5-DR-012` |
+| P5-020 | `P5-DR-008`, `P5-DR-009`, `P5-DR-011` |
+| P5-021 | `P5-DR-002`, `P5-DR-003`, `P5-DR-004`, `P5-DR-005`, `P5-DR-009` |
+
+P5-4 is evidence-control only; future runtime automation may still be needed for automated backups, restore pipelines, PITR operations, object-storage replication, DR orchestration, recovery validation automation, and evidence-bundle archive automation.
