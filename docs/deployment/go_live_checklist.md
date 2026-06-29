@@ -1,7 +1,7 @@
-# AIM Phase 2.0 Go-Live Checklist
+# AIM Final Go-Live Checklist
 
-**Purpose:** Provide a go/no-go checklist for controlled UAT or MVP release rehearsal after Phase 1 Governance Closure.  
-**Scope:** Release readiness only. This checklist does not approve production go-live by itself.
+**Purpose:** Provide a go/no-go checklist for controlled MVP release-candidate and production go-live readiness after RC4-A through RC4-W.  
+**Scope:** Release readiness only. This checklist does not approve production go-live by itself; approval requires the final human decision record in `docs/release/final_go_no_go_decision_record.md`.
 
 ## 1. Governance Readiness
 
@@ -107,7 +107,7 @@ The release must be **No-Go** if any of the following is true:
 - Report can be issued with failed gates.
 - Internal work order can close without required completion note/evidence.
 - Audit logs are missing for controlled actions.
-- Full API 579/API 581, external CMMS integration, 3D processing, frontend UI implementation, or invented API/ASME formulas were accidentally introduced.
+- Full API 579/API 581, external CMMS integration, 3D processing, unapproved frontend scope outside governed RC4 screens, or invented API/ASME formulas were accidentally introduced.
 - Critical UAT defects remain unresolved without formal risk acceptance.
 
 
@@ -118,3 +118,20 @@ RC3-A and RC3-B are now implemented in this repository state. Correct health end
 RC3-B implements evidence object-storage upload/download and report artifact object-storage export. Original evidence files and generated report artifacts are stored in private S3-compatible object storage; PostgreSQL stores metadata, checksums, object keys, upload sessions, status, and audit linkage. Legacy metadata-only evidence upload is retained only for compatibility and is not gate-eligible until object storage verification is completed through the RC3-B flow.
 
 Final production closure remains human-gated after hypercare completion; AI and n8n cannot approve production closure or final engineering actions.
+
+
+## 8. Final RC4-X Decision Pack
+
+| Check | Owner | Evidence Required | Status |
+|---|---|---|---|
+| Final release readiness status reviewed. | Product Owner / Lead Engineer | `docs/release/final_release_readiness_status.md`. |  |
+| Final go/no-go decision record prepared. | Product Owner | `docs/release/final_go_no_go_decision_record.md`. |  |
+| Final release evidence register populated. | UAT Lead / IT Admin / Security Owner | `docs/release/final_release_evidence_register.md`. |  |
+| Human signoff table completed. | Product Owner | Signed decision record. |  |
+| AI/n8n/service actors excluded from go-live approval. | Security Owner / IT Admin | RBAC/service-actor denial evidence. |  |
+
+## 9. Final Go / No-Go Rule
+
+- **Go** requires complete evidence, clean tests/lint/hygiene, completed migration/smoke/backup/monitoring/security checks, no open blocker/critical/governance defects, and all required human signoffs.
+- **Conditional Go** is allowed only for non-governance, non-security residual risks with named owner, mitigation, approval, and closure date.
+- **No-Go** is required when any blocker, critical, governance, security, evidence, migration, backup/restore, monitoring, or signoff gate remains unresolved.

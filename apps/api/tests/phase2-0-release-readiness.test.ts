@@ -37,7 +37,6 @@ function expectNoImplementationClaim(relativePath: string, content: string): voi
     /production\s+(sap|maximo|cmms)\s+integration\s+(is\s+)?(implemented|enabled|active)/i,
     /implemented\s+3d\s+processing/i,
     /implements\s+3d\s+processing/i,
-    /frontend\s+ui\s+implementation\s+(is\s+)?(complete|implemented|added)/i,
     /invented\s+api\/asme\s+formula\s+(implemented|added|enabled)/i,
     /new\s+api\/asme\s+formula\s+(implemented|added|enabled)/i
   ];
@@ -271,7 +270,7 @@ describe('Phase 2.0 release readiness pack', () => {
       'full API 581 implementation',
       'SAP/Maximo/CMMS integration',
       '3D processing',
-      'frontend UI implementation',
+      'unapproved frontend scope outside governed RC4 screens',
       'invented API/ASME formulas'
     ]);
   });

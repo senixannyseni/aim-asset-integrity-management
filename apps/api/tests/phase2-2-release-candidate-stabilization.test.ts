@@ -54,7 +54,6 @@ function expectNoOutOfScopeImplementationClaim(relativePath: string, content: st
     /production\s+(sap|maximo|cmms)\s+integration\s+(is\s+)?(implemented|enabled|active)/i,
     /implemented\s+3d\s+processing/i,
     /implements\s+3d\s+processing/i,
-    /frontend\s+ui\s+implementation\s+(is\s+)?(complete|implemented|added)/i,
     /invented\s+api\/asme\s+formula\s+(implemented|added|enabled)/i,
     /new\s+api\/asme\s+formula\s+(implemented|added|enabled)/i
   ];
@@ -257,7 +256,7 @@ describe('Phase 2.2 release candidate stabilization pack', () => {
       'No full API 581 implementation is included',
       'No SAP/Maximo/CMMS integration is included',
       'No 3D processing is included',
-      'No frontend UI implementation is included',
+      'No unapproved frontend scope outside governed RC4 screens is included',
       'No invented API/ASME formulas are included'
     ]);
     expectNoObviousSecrets(docPath, doc);

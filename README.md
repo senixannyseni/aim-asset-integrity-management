@@ -1,6 +1,6 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A Sprint 0 foundation polish merged and tagged; RC4-B Tank Asset Register frontend completed; RC4-C Evidence Repository upload/detail frontend completed; RC4-D NDT bulk import and measurement detail frontend completed; RC4-E validation-by-asset, validation history, and data dictionary UX completed; RC4-F Formula Registry to formula_versions synchronization completed; RC4-G Calculation guided UI and golden dataset fixtures completed**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A through RC4-W implemented and post-review closed; RC4-X Final Release Decision Pack Cleanup prepared as a documentation/evidence-control closure package. Current state is MVP release-candidate complete, with final production go-live still conditional on human go/no-go signoff and external evidence attachment.**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, approved Formula Registry to formula_versions synchronization, guided universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
@@ -809,3 +809,18 @@ RC4-W adds the security monitoring closure workspace:
 - security monitoring signoff evidence matrix
 
 The workspace is read-only and separates security/operations evidence from final production go-live approval. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize security monitoring closure, operational signoff, or production launch readiness.
+
+
+### RC4-X Final Release Decision Pack Cleanup
+
+RC4-X is a documentation/evidence-control closure package after RC4-A through RC4-W post-review merge.
+
+RC4-X adds and aligns:
+
+- final release readiness status summary;
+- final go/no-go decision record template;
+- final release evidence register;
+- final release checklist wording that distinguishes MVP release-candidate readiness from production go-live approval;
+- superseded-note cleanup for older Phase 2 documents that previously treated frontend screens as absent.
+
+RC4-X does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration. Final production go-live remains a human decision based on attached UAT, security, backup/restore, monitoring, deployment, and signoff evidence.
