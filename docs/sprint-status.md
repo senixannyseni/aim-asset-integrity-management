@@ -1,5 +1,16 @@
 # Sprint / Release Status
 
+## P5-3 — Observability and Incident Response
+
+**Status:** Prepared as Phase 5 documentation/evidence-control package after P5-2.
+
+P5-3 prepares observability, alerting, incident-response, and hypercare evidence records for production-pilot readiness. It covers monitoring ownership, dashboard baseline, service health checks, alert routing verification, audit/error/workflow/correlation log review, log retention/redaction, severity triage, incident response tabletop, governance incident route, hypercare cadence, incident closure evidence, and human observability signoff.
+
+P5-3 is not a runtime feature package. It does not change API behavior, database schema, formulas, AI/n8n behavior, object-storage behavior, approvals, work orders, report issue gates, or CMMS integration.
+
+AI/n8n/service actors cannot accept observability evidence, close incidents, accept residual operational risk, approve hypercare handoff, or authorize production go-live.
+
+
 ## AIM MVP Final Go/No-Go Evidence Bundle
 
 **Status:** Prepared as documentation/evidence-control closure package after RC4-Z.
