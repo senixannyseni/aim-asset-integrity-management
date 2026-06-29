@@ -17,7 +17,7 @@ const SERVICE_SECURITY_MONITORING_BLOCKED_ROLES = new Set([
 const SECURITY_MONITORING_CLOSURE_CHAIN = [
   'Secrets and environment configuration',
   'RBAC and service-actor boundary',
-  'Audit log and redaction verification',
+  'audit-log redaction verification',
   'Security headers and CORS verification',
   'Vulnerability and dependency scan evidence',
   'Monitoring dashboard verification',
