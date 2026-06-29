@@ -748,3 +748,12 @@ RC4-R adds the asset integrity package workspace:
 - `/assets/[assetId]`
 
 The readiness endpoint is read-only and summarizes asset master data, geometry, shell courses, material traceability, evidence coverage, inspection history, NDT coverage, findings, deterministic calculation traceability, review/approval trace, integrity decisions, downstream reports/work-orders, and audit events. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize asset integrity package readiness.
+
+### RC4-S FFS Case Detail + FFS Disposition Readiness
+
+RC4-S adds the FFS disposition readiness workspace:
+
+- `GET /api/v1/ffs/cases/{caseId}/readiness`
+- `/ffs/[caseId]`
+
+The readiness endpoint is read-only and summarizes FFS trigger context, supporting evidence, deterministic calculation trigger trace, engineering review trace, senior disposition approval trace, downstream report/work-order traceability, and audit events. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot approve final FFS disposition or declare fitness for service.
