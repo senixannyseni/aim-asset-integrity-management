@@ -357,3 +357,27 @@ The Commercial MVP Launch Control and Customer Onboarding Evidence Pack maps fin
 | COMM-LAUNCH-012 | Final commercial MVP launch authorization | `docs/commercial/commercial_mvp_launch_control_authorization_record.md` |
 
 This mapping depends on the Final Productization and Commercial Readiness Roadmap Pack. Commercial launch control is not a runtime feature release and does not authorize unapproved tenant billing, payment processing, contract execution, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
+
+
+## Customer Success and Commercial Operations Mapping
+
+The Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack maps Commercial MVP launch and customer onboarding evidence into controlled post-launch customer lifecycle operations:
+
+| Evidence ID | Evidence area | Primary record |
+|---|---|---|
+| CS-OPS-001 | Customer success baseline | `docs/customer_success/customer_success_commercial_operations_renewal_pack.md` / `docs/customer_success/customer_success_health_adoption_record.md` |
+| CS-OPS-002 | Customer health model | `docs/customer_success/customer_success_health_adoption_record.md` |
+| CS-OPS-003 | Adoption and value realization | `docs/customer_success/customer_success_health_adoption_record.md` |
+| CS-OPS-004 | Support operations model | `docs/customer_success/commercial_operations_billing_support_readiness_record.md` |
+| CS-OPS-005 | SLA/KPI operating review | `docs/customer_success/commercial_operations_billing_support_readiness_record.md` |
+| CS-OPS-006 | Commercial operations handoff | `docs/customer_success/commercial_operations_billing_support_readiness_record.md` |
+| CS-OPS-007 | Customer issue and escalation review | `docs/customer_success/customer_success_health_adoption_record.md` |
+| CS-OPS-008 | Renewal readiness model | `docs/customer_success/renewal_expansion_readiness_record.md` |
+| CS-OPS-009 | Expansion readiness model | `docs/customer_success/renewal_expansion_readiness_record.md` |
+| CS-OPS-010 | Customer lifecycle risk register | `docs/customer_success/renewal_expansion_readiness_record.md` |
+| CS-OPS-011 | Customer lifecycle archive | `docs/customer_success/commercial_operations_billing_support_readiness_record.md` |
+| CS-OPS-012 | Final customer success/commercial operations signoff | `docs/customer_success/renewal_expansion_readiness_record.md` |
+
+This mapping depends on the Commercial MVP Launch Control and Customer Onboarding Evidence Pack. Customer success and commercial operations evidence does not authorize unapproved runtime APIs, tenant billing, payment processing, contract execution, external CMMS integration, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept customer success evidence, approve customer success readiness, approve renewal readiness, approve expansion readiness, approve commercial operations handoff, approve SLA exceptions, accept customer lifecycle risks, waive customer success evidence, or sign customer lifecycle closure.

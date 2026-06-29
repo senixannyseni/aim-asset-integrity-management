@@ -154,3 +154,12 @@ This roadmap pack does not add runtime APIs, tenant billing, payment processing,
 After the Final Productization and Commercial Readiness Roadmap Pack, the next controlled package is Commercial MVP Launch Control and Customer Onboarding. This package introduces `COMM-LAUNCH-001` through `COMM-LAUNCH-012` to govern first-customer launch evidence, onboarding readiness, commercial support/SLA commitments, customer acceptance, rollback/offboarding, and final human launch authorization.
 
 This package is not a runtime feature package and does not reopen the production operations baseline. It provides evidence-control for commercial MVP launch readiness and customer onboarding before any broader commercial scaling work.
+
+
+## Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack
+
+After Commercial MVP Launch Control and Customer Onboarding, the next controlled package is Customer Success, Commercial Operations, and Renewal Readiness. This package introduces `CS-OPS-001` through `CS-OPS-012` to govern customer success baseline, customer health, adoption/value realization, support operations, SLA/KPI review, commercial operations handoff, renewal readiness, expansion readiness, customer lifecycle risks, archive ownership, and final human customer lifecycle signoff.
+
+This package is not a runtime feature package and does not reopen the commercial launch baseline. It provides evidence-control for post-launch customer lifecycle operations before broader renewal, expansion, or enterprise scaling work.
+
+AI/n8n/service actors cannot accept customer success evidence, approve customer success readiness, approve renewal readiness, approve expansion readiness, approve commercial operations handoff, approve SLA exceptions, accept customer lifecycle risks, or sign customer lifecycle closure.
