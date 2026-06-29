@@ -757,3 +757,13 @@ RC4-S adds the FFS disposition readiness workspace:
 - `/ffs/[caseId]`
 
 The readiness endpoint is read-only and summarizes FFS trigger context, supporting evidence, deterministic calculation trigger trace, engineering review trace, senior disposition approval trace, downstream report/work-order traceability, and audit events. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot approve final FFS disposition or declare fitness for service.
+### RC4-T End-to-End Integrity Package Workspace + Release Candidate Consolidation
+
+RC4-T adds the consolidated integrity package workspace:
+
+- `GET /api/v1/integrity-workspace`
+- `GET /api/v1/integrity-workspace/assets/{assetId}/readiness`
+- `/integrity-workspace`
+- `/integrity-workspace/[assetId]`
+
+The workspace links the complete AIM integrity chain: Asset → Inspection → Evidence → NDT → Findings → Calculation → Review/Approval → Integrity Decision → FFS/RBI → Report → Work Order. Module-specific readiness gates remain authoritative. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize end-to-end integrity package readiness.

@@ -3765,6 +3765,68 @@ paths:
       security:
       - bearerAuth: []
 
+
+  /api/v1/integrity-workspace:
+    get:
+      summary: List end-to-end integrity package workspace assets
+      description: Read-only RC4-T release candidate consolidation workspace. It links Asset → Inspection → Evidence → NDT → Findings → Calculation → Review/Approval → Integrity Decision → FFS/RBI → Report → Work Order. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      x-permission-required: asset.read
+      x-read-only: true
+      x-audit-event-generated: none
+      x-ai-n8n-boundary: AI/n8n/service actors cannot finalize end-to-end integrity package readiness.
+      responses:
+        '200':
+          description: End-to-end integrity package workspace asset list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IntegrityWorkspaceOverview'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+  /api/v1/integrity-workspace/assets/{assetId}/readiness:
+    get:
+      summary: Preview end-to-end integrity package readiness
+      description: "Read-only RC4-T consolidated readiness preview for the complete asset integrity chain: Asset → Inspection → Evidence → NDT → Findings → Calculation → Review/Approval → Integrity Decision → FFS/RBI → Report → Work Order. Module-specific readiness endpoints remain authoritative. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed by this endpoint."
+      x-permission-required: asset.read
+      x-read-only: true
+      x-audit-event-generated: none
+      x-no-calculation-boundary: "No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed"
+      x-ai-n8n-boundary: AI/n8n/service actors cannot finalize end-to-end integrity package readiness.
+      parameters:
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: End-to-end integrity package readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/EndToEndIntegrityPackageReadiness'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Asset not found
+      security:
+      - bearerAuth: []
+
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -6225,3 +6287,115 @@ components:
         metadata:
           type: object
           additionalProperties: true
+
+    IntegrityWorkspaceOverview:
+      type: object
+      description: Read-only RC4-T end-to-end integrity package workspace summary for release candidate consolidation.
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        read_only:
+          type: boolean
+        workspace:
+          type: string
+        summary:
+          type: object
+          additionalProperties: true
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrityWorkspaceAssetSummary'
+        governance_notes:
+          type: array
+          items:
+            type: string
+    IntegrityWorkspaceAssetSummary:
+      type: object
+      description: Asset row in the RC4-T consolidated integrity workspace.
+      properties:
+        asset:
+          type: object
+          additionalProperties: true
+        counts:
+          type: object
+          additionalProperties: true
+        links:
+          type: object
+          additionalProperties:
+            type: string
+    EndToEndIntegrityPackageReadiness:
+      type: object
+      description: Read-only RC4-T end-to-end integrity package readiness preview. Module-specific readiness gates remain authoritative. This endpoint does not approve, issue, close, mutate, calculate, or allow AI/n8n/service actors to finalize readiness.
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        generated_at:
+          type: string
+          format: date-time
+        ready_for_release_candidate_review:
+          type: boolean
+        gate_summary:
+          type: object
+          additionalProperties: true
+        asset:
+          type: object
+          additionalProperties: true
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrityWorkspaceReadinessGate'
+        end_to_end_chain:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        module_traceability:
+          type: object
+          additionalProperties: true
+        audit_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        governance_notes:
+          type: array
+          items:
+            type: string
+    IntegrityWorkspaceReadinessGate:
+      type: object
+      description: RC4-T consolidated workspace gate. It checks visibility and traceability only; no API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - asset_readiness_visible
+          - asset_integrity_package_visible
+          - inspection_package_trace_visible
+          - evidence_traceability_visible
+          - ndt_measurement_trace_visible
+          - findings_triage_trace_visible
+          - calculation_traceability_visible
+          - engineering_review_trace_visible
+          - integrity_decision_trace_visible
+          - ffs_rbi_trace_visible
+          - report_issue_trace_visible
+          - work_order_closure_trace_visible
+          - audit_trail_visible
+          - no_formula_execution
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - warning
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
