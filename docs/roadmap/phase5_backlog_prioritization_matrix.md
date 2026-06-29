@@ -292,3 +292,14 @@ AI/n8n/service actors cannot accept commercial governance evidence, approve sale
 | SCALE-OPS-BL-004 | Consolidate scale risks and governed release/change-control cadence | SCALE-OPS-010, SCALE-OPS-011, SCALE-OPS-012 | High | Product Owner / Lead Engineer |
 
 AI/n8n/service actors cannot approve backlog priority, accept scale operating risks, waive scale operating evidence, or sign scale operating model closure.
+
+## Commercial Final Closure and Enterprise Scale Roadmap Backlog Mapping
+
+| Backlog ID | Item | Evidence IDs | Priority | Owner |
+|---|---|---|---|---|
+| COMM-FINAL-BL-001 | Reconcile predecessor commercial evidence baselines and closure inventory | COMM-FINAL-001, COMM-FINAL-002, COMM-FINAL-012 | High | Product Owner / Evidence Coordinator |
+| COMM-FINAL-BL-002 | Define customer/partner expansion readiness and enterprise onboarding model | COMM-FINAL-003, COMM-FINAL-008, COMM-FINAL-009 | High | Product Owner / Customer Success / Partner Manager |
+| COMM-FINAL-BL-003 | Consolidate enterprise roadmap, investment backlog, KPI/SLA, and compliance/legal/data-readiness gaps | COMM-FINAL-004, COMM-FINAL-005, COMM-FINAL-006, COMM-FINAL-007 | High | Product Owner / Operations / Legal / Security Owner |
+| COMM-FINAL-BL-004 | Consolidate enterprise operational scale risks and governed release/change-control cadence | COMM-FINAL-010, COMM-FINAL-011, COMM-FINAL-012 | High | Product Owner / Lead Engineer / Risk Owner |
+
+AI/n8n/service actors cannot approve enterprise investment priority, accept enterprise scale gaps, waive commercial final evidence, or sign commercial final closure.

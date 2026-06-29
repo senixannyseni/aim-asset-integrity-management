@@ -424,3 +424,24 @@ This mapping follows the Commercial Governance, Sales Enablement, and Scale Read
 | SCALE-OPS-010 | Scale risk and dependency register | Partner/staffing/support/security/compliance risk register | Product Owner / Risk Owner | Pending |
 | SCALE-OPS-011 | Change-control and release cadence | Scale backlog/release/UAT/customer communication model | Product Owner / Lead Engineer | Pending |
 | SCALE-OPS-012 | Final scale operating-model signoff | Human approval/no-go/carryover decision | Product Owner / Operations / Lead Engineer | Pending |
+
+## Commercial Final Closure and Enterprise Scale Roadmap Mapping
+
+This mapping follows the Commercial Scale Operating Model and Partner Implementation Readiness Pack and records the evidence required before AIM can treat the commercial MVP baseline as closed and future enterprise-scale work as governed through roadmap/backlog/change-control rather than ad hoc commitments.
+
+| Evidence ID | Evidence area | Required artifact | Owner | Status |
+|---|---|---|---|---|
+| COMM-FINAL-001 | Commercial final baseline | References to commercial launch, customer success, commercial governance, and scale operating-model baselines | Product Owner / Operations | Pending |
+| COMM-FINAL-002 | Commercial closure inventory | Final inventory of open/completed commercial evidence records | Product Owner / Evidence Coordinator | Pending |
+| COMM-FINAL-003 | Customer/partner expansion readiness | Controlled criteria for next customer/partner expansion wave | Product Owner / Partner Manager | Pending |
+| COMM-FINAL-004 | Enterprise-scale roadmap | Roadmap by capability, dependency, risk, owner, and target horizon | Product Owner | Pending |
+| COMM-FINAL-005 | Enterprise investment backlog | Investment/backlog items for product, security, compliance, support, sales, and delivery scale | Product Owner / Finance / Leadership | Pending |
+| COMM-FINAL-006 | Commercial KPI/SLA governance | KPI/SLA targets, exception handling, and review cadence | Operations / Customer Success | Pending |
+| COMM-FINAL-007 | Compliance/legal/data-readiness gap consolidation | Residual legal, data residency, privacy, contractual, and compliance gaps | Legal / Security Owner | Pending |
+| COMM-FINAL-008 | Enterprise customer onboarding model | Repeatable enterprise onboarding and UAT model | Customer Success / Delivery Lead | Pending |
+| COMM-FINAL-009 | Partner/channel scale model | Partner/channel qualification, training, access, and supervision path | Partner Manager / Security Owner | Pending |
+| COMM-FINAL-010 | Enterprise operational scale risk register | Commercial, operational, security, support, delivery, and customer risks | Product Owner / Risk Owner | Pending |
+| COMM-FINAL-011 | Continuous improvement and release cadence | CI backlog, release cadence, change-control, and customer communication route | Product Owner / Lead Engineer | Pending |
+| COMM-FINAL-012 | Final commercial closure signoff | Human approval/no-go/carryover decision | Product Owner / Operations / Lead Engineer | Pending |
+
+AI/n8n/service actors cannot accept commercial final closure evidence, approve enterprise scale roadmap, approve enterprise investment priority, accept enterprise scale gaps, approve customer/partner expansion commitments, waive commercial final evidence, or sign commercial final closure.
