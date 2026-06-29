@@ -662,3 +662,14 @@ P5-5 expands the performance, reliability, scale, and data-lifecycle workstreams
 P5-5 is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept performance evidence, approve performance readiness, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, or authorize production go-live.
+
+## P5-6 — Integration Readiness
+
+Status: prepared as Phase 5 documentation/evidence-control package.
+
+P5-6 expands the integration readiness workstream into `P5-INT-001` through `P5-INT-012`, covering integration ownership and inventory, AIM API contract boundary review, n8n workflow boundary review, object-storage handoff boundary, external CMMS readiness and internal work-order fallback, notification/webhook routing, retry/replay/idempotency policy, integration error/audit/correlation logging, service-account and credential review, sandbox/test-data validation, integration accepted-risk review, and human integration readiness signoff.
+
+P5-6 is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, or authorize production go-live.
+

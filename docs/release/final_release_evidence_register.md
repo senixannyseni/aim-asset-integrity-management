@@ -180,3 +180,20 @@ docs/operations/p5_5_performance_scale_data_lifecycle_runbook.md
 The P5-5 evidence set expands `EV-FINAL-002`, `EV-FINAL-003`, `EV-FINAL-004`, `EV-FINAL-007`, `EV-FINAL-014`, `EV-FINAL-016`, and `EV-FINAL-017` with `P5-PERF-001` through `P5-PERF-012`, covering performance baseline ownership, API load smoke testing, report export throughput, object-storage upload/download throughput, database query and pagination review, frontend route responsiveness, capacity assumptions, timeout/retry/error policy, data retention matrix, archive/export/purge lifecycle procedure, performance/lifecycle accepted-risk review, and final human performance/lifecycle signoff.
 
 AI/n8n/service actors cannot accept performance evidence, approve performance readiness, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, waive missing lifecycle evidence, sign performance/lifecycle readiness, or authorize production go-live.
+
+## 12. P5-6 Integration Readiness Mapping
+
+P5-6 adds detailed integration-readiness evidence maintained in:
+
+```text
+docs/integrations/p5_6_integration_readiness_pack.md
+docs/integrations/p5_6_integration_inventory_boundary_record.md
+docs/integrations/p5_6_external_cmms_notification_readiness_record.md
+docs/integrations/p5_6_integration_failure_replay_record.md
+docs/operations/p5_6_integration_readiness_runbook.md
+```
+
+The P5-6 evidence set expands `EV-FINAL-006`, `EV-FINAL-007`, `EV-FINAL-008`, `EV-FINAL-014`, `EV-FINAL-016`, and `EV-FINAL-017` with `P5-INT-001` through `P5-INT-012`, covering integration ownership and inventory, AIM API contract boundary review, n8n workflow boundary review, object-storage handoff boundary, external CMMS readiness and internal work-order fallback, notification/webhook routing, retry/replay/idempotency policy, integration error/audit/correlation logging, integration credential and service-account review, sandbox/test-data validation, integration accepted-risk review, and final human integration readiness signoff.
+
+AI/n8n/service actors cannot accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, waive missing integration evidence, sign integration readiness, or authorize production go-live.
+

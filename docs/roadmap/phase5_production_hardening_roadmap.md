@@ -67,3 +67,10 @@ P5-4 implements the documentation/evidence-control layer for the backup/restore/
 ## P5-5 Execution Pack
 
 P5-5 implements the documentation/evidence-control layer for the performance, reliability, scalability, and data lifecycle governance workstreams. It does not change runtime behavior. Its output is a controlled evidence set for performance baseline ownership, API load smoke tests, report export throughput, object-storage throughput, database query/pagination review, frontend responsiveness, capacity assumptions, timeout/retry/error policy, data retention, archive/export/purge lifecycle procedure, accepted-risk review, and human performance/lifecycle signoff.
+
+## P5-6 Execution Pack
+
+P5-6 implements the documentation/evidence-control layer for the integration readiness workstream. It does not change runtime behavior. Its output is a controlled evidence set for integration ownership and inventory, AIM API contract boundary review, n8n workflow boundary review, object-storage handoff boundaries, external CMMS readiness and internal work-order fallback, notification and webhook routing, retry/replay/idempotency policy, integration error/audit/correlation logging, service-account and credential review, sandbox/test-data validation, accepted-risk review, and human integration readiness signoff.
+
+AI/n8n/service actors cannot accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, or authorize production go-live.
+

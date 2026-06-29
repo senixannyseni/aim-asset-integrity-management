@@ -108,3 +108,25 @@ Required P5-5 gate evidence:
 - human performance and lifecycle signoff.
 
 AI/n8n/service actors cannot approve P5-5 gates, accept performance evidence, approve performance readiness, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, waive missing lifecycle evidence, or authorize production go-live.
+
+## P5-6 Execution Pack
+
+P5-6 operationalizes `P5-GATE-007 Integration readiness gate` through `P5-INT-001` through `P5-INT-012`.
+
+Required P5-6 gate evidence:
+
+- integration ownership and inventory;
+- AIM API contract boundary review;
+- n8n workflow boundary review and no direct PostgreSQL access evidence;
+- object-storage handoff boundary and signed URL/raw object key exposure review;
+- external CMMS readiness decision and internal work-order fallback status;
+- notification and webhook routing readiness;
+- retry, replay, idempotency, duplicate prevention, and manual recovery policy;
+- integration error, audit, and correlation logging evidence;
+- service-account and credential review;
+- sandbox and approved test-data validation;
+- integration accepted-risk register;
+- human integration readiness signoff.
+
+AI/n8n/service actors cannot approve P5-6 gates, accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, or authorize production go-live.
+

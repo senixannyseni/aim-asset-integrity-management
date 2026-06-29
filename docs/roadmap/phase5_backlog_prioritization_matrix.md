@@ -109,3 +109,20 @@ P5-5 maps the Phase 5 performance, reliability, and data lifecycle backlog into 
 | P5-030 | P5-PERF-009 / P5-PERF-010 | Long-term audit/compliance evidence retention and export strategy |
 
 AI/n8n/service actors cannot accept performance evidence, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, or authorize production go-live.
+
+## P5-6 Backlog Mapping
+
+P5-6 maps the Phase 5 integration readiness backlog into controlled evidence records:
+
+| Backlog ID | P5-6 evidence mapping | Notes |
+|---|---|---|
+| P5-023 | P5-INT-001 / P5-INT-002 / P5-INT-003 | Integration ownership, AIM API boundary, and n8n orchestration boundary |
+| P5-024 | P5-INT-005 | External CMMS readiness decision and internal work-order fallback |
+| P5-025 | P5-INT-004 / P5-INT-008 | Evidence/report object-storage handoff and audit/correlation linkage |
+| P5-006 | P5-INT-007 | Retry/replay/idempotency and manual recovery path |
+| P5-010 | P5-INT-006 / P5-INT-008 | Notification/webhook routing and incident/audit route |
+| P5-022 | P5-INT-011 | Integration accepted-risk workflow |
+| P5-030 | P5-INT-008 / P5-INT-012 | Long-term audit/compliance integration evidence and human signoff |
+
+AI/n8n/service actors cannot accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, or authorize production go-live.
+
