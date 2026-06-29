@@ -99,6 +99,9 @@ describe('RC4-H findings / anomaly foundation', () => {
 
     expect(list).toContain('FindingsClient');
     expect(client).toContain('/api/v1/findings');
+    expect(client).toContain('/api/v1/engineering/calculations');
+    expect(client).not.toContain('/api/v1/calculations?asset_id=');
+    expect(client).not.toContain("'/api/v1/calculations'");
     expect(client).toContain('missing-evidence');
     expect(client).toContain('critical evidence required');
     expect(client).toContain('Cross-asset linkage warning');

@@ -178,7 +178,7 @@ export default function FindingsClient({ fixedAssetId, assetScoped = false }: Fi
         apiFetch(findingsPath, { cache: 'no-store' }),
         apiFetch(fixedAssetId ? `/api/v1/evidence?asset_id=${encodeURIComponent(fixedAssetId)}` : '/api/v1/evidence', { cache: 'no-store' }),
         apiFetch(fixedAssetId ? `/api/v1/ndt/measurements?asset_id=${encodeURIComponent(fixedAssetId)}` : '/api/v1/ndt/measurements', { cache: 'no-store' }),
-        apiFetch(fixedAssetId ? `/api/v1/calculations?asset_id=${encodeURIComponent(fixedAssetId)}` : '/api/v1/calculations', { cache: 'no-store' })
+        apiFetch(fixedAssetId ? `/api/v1/engineering/calculations?asset_id=${encodeURIComponent(fixedAssetId)}` : '/api/v1/engineering/calculations', { cache: 'no-store' })
       ]);
       const [assetsPayload, findingsPayload, evidencePayload, ndtPayload, calculationsPayload] = await Promise.all([
         assetsResponse.json(), findingsResponse.json(), evidenceResponse.json(), ndtResponse.json(), calculationsResponse.json()

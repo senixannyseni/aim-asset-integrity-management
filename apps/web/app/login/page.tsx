@@ -15,7 +15,7 @@ function messageFromError(error: unknown): string {
 export default function LoginPage() {
   const [email, setEmail] = useState('engineer@aim.local');
   const [password, setPassword] = useState('ChangeMe123!');
-  const [message, setMessage] = useState<string | null>(typeof window !== 'undefined' && getAimAccessToken() ? 'Token is present for this browser session.' : null);
+  const [message, setMessage] = useState<string | null>(typeof window !== 'undefined' && getAimAccessToken() ? 'In-memory token is present for this browser session.' : null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,7 +31,7 @@ export default function LoginPage() {
 
   function logout() {
     clearAimAccessToken();
-    setMessage('Local access token cleared.');
+    setMessage('Browser-session access token cleared.');
   }
 
   return (
