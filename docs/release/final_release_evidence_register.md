@@ -336,3 +336,24 @@ PROD-READY-001 through PROD-READY-012
 This mapping depends on the Final Production Operations Closure and Continuous Improvement Backlog Pack and does not reopen the production operations baseline.
 
 AI/n8n/service actors cannot accept productization evidence, approve commercial readiness, approve pricing or licensing, accept enterprise readiness gaps, approve customer onboarding readiness, waive productization evidence, or sign productization roadmap approval.
+
+## Commercial MVP Launch Control and Customer Onboarding Mapping
+
+The Commercial MVP Launch Control and Customer Onboarding Evidence Pack maps final productization/commercial readiness into controlled first-customer launch and onboarding evidence:
+
+| Evidence ID | Evidence area | Primary record |
+|---|---|---|
+| COMM-LAUNCH-001 | Commercial launch baseline | `docs/commercial/commercial_mvp_launch_control_customer_onboarding_pack.md` |
+| COMM-LAUNCH-002 | Launch control authority | `docs/commercial/commercial_mvp_launch_control_authorization_record.md` |
+| COMM-LAUNCH-003 | Customer qualification and fit | `docs/commercial/customer_onboarding_readiness_record.md` |
+| COMM-LAUNCH-004 | Customer onboarding plan | `docs/commercial/customer_onboarding_readiness_record.md` |
+| COMM-LAUNCH-005 | Tenant/customer environment readiness | `docs/commercial/customer_onboarding_readiness_record.md` |
+| COMM-LAUNCH-006 | Demo/sandbox and data safety | `docs/commercial/customer_onboarding_readiness_record.md` |
+| COMM-LAUNCH-007 | Commercial support and SLA onboarding | `docs/commercial/customer_acceptance_support_sla_record.md` |
+| COMM-LAUNCH-008 | Customer UAT and acceptance model | `docs/commercial/customer_acceptance_support_sla_record.md` |
+| COMM-LAUNCH-009 | Security/legal/compliance onboarding | `docs/commercial/customer_onboarding_readiness_record.md` |
+| COMM-LAUNCH-010 | Commercial risk and exception register | `docs/commercial/commercial_mvp_launch_control_authorization_record.md` / `docs/commercial/customer_acceptance_support_sla_record.md` |
+| COMM-LAUNCH-011 | Launch communications and rollback/offboarding | `docs/commercial/customer_acceptance_support_sla_record.md` |
+| COMM-LAUNCH-012 | Final commercial MVP launch authorization | `docs/commercial/commercial_mvp_launch_control_authorization_record.md` |
+
+This mapping depends on the Final Productization and Commercial Readiness Roadmap Pack. Commercial launch control is not a runtime feature release and does not authorize unapproved tenant billing, payment processing, contract execution, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
