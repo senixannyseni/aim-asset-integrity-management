@@ -796,3 +796,16 @@ RC4-V adds the production validation workspace:
 - release candidate signoff evidence matrix
 
 The workspace is read-only and separates release-candidate evidence from final production go-live approval. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize production validation or approve go-live.
+
+### RC4-W Security Review Evidence + Operational Monitoring Closure
+
+RC4-W adds the security monitoring closure workspace:
+
+- `GET /api/v1/security-monitoring/readiness`
+- `/security-monitoring`
+- security review evidence checklist
+- operational monitoring closure checklist
+- incident response and alert routing runbook
+- security monitoring signoff evidence matrix
+
+The workspace is read-only and separates security/operations evidence from final production go-live approval. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize security monitoring closure, operational signoff, or production launch readiness.

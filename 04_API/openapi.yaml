@@ -3876,6 +3876,29 @@ paths:
           description: AI/n8n/service actor blocked or missing permission
       security:
       - bearerAuth: []
+
+  /api/v1/security-monitoring/readiness:
+    get:
+      summary: RC4-W security review evidence and operational monitoring closure readiness
+      description: Read-only security monitoring evidence endpoint covering secrets and configuration review, RBAC verification, service-actor boundary verification, audit-log redaction, vulnerability and dependency scan review, security headers/CORS checks, monitoring dashboard verification, alert routing, incident response runbook, log retention, backup evidence, and operational access signoff. AI/n8n/service actors cannot finalize security review, monitoring closure, or operational signoff. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      x-permission-required: golive_readiness.view
+      x-read-only: true
+      x-audit-event-generated: none
+      x-ai-n8n-finalization: prohibited
+      responses:
+        '200':
+          description: Security monitoring readiness
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SecurityMonitoringReadiness'
+        '403':
+          description: AI/n8n/service actor blocked or missing permission
+      security:
+      - bearerAuth: []
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -6629,3 +6652,94 @@ components:
         metadata:
           type: object
           additionalProperties: true
+
+    SecurityMonitoringReadiness:
+      type: object
+      description: RC4-W read-only security review evidence and operational monitoring closure readiness. AI/n8n/service actors cannot finalize security monitoring closure, operational signoff, or production launch. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        permission_required:
+          type: string
+        read_only:
+          type: boolean
+        security_monitoring_status:
+          type: string
+        ready_for_unconditional_go_live_without_security_conditions:
+          type: boolean
+        release_candidate_ready_for_security_operations_review:
+          type: boolean
+        completion_estimate:
+          type: object
+          additionalProperties: true
+        gate_summary:
+          type: object
+          additionalProperties: true
+        security_monitoring_closure_chain:
+          type: array
+          items:
+            type: string
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/SecurityMonitoringReadinessGate'
+        security_monitoring_evidence_pack:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        signoff_roles:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        monitoring_matrix:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        prohibited_controls:
+          type: array
+          items:
+            type: string
+        safe_navigation_links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    SecurityMonitoringReadinessGate:
+      type: object
+      description: RC4-W security monitoring gate. It captures security review and monitoring evidence only; no API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - secrets_configuration_reviewed
+          - rbac_permission_matrix_verified
+          - service_actor_boundary_verified
+          - audit_log_redaction_verified
+          - vulnerability_scan_reviewed
+          - dependency_license_reviewed
+          - security_headers_cors_reviewed
+          - monitoring_dashboard_verified
+          - alert_routing_verified
+          - incident_response_runbook_ready
+          - log_retention_backup_verified
+          - operational_access_review_signed_off
+          - no_formula_execution
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - attention_required
+          - blocked
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+

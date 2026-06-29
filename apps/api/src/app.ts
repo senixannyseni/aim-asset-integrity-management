@@ -31,6 +31,7 @@ import { inspectionsRouter } from "./routes/inspections.js";
 import { integrityWorkspaceRouter } from "./routes/integrity-workspace.js";
 import { releaseClosureRouter } from "./routes/release-closure.js";
 import { productionValidationRouter } from "./routes/production-validation.js";
+import { securityMonitoringRouter } from "./routes/security-monitoring.js";
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
@@ -89,6 +90,7 @@ export function createApp() {
   app.use('/api/v1', integrityWorkspaceRouter);
   app.use('/api/v1', releaseClosureRouter);
   app.use('/api/v1', productionValidationRouter);
+  app.use('/api/v1', securityMonitoringRouter);
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === 'number'
       ? Number((error as { statusCode: number }).statusCode)
