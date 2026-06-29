@@ -264,3 +264,24 @@ Gate conditions:
 Productization roadmap readiness is not commercial launch approval and does not authorize runtime feature delivery by itself.
 
 AI/n8n/service actors cannot accept productization evidence, approve commercial readiness, approve pricing or licensing, accept enterprise readiness gaps, approve customer onboarding readiness, waive productization evidence, or sign productization roadmap approval.
+
+## Commercial MVP Launch Control and Customer Onboarding Gate
+
+`COMM-LAUNCH-001 through COMM-LAUNCH-012` must be complete before AIM can be represented as ready for controlled commercial MVP launch or first-customer onboarding evidence execution.
+
+Required gate evidence:
+
+- commercial launch baseline and productization dependency;
+- named commercial launch/no-go authority;
+- target customer qualification and onboarding plan;
+- tenant/customer environment assumptions and access boundaries;
+- demo/sandbox and real-customer-data safety controls;
+- support/SLA onboarding and escalation route;
+- customer UAT/acceptance criteria and defect triage route;
+- security/legal/compliance onboarding evidence;
+- residual commercial launch risks and rollback/offboarding path;
+- final human commercial MVP launch authorization.
+
+AI/n8n/service actors cannot accept commercial launch evidence, approve commercial launch, approve customer onboarding, approve customer acceptance, approve SLA commitments, accept commercial launch risks, or sign commercial launch authorization.
+
+Commercial MVP launch control is not runtime delivery, not tenant billing/payment processing implementation, not contract execution, and not a waiver of production governance gates.

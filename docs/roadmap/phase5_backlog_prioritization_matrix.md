@@ -237,3 +237,16 @@ The Final Productization and Commercial Readiness Roadmap Pack maps final operat
 | P5-033 | PROD-READY-001 / PROD-READY-012 | Productization baseline and final human roadmap approval |
 
 AI/n8n/service actors cannot accept productization evidence, approve commercial readiness, approve pricing or licensing, accept enterprise readiness gaps, approve customer onboarding readiness, waive productization evidence, or sign productization roadmap approval.
+
+## Commercial MVP Launch Control and Customer Onboarding Backlog Mapping
+
+The Commercial MVP Launch Control and Customer Onboarding Evidence Pack maps productization readiness into controlled first-customer launch/onboarding evidence:
+
+| Backlog ID | Commercial launch mapping | Notes |
+|---|---|---|
+| P5-034 | COMM-LAUNCH-001 / COMM-LAUNCH-002 / COMM-LAUNCH-012 | Commercial launch baseline, authority, and final human authorization |
+| P5-035 | COMM-LAUNCH-003 / COMM-LAUNCH-004 / COMM-LAUNCH-008 | Customer qualification, onboarding plan, and acceptance model |
+| P5-036 | COMM-LAUNCH-005 / COMM-LAUNCH-006 / COMM-LAUNCH-009 | Tenant/customer environment, demo/sandbox safety, and security/legal onboarding |
+| P5-037 | COMM-LAUNCH-007 / COMM-LAUNCH-010 / COMM-LAUNCH-011 | Support/SLA onboarding, residual launch risks, and rollback/offboarding |
+
+AI/n8n/service actors cannot approve commercial launch, customer onboarding, customer acceptance, SLA commitments, residual launch risks, or final launch authorization.

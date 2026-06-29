@@ -1034,3 +1034,11 @@ The Final Productization and Commercial Readiness Roadmap Pack adds `PROD-READY-
 Productization readiness does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, tenant billing, payment processing, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept productization evidence, approve commercial readiness, approve pricing or licensing, accept enterprise readiness gaps, approve customer onboarding readiness, or sign productization roadmap approval. n8n remains orchestration-only. AIM remains the system of record.
+
+## Commercial MVP Launch Control and Customer Onboarding Evidence Pack
+
+The Commercial MVP Launch Control and Customer Onboarding Evidence Pack adds `COMM-LAUNCH-001` through `COMM-LAUNCH-012`, covering commercial launch baseline, launch authority, customer qualification, onboarding plan, tenant/customer environment readiness, demo/sandbox and data safety, support/SLA onboarding, customer UAT/acceptance model, security/legal/compliance onboarding, commercial launch risk register, launch communications and rollback/offboarding, and final human commercial MVP launch authorization.
+
+Commercial launch control does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, tenant billing, payment processing, contract execution, invoice collection, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept commercial launch evidence, approve commercial launch, approve customer onboarding, approve customer acceptance, approve SLA commitments, accept commercial launch risks, or sign commercial launch authorization. n8n remains orchestration-only and AIM remains the system of record.

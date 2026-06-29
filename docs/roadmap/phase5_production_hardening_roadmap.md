@@ -148,3 +148,9 @@ Roadmap objectives:
 - obtain final human productization roadmap signoff or a no-go/carryover decision.
 
 This roadmap pack does not add runtime APIs, tenant billing, payment processing, full API 579, full API 581, 3D processing, copied API/API-ASME formulas, or external CMMS implementation. AI/n8n/service actors cannot approve commercial readiness, accept productization evidence, accept enterprise readiness gaps, approve customer onboarding readiness, or sign productization roadmap approval.
+
+## Commercial MVP Launch Control and Customer Onboarding Evidence Pack
+
+After the Final Productization and Commercial Readiness Roadmap Pack, the next controlled package is Commercial MVP Launch Control and Customer Onboarding. This package introduces `COMM-LAUNCH-001` through `COMM-LAUNCH-012` to govern first-customer launch evidence, onboarding readiness, commercial support/SLA commitments, customer acceptance, rollback/offboarding, and final human launch authorization.
+
+This package is not a runtime feature package and does not reopen the production operations baseline. It provides evidence-control for commercial MVP launch readiness and customer onboarding before any broader commercial scaling work.

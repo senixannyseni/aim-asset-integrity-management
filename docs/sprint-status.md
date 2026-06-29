@@ -750,3 +750,9 @@ The productization roadmap pack adds `PROD-READY-001` through `PROD-READY-012` t
 This package is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, tenant billing, payment processing, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept productization evidence, approve commercial readiness, approve pricing or licensing, accept enterprise readiness gaps, approve customer onboarding readiness, or sign productization roadmap approval.
+
+## Commercial MVP Launch Control and Customer Onboarding Evidence Pack
+
+The commercial launch control pack adds `COMM-LAUNCH-001` through `COMM-LAUNCH-012` to convert the productization/commercial readiness roadmap into controlled first-customer launch and onboarding evidence. It records commercial baseline, launch authority, customer qualification, onboarding plan, environment readiness, demo/sandbox safety, support/SLA onboarding, customer acceptance, security/legal/compliance onboarding, residual launch risk, rollback/offboarding, and final human commercial MVP launch authorization.
+
+Commercial MVP launch readiness is documentation/evidence-control only and does not add runtime APIs, tenant billing, payment processing, contract execution, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas. AI/n8n/service actors cannot accept commercial launch evidence or sign commercial launch authorization.
