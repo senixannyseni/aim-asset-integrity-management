@@ -272,3 +272,22 @@ This mapping depends on the Final Production Go-Live Authorization Evidence Pack
 AI/n8n/service actors cannot accept hypercare evidence, close production incidents, close hypercare defects, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.
 
 AIM remains the system of record. n8n remains orchestration-only.
+
+## Post-Go-Live Hypercare Closure and BAU Transition Mapping
+
+| Evidence ID | Evidence area | Source document | Required status |
+|---|---|---|---|
+| BAU-001 | Hypercare baseline confirmation | `docs/bau/post_golive_hypercare_closure_bau_transition_authorization_record.md` | Attached or human-approved exception |
+| BAU-002 | Hypercare evidence completion | `docs/bau/post_golive_hypercare_closure_bau_transition_authorization_record.md` | Attached or human-approved exception |
+| BAU-003 | Production incident closure review | `docs/bau/bau_residual_risk_defect_carryover_record.md` | Attached or human-approved exception |
+| BAU-004 | Residual defect carryover | `docs/bau/bau_residual_risk_defect_carryover_record.md` | Attached or human-approved exception |
+| BAU-005 | BAU support model | `docs/bau/bau_operational_ownership_support_model_record.md` | Attached or human-approved exception |
+| BAU-006 | Monitoring ownership transfer | `docs/bau/bau_operational_ownership_support_model_record.md` | Attached or human-approved exception |
+| BAU-007 | Governance control continuity | `docs/bau/bau_operational_ownership_support_model_record.md` | Attached or human-approved exception |
+| BAU-008 | Security/access handoff | `docs/bau/bau_operational_ownership_support_model_record.md` | Attached or human-approved exception |
+| BAU-009 | Backup/restore/DR BAU ownership | `docs/bau/bau_operational_ownership_support_model_record.md` | Attached or human-approved exception |
+| BAU-010 | Performance/capacity BAU ownership | `docs/bau/bau_operational_ownership_support_model_record.md` | Attached or human-approved exception |
+| BAU-011 | Evidence archive and audit readiness | `docs/bau/bau_residual_risk_defect_carryover_record.md` | Attached or human-approved exception |
+| BAU-012 | Final BAU transition authorization | `docs/bau/post_golive_hypercare_closure_bau_transition_authorization_record.md` | Named human decision required |
+
+The BAU transition package depends on the Post-Go-Live Hypercare and Production Stabilization Evidence Pack and the Final Production Go-Live Authorization Evidence Pack. AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, accept residual BAU risks, approve support handoff, waive BAU transition evidence, or sign BAU transition authorization.

@@ -724,3 +724,11 @@ This package expands production stabilization evidence into `HYPERCARE-001` thro
 Post-go-live hypercare is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept hypercare evidence, close production incidents, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.
+
+## Post-Go-Live Hypercare Closure and BAU Transition Authorization Pack
+
+Status: Documentation/evidence-control package prepared.
+
+The BAU transition pack adds `BAU-001` through `BAU-012` to close the post-go-live hypercare evidence-control track into named human BAU transition authorization. It verifies hypercare evidence completion, incident/defect carryover, support ownership, monitoring handoff, governance continuity, security/access handoff, backup/restore/DR ownership, performance/capacity ownership, evidence archive readiness, and final BAU transition signoff.
+
+BAU transition authorization is not runtime implementation and is not an AI/n8n/service-actor decision. AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, close BAU transition gaps, accept residual BAU risks, approve support handoff, or sign BAU transition authorization.
