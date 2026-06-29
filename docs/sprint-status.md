@@ -528,3 +528,9 @@ Status: implemented in this patch. Adds read-only inspection package readiness A
 ## RC4-R — Asset Detail + Asset Integrity Package Readiness
 
 Status: implemented in this patch. Adds read-only asset integrity package readiness API and `/assets/[assetId]` detail workspace for master data, geometry, shell courses, evidence, inspections, NDT, findings, calculation, review/approval, downstream decision/report/work-order, and audit traceability.
+
+## RC4-S — FFS Case Detail + FFS Disposition Readiness
+
+Status: implemented in this patch. Adds read-only FFS disposition readiness API and `/ffs/[caseId]` detail workspace for trigger context, supporting evidence, calculation trigger trace, human review, senior final disposition approval, downstream report/work-order traceability, and audit events.
+
+RC4-S does not add API 579/API 581/FFS/RBI formulas, does not declare fitness for service, does not automate final disposition, does not mutate object storage, and does not allow AI/n8n/service actors to finalize FFS cases.

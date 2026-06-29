@@ -141,12 +141,13 @@ export default function FfsWorkflowClient() {
         <div>
           <p className="eyebrow">Sprint 7</p>
           <h1>FFS Trigger Workflow</h1>
-          <p>API 579-1/ASME FFS-1 governance trigger workflow. Trigger cases require engineer review and never auto-declare fitness.</p>
+          <p>API 579-1/ASME FFS-1 governance trigger workflow. Trigger cases require engineer review, RC4-S detail-level FFS Disposition Readiness, and never auto-declare fitness.</p>
         </div>
         <div className="action-row">
           <Link className="secondary-button" href="/calculations">Calculations</Link>
           <Link className="secondary-button" href="/evidence">Evidence</Link>
           <Link className="secondary-button" href="/ndt">NDT</Link>
+          <Link className="secondary-button" href="/reports">Reports</Link>
         </div>
       </header>
 
@@ -209,7 +210,12 @@ export default function FfsWorkflowClient() {
                     <td><span className="badge">{item.status}</span></td>
                     <td>{item.severity}</td>
                     <td>{item.damage_mechanism}</td>
-                    <td><button className="secondary-button" type="button" onClick={() => setSelected(item)}>View</button></td>
+                    <td>
+                      <div className="action-row">
+                        <button className="secondary-button" type="button" onClick={() => setSelected(item)}>View</button>
+                        <Link className="secondary-button" href={`/ffs/${item.id}`}>Detail</Link>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -218,6 +224,7 @@ export default function FfsWorkflowClient() {
           {selected && (
             <div className="detail-card">
               <h3>{selected.case_id}</h3>
+              <Link className="secondary-button" href={`/ffs/${selected.id}`}>Open FFS Disposition Readiness</Link>
               <p><strong>Trigger:</strong> {selected.trigger_reason}</p>
               <p><strong>Next action:</strong> {selected.required_next_action}</p>
               <p><strong>Due:</strong> {selected.due_date}</p>

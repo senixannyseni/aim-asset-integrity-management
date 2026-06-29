@@ -190,6 +190,271 @@ async function getFfsCase(client: Queryable, caseId: string): Promise<DbRow | un
   return result.rows[0];
 }
 
+
+type FfsDispositionGate = {
+  gate_type: string;
+  gate_status: 'pass' | 'warning' | 'fail';
+  blocking: boolean;
+  message: string;
+  metadata?: Record<string, unknown>;
+};
+
+function ffsDispositionGate(
+  gateType: string,
+  pass: boolean,
+  message: string,
+  metadata: Record<string, unknown> = {},
+  blocking = true,
+  warningWhenFailed = false
+): FfsDispositionGate {
+  return {
+    gate_type: gateType,
+    gate_status: pass ? 'pass' : warningWhenFailed ? 'warning' : 'fail',
+    blocking,
+    message,
+    metadata
+  };
+}
+
+function ffsGateSummary(gates: FfsDispositionGate[]): Record<string, number> {
+  return {
+    total: gates.length,
+    pass: gates.filter((gate) => gate.gate_status === 'pass').length,
+    warning: gates.filter((gate) => gate.gate_status === 'warning').length,
+    fail: gates.filter((gate) => gate.gate_status === 'fail').length,
+    blocking: gates.filter((gate) => gate.blocking && gate.gate_status !== 'pass').length
+  };
+}
+
+function mapFfsTraceRow(row: DbRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    code: row.case_id ?? row.run_id ?? row.finding_code ?? row.report_code ?? row.work_order_code ?? row.review_code ?? row.approval_code ?? row.evidence_code,
+    title: row.title ?? row.report_title ?? row.review_type ?? row.approval_type ?? row.original_filename ?? row.component ?? row.damage_mechanism,
+    status: row.status ?? row.review_status ?? row.approval_status ?? row.report_status ?? row.validation_status,
+    type: row.entity_type ?? row.source_entity_type ?? row.trigger_source ?? row.finding_type,
+    severity: row.severity,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    reviewed_at: row.reviewed_at,
+    approved_at: row.approved_at,
+    issued_at: row.issued_at,
+    closed_at: row.closed_at
+  };
+}
+
+function mapFfsEvidence(row: DbRow): Record<string, unknown> {
+  return {
+    evidence_file_id: row.evidence_file_id ?? row.id,
+    evidence_code: row.evidence_code,
+    original_filename: row.original_filename,
+    file_type: row.file_type ?? row.file_extension,
+    checksum_sha256: row.checksum_sha256,
+    evidence_status: row.evidence_status ?? row.status,
+    method: row.method,
+    component: row.component,
+    inspection_date: row.inspection_date,
+    link_reason: row.link_reason,
+    linked_entity_type: row.linked_entity_type,
+    linked_entity_id: row.linked_entity_id,
+    created_at: row.created_at
+  };
+}
+
+function mapFfsAuditEvent(row: DbRow): Record<string, unknown> {
+  return {
+    audit_log_id: row.audit_log_id ?? row.id,
+    event_type: row.event_type,
+    actor_user_id: row.actor_user_id,
+    actor_role_codes: row.actor_role_codes,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    created_at: row.created_at,
+    metadata: row.metadata_json ?? row.metadata
+  };
+}
+
+async function buildFfsDispositionReadiness(client: Queryable, ffsCase: DbRow): Promise<Record<string, unknown>> {
+  const caseId = String(ffsCase.id);
+  const assetId = String(ffsCase.asset_id);
+  const calculationRunId = ffsCase.calculation_run_id ? String(ffsCase.calculation_run_id) : null;
+  const inspectionEventId = ffsCase.inspection_event_id ? String(ffsCase.inspection_event_id) : null;
+
+  const [assetResult, inspectionResult, calculationResult, evidenceResult, reviewResult, approvalResult, findingResult, reportResult, workOrderResult, auditResult] = await Promise.all([
+    client.query<DbRow>('select * from assets where id = $1 limit 1', [assetId]),
+    inspectionEventId
+      ? client.query<DbRow>('select * from inspection_events where id = $1 limit 1', [inspectionEventId])
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    calculationRunId
+      ? client.query<DbRow>('select * from calculation_runs where id = $1 limit 1', [calculationRunId])
+      : Promise.resolve({ rows: [], rowCount: 0 }),
+    client.query<DbRow>(
+      `select el.evidence_file_id, el.link_reason, el.linked_entity_type, el.linked_entity_id, el.created_at,
+              ef.evidence_code, ef.original_filename, ef.file_type, ef.file_extension, ef.checksum_sha256,
+              ef.status as evidence_status, ef.method, ef.component, ef.inspection_date
+       from evidence_links el
+       left join evidence_files ef on ef.id = el.evidence_file_id
+       where el.linked_entity_type = 'ffs_case'
+         and el.linked_entity_id = $1
+       order by el.created_at desc
+       limit 50`,
+      [caseId]
+    ),
+    client.query<DbRow>(
+      `select * from engineering_reviews
+       where entity_type = 'ffs_case'
+         and entity_id = $1
+       order by reviewed_at desc nulls last, created_at desc nulls last
+       limit 25`,
+      [caseId]
+    ),
+    client.query<DbRow>(
+      `select * from approval_records
+       where (entity_type = 'ffs_case' and entity_id = $1)
+          or id = $2
+       order by approved_at desc nulls last, created_at desc nulls last
+       limit 25`,
+      [caseId, ffsCase.approval_record_id ?? null]
+    ),
+    client.query<DbRow>(
+      `select * from findings
+       where asset_id = $1
+         and (source_entity_id = $2 or status = 'linked_to_ffs_candidate' or calculation_run_id = $3)
+       order by created_at desc
+       limit 25`,
+      [assetId, caseId, calculationRunId]
+    ),
+    client.query<DbRow>(
+      `select * from reports
+       where asset_id = $1
+         and ($2::uuid is null or calculation_run_id = $2)
+       order by created_at desc
+       limit 25`,
+      [assetId, calculationRunId]
+    ),
+    client.query<DbRow>(
+      `select * from internal_work_orders
+       where asset_id = $1
+         and (source_entity_type = 'ffs_case' and source_entity_id = $2)
+       order by created_at desc
+       limit 25`,
+      [assetId, caseId]
+    ),
+    client.query<DbRow>(
+      `select * from audit_logs
+       where (entity_type = 'ffs_case' and entity_id = $1)
+          or (entity_type = 'calculation_run' and entity_id = $2)
+       order by created_at desc
+       limit 50`,
+      [caseId, calculationRunId]
+    )
+  ]);
+
+  const snapshotEvidenceIds = evidenceIdsFromLinks(ffsCase.evidence_links);
+  const linkedEvidenceCount = evidenceResult.rows.length;
+  const evidenceCount = linkedEvidenceCount + snapshotEvidenceIds.length;
+  const reviewCompleted = reviewResult.rows.some((row) => row.review_status === 'reviewed' || row.review_status === 'approved');
+  const approvedDisposition = approvalResult.rows.some((row) => row.approval_status === 'approved') || Boolean(ffsCase.approval_record_id);
+  const closedWithDisposition = ffsCase.status === 'closed' && Boolean(asString(ffsCase.final_disposition));
+  const triggerSource = asString(ffsCase.trigger_source) ?? 'unknown';
+  const calculationTraceExpected = triggerSource === 'calculation_warning' || Boolean(calculationRunId);
+
+  const gates: FfsDispositionGate[] = [
+    ffsDispositionGate('ffs_case_recorded', true, 'FFS trigger case is recorded in AIM as a governance workflow case.', { case_id: ffsCase.case_id, status: ffsCase.status }),
+    ffsDispositionGate(
+      'trigger_context_present',
+      Boolean(asString(ffsCase.trigger_reason)) && Boolean(asString(ffsCase.damage_mechanism)) && Boolean(asString(ffsCase.trigger_rule_id)),
+      'Trigger reason, damage mechanism, and trigger rule are visible for engineering review.',
+      { trigger_source: ffsCase.trigger_source, damage_mechanism: ffsCase.damage_mechanism, trigger_rule_id: ffsCase.trigger_rule_id }
+    ),
+    ffsDispositionGate(
+      'supporting_evidence_linked',
+      evidenceCount > 0,
+      'Supporting evidence is linked to the FFS case or preserved in the trigger evidence snapshot.',
+      { linked_evidence_count: linkedEvidenceCount, snapshot_evidence_count: snapshotEvidenceIds.length }
+    ),
+    ffsDispositionGate(
+      'calculation_trigger_trace_visible',
+      !calculationTraceExpected || calculationResult.rows.length > 0,
+      'Calculation trigger trace is visible when the FFS case was created from deterministic calculation warnings.',
+      { trigger_source: triggerSource, calculation_run_id: calculationRunId },
+      false,
+      true
+    ),
+    ffsDispositionGate(
+      'engineering_review_trace_present',
+      reviewCompleted || reviewResult.rows.length > 0,
+      'Human engineering review trace is visible before final FFS disposition.',
+      { review_count: reviewResult.rows.length }
+    ),
+    ffsDispositionGate(
+      'final_disposition_approval_present',
+      closedWithDisposition && approvedDisposition,
+      'Senior engineer/admin final disposition approval is recorded when the case is closed.',
+      { status: ffsCase.status, approval_count: approvalResult.rows.length, final_disposition_present: Boolean(asString(ffsCase.final_disposition)) },
+      false,
+      true
+    ),
+    ffsDispositionGate(
+      'downstream_report_or_work_order_trace_visible',
+      reportResult.rows.length + workOrderResult.rows.length > 0,
+      'Downstream report or work-order traceability is visible when created from the FFS disposition.',
+      { report_count: reportResult.rows.length, work_order_count: workOrderResult.rows.length },
+      false,
+      true
+    ),
+    ffsDispositionGate(
+      'no_api_579_formula_execution',
+      true,
+      'No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed by this FFS readiness endpoint.',
+      { read_only: true, formula_execution: false },
+      false
+    ),
+    ffsDispositionGate(
+      'ai_n8n_finalization_absent',
+      true,
+      'AI, n8n, and service actors cannot approve final FFS disposition or declare fitness for service.',
+      { ai_can_finalize: false, n8n_can_finalize: false, service_actor_can_finalize: false }
+    )
+  ];
+
+  const summary = ffsGateSummary(gates);
+  return {
+    ffs_case_id: caseId,
+    case_id: ffsCase.case_id,
+    asset_id: assetId,
+    inspection_event_id: inspectionEventId,
+    calculation_run_id: calculationRunId,
+    status: ffsCase.status,
+    final_disposition_ready: summary.blocking === 0,
+    final_disposition_recorded: closedWithDisposition && approvedDisposition,
+    gate_summary: summary,
+    ffs_case: mapFfsCase(ffsCase),
+    readiness_gates: gates,
+    evidence_traceability: {
+      linked_evidence_count: linkedEvidenceCount,
+      snapshot_evidence_ids: snapshotEvidenceIds,
+      linked_evidence: evidenceResult.rows.map(mapFfsEvidence)
+    },
+    linked_context: {
+      asset: assetResult.rows[0] ? mapFfsTraceRow(assetResult.rows[0]) : null,
+      inspection_event: inspectionResult.rows[0] ? mapFfsTraceRow(inspectionResult.rows[0]) : null,
+      calculation_run: calculationResult.rows[0] ? mapFfsTraceRow(calculationResult.rows[0]) : null,
+      findings: findingResult.rows.map(mapFfsTraceRow),
+      engineering_reviews: reviewResult.rows.map(mapFfsTraceRow),
+      approval_records: approvalResult.rows.map(mapFfsTraceRow),
+      reports: reportResult.rows.map(mapFfsTraceRow),
+      work_orders: workOrderResult.rows.map(mapFfsTraceRow)
+    },
+    audit_events: auditResult.rows.map(mapFfsAuditEvent),
+    governance_notes: [
+      'RC4-S is a read-only FFS disposition readiness preview and detail workflow.',
+      'No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed by the readiness endpoint.',
+      'AIM remains the system of record; AI/n8n/service actors cannot approve final FFS disposition.'
+    ]
+  };
+}
+
 async function assetExists(client: Queryable, assetId: string): Promise<boolean> {
   const result = await client.query('select id from assets where id = $1 and deleted_at is null limit 1', [assetId]);
   return (result.rowCount ?? 0) > 0;
@@ -435,6 +700,26 @@ ffsRouter.get('/ffs/cases/:caseId', requirePermission('ffs.read'), async (req, r
       return;
     }
     res.json({ data: mapFfsCase(row) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+ffsRouter.get('/ffs/cases/:caseId/readiness', requirePermission('ffs.read'), async (req, res, next) => {
+  try {
+    const caseId = req.params.caseId;
+    if (!caseId) {
+      validationError(res, 'caseId', 'caseId is required.');
+      return;
+    }
+    const ffsCase = await getFfsCase(pool, caseId);
+    if (!ffsCase) {
+      res.status(404).json({ error: { code: 'FFS_CASE_NOT_FOUND', message: 'FFS case not found.' } });
+      return;
+    }
+    const readiness = await buildFfsDispositionReadiness(pool, ffsCase);
+    res.json({ data: readiness });
   } catch (error) {
     next(error);
   }

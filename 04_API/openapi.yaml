@@ -1257,6 +1257,39 @@ paths:
       security:
       - bearerAuth: []
       x-audit-event-generated: none
+  /api/v1/ffs/cases/{caseId}/readiness:
+    get:
+      summary: Preview FFS disposition readiness
+      description: Read-only RC4-S FFS case readiness preview. It summarizes trigger context, supporting evidence, calculation trigger trace, human engineering review, senior disposition approval, downstream reports/work-orders, and audit timeline. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed by this endpoint.
+      x-permission-required: ffs.read
+      x-audit-event-generated: none
+      x-read-only: true
+      x-no-api-579-formula-execution: true
+      x-ai-finalization-allowed: false
+      parameters:
+      - in: path
+        name: caseId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: FFS disposition readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FfsDispositionReadiness'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: FFS case not found
+      security:
+      - bearerAuth: []
   /api/v1/ffs/cases/{caseId}/status:
     patch:
       summary: Update FFS workflow status
@@ -6099,6 +6132,85 @@ components:
           - calculation_traceability_visible
           - review_or_approval_trace_present
           - downstream_traceability_visible
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - warning
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    FfsDispositionReadiness:
+      type: object
+      description: Read-only RC4-S FFS disposition readiness preview. It does not calculate FFS acceptance, does not run API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formulas, does not approve a final disposition, and does not allow AI/n8n/service actors to finalize FFS cases.
+      properties:
+        ffs_case_id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+        asset_id:
+          type: string
+          format: uuid
+        inspection_event_id:
+          type: string
+          format: uuid
+          nullable: true
+        calculation_run_id:
+          type: string
+          format: uuid
+          nullable: true
+        final_disposition_ready:
+          type: boolean
+        final_disposition_recorded:
+          type: boolean
+        gate_summary:
+          type: object
+          additionalProperties: true
+        ffs_case:
+          type: object
+          additionalProperties: true
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/FfsDispositionReadinessGate'
+        evidence_traceability:
+          type: object
+          additionalProperties: true
+        linked_context:
+          type: object
+          additionalProperties: true
+        audit_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        governance_notes:
+          type: array
+          items:
+            type: string
+    FfsDispositionReadinessGate:
+      type: object
+      description: FFS disposition readiness gate for trigger context, supporting evidence, calculation trigger trace, human review, senior approval, downstream traceability, and AI/n8n finalization boundary.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - ffs_case_recorded
+          - trigger_context_present
+          - supporting_evidence_linked
+          - calculation_trigger_trace_visible
+          - engineering_review_trace_present
+          - final_disposition_approval_present
+          - downstream_report_or_work_order_trace_visible
+          - no_api_579_formula_execution
           - ai_n8n_finalization_absent
         gate_status:
           type: string

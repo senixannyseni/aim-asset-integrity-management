@@ -11,6 +11,7 @@ const navigationItems = [
   { href: '/ndt-data-room', label: 'NDT Data Room', description: 'View read-only NDT method, component, CML/TML/Grid, and evidence linkage readiness.' },
   { href: '/workflow-console', label: 'Workflow Console', description: 'View read-only n8n/workflow orchestration and notification status.' },
   { href: '/integrity-decisions', label: 'Integrity Decisions', description: 'Review integrity decisions and evidence gates.' },
+  { href: '/ffs', label: 'FFS Cases', description: 'Review FFS trigger cases and RC4-S final disposition readiness.' },
   { href: '/reports', label: 'Reports', description: 'Review report readiness gates and issue controls.' },
   { href: '/work-orders', label: 'Work Orders', description: 'Manage internal AIM work-order fallback actions.' },
   { href: '/audit-logs', label: 'Audit Logs', description: 'View read-only, redacted governance audit trail entries.' }
