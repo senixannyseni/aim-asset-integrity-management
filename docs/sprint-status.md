@@ -534,3 +534,8 @@ Status: implemented in this patch. Adds read-only asset integrity package readin
 Status: implemented in this patch. Adds read-only FFS disposition readiness API and `/ffs/[caseId]` detail workspace for trigger context, supporting evidence, calculation trigger trace, human review, senior final disposition approval, downstream report/work-order traceability, and audit events.
 
 RC4-S does not add API 579/API 581/FFS/RBI formulas, does not declare fitness for service, does not automate final disposition, does not mutate object storage, and does not allow AI/n8n/service actors to finalize FFS cases.
+## RC4-T — End-to-End Integrity Package Workspace + Release Candidate Consolidation
+
+Status: implemented in this patch. Adds read-only consolidated workspace APIs and `/integrity-workspace` pages for the full chain: Asset → Inspection → Evidence → NDT → Findings → Calculation → Review/Approval → Integrity Decision → FFS/RBI → Report → Work Order.
+
+RC4-T does not replace module-specific gates, run formulas, approve/reject records, issue reports, close work orders, mutate object storage, promote AI staging records, or allow AI/n8n/service actors to finalize release candidate readiness.
