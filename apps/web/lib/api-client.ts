@@ -8,24 +8,35 @@ export const DEV_DEMO_HEADERS: Record<string, string> = {
 };
 
 const TOKEN_STORAGE_KEY = 'aim.accessToken';
+const LEGACY_SESSION_STORAGE_ENABLED = process.env.NEXT_PUBLIC_AIM_LEGACY_TOKEN_STORAGE === 'true';
+
+let inMemoryAccessToken: string | null = null;
 
 export function apiUrl(path: string): string {
   return new URL(path, API_BASE).toString();
 }
 
+function legacySessionStorage(): Storage | null {
+  if (typeof window === 'undefined' || !LEGACY_SESSION_STORAGE_ENABLED) return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function getAimAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  return inMemoryAccessToken ?? legacySessionStorage()?.getItem(TOKEN_STORAGE_KEY) ?? null;
 }
 
 export function setAimAccessToken(token: string): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  inMemoryAccessToken = token;
+  legacySessionStorage()?.setItem(TOKEN_STORAGE_KEY, token);
 }
 
 export function clearAimAccessToken(): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  inMemoryAccessToken = null;
+  legacySessionStorage()?.removeItem(TOKEN_STORAGE_KEY);
 }
 
 export async function loginToAim(email: string, password: string): Promise<Record<string, unknown>> {
