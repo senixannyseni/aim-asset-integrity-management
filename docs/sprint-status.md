@@ -614,3 +614,11 @@ Status: tagged as archive-ready evidence/signoff assembly for the MVP release-ca
 ## Phase 5 — Production Hardening Roadmap
 
 Status: planned as the next post-MVP hardening phase. Phase 5 focuses on production security, CI/CD, deployment automation, observability, backup/restore/DR, performance/scalability, data lifecycle, external integration readiness, and enterprise/commercial readiness while preserving all AIM governance boundaries.
+
+## P5-1 — Security and Secrets Hardening
+
+Status: prepared as Phase 5 documentation/evidence-control package.
+
+P5-1 adds the concrete security evidence pack for secret scanning, environment-file hygiene, dependency vulnerability review, RBAC/service actor review, token/session hardening, audit-log redaction, signed URL/raw object key exposure review, accepted-risk approval, incident-response security routing, and final human security signoff.
+
+P5-1 is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
