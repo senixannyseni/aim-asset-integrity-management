@@ -598,3 +598,19 @@ Status: Documentation/evidence-control package prepared.
 RC4-X aligns the final release decision pack after RC4-A through RC4-W post-review closure. It adds final release readiness status, final go/no-go decision record, final release evidence register, updated go-live checklist wording, and superseded-note cleanup for older Phase 2 release decision documents.
 
 RC4-X does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration. Production go-live remains a human decision based on attached evidence and signoff.
+
+## RC4-Y — Final Release Operations Evidence Collection
+
+Status: merged and tagged as the operations evidence collection layer after RC4-X. Adds final operations evidence matrix, operations evidence runbook, cutover/rollback record, and evidence gate linkage. Documentation/evidence-control only; no runtime APIs, migrations, formulas, AI/n8n behavior, object-storage behavior, approval behavior, work-order behavior, or external CMMS integration.
+
+## RC4-Z — Final Go/No-Go Signoff Preparation
+
+Status: merged and tagged as the final human signoff preparation layer. Adds final go/no-go signoff packet, meeting minutes template, go-live authorization record, and final signoff mapping. Documentation/evidence-control only; AI/n8n/service actors cannot sign, authorize, or approve production go-live.
+
+## AIM MVP Final Go/No-Go Evidence Bundle
+
+Status: tagged as archive-ready evidence/signoff assembly for the MVP release-candidate baseline. It consolidates RC4-X decision records, RC4-Y operations evidence, and RC4-Z signoff artifacts into the final evidence bundle, index, and release handoff record.
+
+## Phase 5 — Production Hardening Roadmap
+
+Status: planned as the next post-MVP hardening phase. Phase 5 focuses on production security, CI/CD, deployment automation, observability, backup/restore/DR, performance/scalability, data lifecycle, external integration readiness, and enterprise/commercial readiness while preserving all AIM governance boundaries.

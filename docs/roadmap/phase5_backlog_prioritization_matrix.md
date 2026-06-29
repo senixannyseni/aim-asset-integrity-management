@@ -1,0 +1,51 @@
+# Phase 5 Backlog Prioritization Matrix
+
+**Package:** Phase 5 Production Hardening Planning Pack  
+**Status:** Planning backlog; implementation requires future scoped patches
+
+## Priority Legend
+
+| Priority | Meaning |
+|---|---|
+| P0 | Required before broader production use |
+| P1 | Required for durable operations |
+| P2 | Required for enterprise/commercial readiness |
+
+## Backlog Matrix
+
+| ID | Priority | Workstream | Item | Acceptance evidence |
+|---|---:|---|---|---|
+| P5-001 | P0 | Security hardening | Automated secret scanning in CI | CI log, policy, passing scan evidence |
+| P5-002 | P0 | Security hardening | Dependency vulnerability scan gate | scan report, triage, accepted-risk record |
+| P5-003 | P0 | Security hardening | RBAC/service actor permission review | signed review, permission matrix, denied-action evidence |
+| P5-004 | P0 | Security hardening | Token/session hardening decision | approved session strategy and implementation plan |
+| P5-005 | P0 | Deployment automation | Build provenance and tag-to-artifact trace | release tag, commit SHA, artifact checksum |
+| P5-006 | P0 | Deployment automation | Production rollback rehearsal | rollback execution record and owner signoff |
+| P5-007 | P0 | Environment hardening | Production configuration validation | environment checklist and smoke result |
+| P5-008 | P0 | Environment hardening | Database migration and seed rehearsal | migration/seed output and rollback plan |
+| P5-009 | P0 | Observability | Monitoring dashboard baseline | dashboard screenshots/reference and owner |
+| P5-010 | P0 | Observability | Alert routing verification | alert test, route owner, escalation timing |
+| P5-011 | P0 | Backup/restore/DR | Backup restore drill | restore log, recovered data proof, RPO/RTO record |
+| P5-012 | P0 | Backup/restore/DR | DR ownership and escalation | DR owner, escalation matrix, review cadence |
+| P5-013 | P1 | Data lifecycle | Evidence retention policy | approved retention matrix |
+| P5-014 | P1 | Data lifecycle | Evidence archive/export procedure | archive runbook and sample export evidence |
+| P5-015 | P1 | Reliability | API load smoke test | test script, result, bottleneck notes |
+| P5-016 | P1 | Reliability | Object-storage upload/download throughput check | upload/download evidence and thresholds |
+| P5-017 | P1 | Reliability | Report export throughput check | export evidence and timeout/error policy |
+| P5-018 | P1 | Reliability | Database query review | query review report and index backlog |
+| P5-019 | P1 | Operations | Hypercare operating cadence | schedule, owner, issue triage procedure |
+| P5-020 | P1 | Operations | Incident response tabletop | scenario record and improvement actions |
+| P5-021 | P1 | Release governance | Go/no-go evidence archive automation | final bundle location, checksum, owner |
+| P5-022 | P1 | Release governance | Accepted-risk workflow | risk acceptance form, approver, target closure |
+| P5-023 | P2 | Integration readiness | CMMS/SAP/Maximo boundary design | approved interface contract |
+| P5-024 | P2 | Integration readiness | Outbound queue/retry/replay design | failure-mode design and audit requirements |
+| P5-025 | P2 | Integration readiness | Integration evidence-linkage policy | evidence mapping and rejection cases |
+| P5-026 | P2 | Enterprise readiness | Tenant isolation assessment | tenant model decision and risk register |
+| P5-027 | P2 | Enterprise readiness | SLA/SLO framework | service objectives and escalation policy |
+| P5-028 | P2 | Enterprise readiness | Support onboarding/offboarding runbook | onboarding/offboarding checklist |
+| P5-029 | P2 | Enterprise readiness | Commercial packaging assessment | packaging/security/legal/compliance backlog |
+| P5-030 | P2 | Enterprise readiness | Long-term audit/compliance evidence strategy | evidence retention and audit export plan |
+
+## Non-Negotiable Carry-Forward Boundaries
+
+AIM remains system of record; n8n remains orchestration-only; AI output remains staging-only; human engineering review remains mandatory; and AI/n8n/service actors cannot approve engineering data, release evidence, accepted risks, or production go-live.

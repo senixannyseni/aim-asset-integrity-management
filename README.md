@@ -852,3 +852,43 @@ RC4-X adds and aligns:
 - superseded-note cleanup for older Phase 2 documents that previously treated frontend screens as absent.
 
 RC4-X does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration. Final production go-live remains a human decision based on attached UAT, security, backup/restore, monitoring, deployment, and signoff evidence.
+
+### RC4-Y Final Release Operations Evidence Collection
+
+RC4-Y adds the final operations evidence collection layer after RC4-X:
+
+- final operations evidence matrix from `EV-OPS-001` through `EV-OPS-017`;
+- final release operations evidence runbook;
+- cutover and rollback evidence record;
+- final evidence register and go/no-go linkage for operations evidence.
+
+RC4-Y does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration. AI/n8n/service actors cannot accept evidence, sign go-live evidence, or approve go-live.
+
+
+### RC4-Z Final Go/No-Go Signoff Preparation
+
+RC4-Z adds the final human signoff preparation layer after RC4-X and RC4-Y:
+
+- final go/no-go signoff packet;
+- final go/no-go meeting minutes template;
+- final go-live authorization record;
+- signoff evidence mapping in the final evidence register and decision record.
+
+RC4-Z does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration. AI/n8n/service actors cannot sign, authorize, or approve production go-live.
+
+
+### AIM MVP Final Go/No-Go Evidence Bundle
+
+The final evidence bundle consolidates RC4-X decision records, RC4-Y operations evidence, and RC4-Z signoff artifacts into an archive-ready release package. It records release tag, commit SHA, decision date, decision owner, evidence coordinator, final decision status, evidence bundle location, and archive owner.
+
+The final evidence bundle does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+
+### Phase 5 Production Hardening Roadmap
+
+Phase 5 starts after the RC4-A through RC4-Z MVP release-candidate baseline and final evidence bundle are closed. It is a production-hardening and enterprise-readiness track, not an RC4 feature patch.
+
+Phase 5 covers security hardening, CI/CD and deployment automation, environment and infrastructure controls, observability and alerting, backup/restore/DR maturity, data lifecycle governance, performance and scalability testing, external integration readiness, and enterprise/commercial readiness.
+
+Phase 5 must preserve the AIM governance boundaries: AIM remains the system of record; AI output remains staging-only; n8n remains orchestration-only; deterministic calculations remain versioned and auditable; and AI/n8n/service actors cannot approve engineering data, sign release evidence, or authorize production go-live.
+
