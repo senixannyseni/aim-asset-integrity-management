@@ -213,3 +213,21 @@ The final closure evidence set expands the Phase 5 evidence-control baseline wit
 P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure is not production go-live approval.
 
 AI/n8n/service actors cannot accept Phase 5 closure evidence, approve production go-live, accept residual risks, waive missing evidence, close Phase 5 final closure gaps, or sign Phase 5 final closure.
+## 14. Production Pilot Evidence Execution Mapping
+
+The Production Pilot Evidence Execution Pack adds controlled pilot execution evidence maintained in:
+
+```text
+docs/pilot/production_pilot_evidence_execution_pack.md
+docs/pilot/production_pilot_execution_plan.md
+docs/pilot/production_pilot_uat_business_validation_record.md
+docs/pilot/production_pilot_operational_readiness_record.md
+docs/pilot/production_pilot_defect_risk_decision_record.md
+docs/operations/production_pilot_evidence_execution_runbook.md
+```
+
+The production pilot evidence set adds `PILOT-001` through `PILOT-012`, covering pilot baseline and scope, pilot entry gate, pilot users and RBAC, pilot data and evidence set, pilot execution scenarios, engineering governance validation, operational smoke and monitoring, incident/rollback/recovery readiness, defect and issue triage, pilot KPI/adoption evidence, residual-risk and exception review, and final pilot decision and handoff.
+
+Production pilot evidence execution is not production-wide go-live approval.
+
+AI/n8n/service actors cannot accept production pilot evidence, approve pilot completion, approve production-wide go-live, accept residual pilot risks, close pilot defects, waive missing pilot evidence, or sign the final pilot decision.

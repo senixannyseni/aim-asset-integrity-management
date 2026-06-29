@@ -683,3 +683,23 @@ Status: implemented in this documentation/evidence-control package.
 - P5-1 through P5-6 are closed as evidence-control baseline.
 - Phase 5 final closure is not production go-live approval.
 - AI/n8n/service actors cannot accept Phase 5 closure evidence or approve production go-live.
+## Production Pilot Evidence Execution Pack
+
+Status: Evidence execution package prepared after Phase 5 final closure.
+
+Added pilot evidence IDs:
+
+- `PILOT-001` Pilot baseline and scope;
+- `PILOT-002` Pilot entry gate;
+- `PILOT-003` Pilot users and RBAC;
+- `PILOT-004` Pilot data and evidence set;
+- `PILOT-005` Pilot execution scenarios;
+- `PILOT-006` Engineering governance validation;
+- `PILOT-007` Operational smoke and monitoring;
+- `PILOT-008` Incident, rollback, and recovery readiness;
+- `PILOT-009` Defect and issue triage;
+- `PILOT-010` Pilot KPI and adoption evidence;
+- `PILOT-011` Residual-risk and exception review;
+- `PILOT-012` Final pilot decision and handoff.
+
+Production pilot evidence execution is not production-wide go-live approval. AI/n8n/service actors cannot accept production pilot evidence, approve pilot completion, or approve production-wide go-live.

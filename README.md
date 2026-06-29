@@ -964,3 +964,20 @@ P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure
 Phase 5 final closure does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept Phase 5 closure evidence, approve production go-live, accept residual risks, waive missing evidence, close Phase 5 final closure gaps, or sign Phase 5 final closure.
+### Production Pilot Evidence Execution Pack
+
+The Production Pilot Evidence Execution Pack starts after Phase 5 Final Production Hardening Closure. It converts the Phase 5 evidence-control baseline into a controlled limited production-pilot execution package.
+
+It adds:
+
+- production pilot evidence execution pack;
+- production pilot execution plan;
+- production pilot UAT and business validation record;
+- production pilot operational readiness record;
+- production pilot defect, risk, and decision record;
+- production pilot evidence execution runbook;
+- regression coverage for the pilot evidence package.
+
+Production pilot evidence execution does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, approval behavior, report issue behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+Production pilot evidence execution is not production-wide go-live approval. AI/n8n/service actors cannot accept production pilot evidence, approve pilot completion, approve production-wide go-live, accept residual pilot risks, close pilot defects, or sign the final pilot decision. AIM remains the system of record and n8n remains orchestration-only.

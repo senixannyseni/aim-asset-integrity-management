@@ -81,3 +81,8 @@ The Phase 5 Final Production Hardening Closure Pack closes the documentation/evi
 P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure is not production go-live approval.
 
 AI/n8n/service actors cannot accept Phase 5 closure evidence, approve production go-live, close Phase 5 final closure gaps, sign Phase 5 final closure, accept residual risks, or waive missing evidence.
+## Production Pilot Evidence Execution Pack
+
+The Production Pilot Evidence Execution Pack starts after Phase 5 final closure. It does not change runtime behavior. Its output is a controlled pilot execution evidence set for pilot baseline and scope, pilot entry gate, users/RBAC, pilot data authorization, critical workflow scenario execution, engineering governance validation, operational smoke and monitoring, incident/rollback/recovery readiness, defect triage, KPI/adoption evidence, residual-risk review, and final pilot decision/handoff.
+
+Production pilot evidence execution is not production-wide go-live approval. AI/n8n/service actors cannot accept production pilot evidence, approve pilot completion, approve production-wide go-live, close pilot defects, or accept residual pilot risks.
