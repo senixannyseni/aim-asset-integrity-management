@@ -174,3 +174,21 @@ Required pilot evidence:
 - final pilot decision and handoff.
 
 Production pilot evidence execution is not production-wide go-live approval. AI/n8n/service actors cannot approve pilot gates, accept production pilot evidence, approve pilot completion, approve production-wide go-live, close pilot defects, or accept residual pilot risks.
+
+
+## Final Production Go-Live Authorization Gate
+
+The Final Production Go-Live Authorization Evidence Pack is the final human authorization gate after production pilot evidence execution.
+
+Required evidence:
+
+- `GOLIVE-001 through GOLIVE-012`;
+- production pilot closure and business validation;
+- Phase 5 final closure evidence reconciliation;
+- security, deployment/environment, observability, backup/restore/DR, performance/lifecycle, and integration signoff;
+- cutover and rollback authorization;
+- hypercare activation;
+- final residual-risk business acceptance;
+- final human production go-live authorization.
+
+This gate is satisfied only when the final authorization record is signed by named humans. AI/n8n/service actors cannot approve final production go-live, authorize cutover, accept final residual risks, approve hypercare activation, close go-live gaps, waive missing evidence, or sign final production authorization.

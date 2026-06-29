@@ -231,3 +231,24 @@ The production pilot evidence set adds `PILOT-001` through `PILOT-012`, covering
 Production pilot evidence execution is not production-wide go-live approval.
 
 AI/n8n/service actors cannot accept production pilot evidence, approve pilot completion, approve production-wide go-live, accept residual pilot risks, close pilot defects, waive missing pilot evidence, or sign the final pilot decision.
+
+
+## 15. Final Production Go-Live Authorization Mapping
+
+The Final Production Go-Live Authorization Evidence Pack adds human-only production-wide authorization evidence maintained in:
+
+```text
+docs/golive/final_production_golive_authorization_pack.md
+docs/golive/final_production_golive_authorization_record.md
+docs/golive/final_cutover_hypercare_activation_record.md
+docs/golive/final_residual_risk_business_acceptance_record.md
+docs/operations/final_production_golive_authorization_runbook.md
+```
+
+The final go-live authorization evidence set adds `GOLIVE-001` through `GOLIVE-012`, covering final release baseline confirmation, production pilot closure, Phase 5 closure confirmation, security and secrets signoff, deployment and environment signoff, observability and incident readiness signoff, backup/restore/DR signoff, performance/scale/lifecycle signoff, integration readiness signoff, cutover and rollback authorization, final residual-risk business acceptance, and final human production go-live authorization.
+
+Final production go-live authorization requires the Production Pilot Evidence Execution Pack and Phase 5 Final Production Hardening Closure Pack to remain attached and reconciled.
+
+AI/n8n/service actors cannot approve final production go-live, accept final residual risks, authorize cutover, approve hypercare activation, close go-live gaps, waive missing evidence, or sign final production authorization.
+
+AIM remains the system of record. n8n remains orchestration-only.

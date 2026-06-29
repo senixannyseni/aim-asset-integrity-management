@@ -158,3 +158,20 @@ The Production Pilot Evidence Execution Pack maps the Phase 5 closure baseline i
 | P5-030 | PILOT-004 / PILOT-005 / PILOT-012 | Long-term pilot evidence archive and audit/compliance traceability |
 
 Production pilot evidence execution is not production-wide go-live approval. AI/n8n/service actors cannot accept production pilot evidence, approve pilot completion, approve production-wide go-live, close pilot defects, or accept residual pilot risks.
+
+
+## Final Production Go-Live Authorization Backlog Mapping
+
+The Final Production Go-Live Authorization Evidence Pack maps the final pilot-to-production decision into controlled authorization evidence records:
+
+| Backlog ID | Final go-live mapping | Notes |
+|---|---|---|
+| P5-021 | GOLIVE-001 / GOLIVE-003 / GOLIVE-012 | Final release baseline, Phase 5 closure evidence archive, and final authorization |
+| P5-022 | GOLIVE-004 / GOLIVE-011 | Security and residual-risk acceptance workflow |
+| P5-026 | GOLIVE-002 / GOLIVE-011 / GOLIVE-012 | Pilot closure, business acceptance, and final production decision |
+| P5-027 | GOLIVE-006 / GOLIVE-010 | Observability, incident readiness, cutover, and hypercare activation |
+| P5-028 | GOLIVE-006 / GOLIVE-010 / GOLIVE-012 | Support handoff, hypercare, and final production authorization |
+| P5-029 | GOLIVE-011 / GOLIVE-012 | Commercial readiness, residual risk, and production-wide go-live decision |
+| P5-030 | GOLIVE-001 / GOLIVE-003 / GOLIVE-012 | Long-term audit/compliance evidence archive and final authorization traceability |
+
+AI/n8n/service actors cannot approve final production go-live, authorize cutover, approve hypercare activation, close go-live gaps, accept final residual risks, or sign final production authorization.
