@@ -1,3 +1,15 @@
+# Sprint / Release Status
+
+## RC4-Y Final Release Operations Evidence Collection
+
+**Status:** Prepared as documentation/evidence-control closure package after RC4-X.
+
+RC4-Y centralizes operational evidence collection required before production go-live: full test output, lint/typecheck output, repository hygiene, migration/seed validation, environment validation, backup/restore proof, security scan evidence, monitoring/alert routing proof, UAT signoff, final go/no-go decision, and hypercare ownership.
+
+RC4-Y is not a runtime feature package. It does not change API behavior, database schema, formulas, AI/n8n behavior, object-storage behavior, approvals, work orders, report issue gates, or CMMS integration.
+
+Production go-live remains conditional until required evidence is attached and human signoff is complete. AI/n8n/service actors cannot approve go-live, signoff, finalization, or evidence acceptance.
+
 # Sprint Status
 
 | Sprint | Scope | Status |

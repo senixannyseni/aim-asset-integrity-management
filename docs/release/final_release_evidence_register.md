@@ -48,3 +48,17 @@ A release may be marked **Go** only when every required evidence item is complet
 A **Conditional Go** may be used only when the incomplete item is non-governance, non-security, non-blocker, non-critical, and has formal risk acceptance.
 
 A **No-Go** must be used if any governance, security, evidence, migration, backup/restore, monitoring, or final signoff item remains unresolved.
+
+## 4. RC4-Y Operations Evidence Collection Mapping
+
+The final operations evidence collection pack is maintained in:
+
+```text
+docs/release/final_release_operations_evidence_collection.md
+docs/operations/final_release_operations_evidence_runbook.md
+docs/operations/final_release_cutover_rollback_evidence_record.md
+```
+
+The EV-FINAL register remains the high-level release evidence register. RC4-Y adds detailed `EV-OPS-001` through `EV-OPS-017` operational evidence items covering Git baseline, tests, lint/typecheck, repository hygiene, migration/seed, environment validation, object storage, backup/restore, security, monitoring, incident response, UAT signoff, governance denial proof, report issue gates, work-order closure, final go/no-go, and hypercare handoff.
+
+AI/n8n/service actors cannot accept evidence, approve go-live, sign final records, or replace human signoff.
