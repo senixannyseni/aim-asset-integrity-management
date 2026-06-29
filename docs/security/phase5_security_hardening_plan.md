@@ -33,3 +33,17 @@
 ## 4. Security Exit Criteria
 
 The Phase 5 security workstream exits only when all SEC-P5 evidence is attached, any residual risk has a named human owner and target closure date, and the final decision record references the approved security evidence.
+
+## 5. P5-1 Execution Pack
+
+P5-1 Security and Secrets Hardening expands this plan into concrete evidence records:
+
+```text
+docs/security/p5_1_security_and_secrets_hardening_pack.md
+docs/security/p5_1_secrets_scanning_evidence_record.md
+docs/security/p5_1_rbac_service_actor_review_record.md
+docs/security/p5_1_security_accepted_risk_register.md
+docs/operations/p5_1_security_evidence_runbook.md
+```
+
+P5-1 evidence IDs `P5-SEC-001` through `P5-SEC-012` must be completed or explicitly marked not applicable with human approval before the security workstream can be considered ready for production go-live evidence review.

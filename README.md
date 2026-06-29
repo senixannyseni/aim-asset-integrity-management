@@ -892,3 +892,12 @@ Phase 5 covers security hardening, CI/CD and deployment automation, environment 
 
 Phase 5 must preserve the AIM governance boundaries: AIM remains the system of record; AI output remains staging-only; n8n remains orchestration-only; deterministic calculations remain versioned and auditable; and AI/n8n/service actors cannot approve engineering data, sign release evidence, or authorize production go-live.
 
+## P5-1 Security and Secrets Hardening
+
+Status: Phase 5 documentation/evidence-control package.
+
+P5-1 turns the Phase 5 security roadmap into concrete evidence records for secret scanning, environment-file hygiene, dependency vulnerability triage, RBAC/service actor review, token/session hardening, audit-log redaction, signed URL/raw object key exposure review, accepted-risk approval, and final human security signoff.
+
+P5-1 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept security evidence, approve accepted risks, waive missing evidence, sign the security review, or authorize production go-live.

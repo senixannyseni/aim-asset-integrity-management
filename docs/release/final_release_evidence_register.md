@@ -100,3 +100,18 @@ The final evidence bundle consolidates RC4-X decision records, RC4-Y operations 
 
 AI/n8n/service actors cannot accept the final evidence bundle, waive missing evidence, approve go-live, sign the final release, or replace named human signoff.
 
+## 7. P5-1 Security and Secrets Hardening Mapping
+
+P5-1 adds detailed security and secrets hardening evidence maintained in:
+
+```text
+docs/security/p5_1_security_and_secrets_hardening_pack.md
+docs/security/p5_1_secrets_scanning_evidence_record.md
+docs/security/p5_1_rbac_service_actor_review_record.md
+docs/security/p5_1_security_accepted_risk_register.md
+docs/operations/p5_1_security_evidence_runbook.md
+```
+
+The P5-1 evidence set expands `EV-FINAL-011` and `EV-FINAL-012` with `P5-SEC-001` through `P5-SEC-012`, covering secret scan evidence, dependency vulnerability review, environment-file hygiene, RBAC/service actor review, n8n direct-DB-write exclusion, token/session hardening, audit-log redaction, signed URL/raw object key exposure, accepted-risk approval, incident-response security route, and final human security signoff.
+
+AI/n8n/service actors cannot accept security evidence, accept residual risk, waive missing evidence, sign the security review, or authorize production go-live.
