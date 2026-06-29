@@ -197,3 +197,19 @@ The P5-6 evidence set expands `EV-FINAL-006`, `EV-FINAL-007`, `EV-FINAL-008`, `E
 
 AI/n8n/service actors cannot accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, waive missing integration evidence, sign integration readiness, or authorize production go-live.
 
+## 13. Phase 5 Final Production Hardening Closure Mapping
+
+Phase 5 final closure adds consolidated closure evidence maintained in:
+
+```text
+docs/release/phase5_final_production_hardening_closure_pack.md
+docs/release/phase5_final_evidence_closure_index.md
+docs/release/phase5_final_closure_decision_record.md
+docs/operations/phase5_final_production_hardening_closure_runbook.md
+```
+
+The final closure evidence set expands the Phase 5 evidence-control baseline with `P5-FINAL-001` through `P5-FINAL-012`, covering package inventory, security closure trace, deployment/environment closure trace, observability/incident closure trace, backup/restore/DR closure trace, performance/lifecycle closure trace, integration closure trace, gate reconciliation, residual-risk consolidation, evidence archive readiness, production-pilot recommendation, and final human closure signoff.
+
+P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure is not production go-live approval.
+
+AI/n8n/service actors cannot accept Phase 5 closure evidence, approve production go-live, accept residual risks, waive missing evidence, close Phase 5 final closure gaps, or sign Phase 5 final closure.
