@@ -68,3 +68,21 @@ Required P5-3 gate evidence:
 
 AI/n8n/service actors cannot approve P5-3 gates, accept observability evidence, close incidents, accept residual operational risk, approve hypercare handoff, or authorize production go-live.
 
+## P5-4 Execution Pack
+
+P5-4 operationalizes `P5-GATE-005 Backup/restore/DR gate` through `P5-DR-001` through `P5-DR-012`.
+
+Required P5-4 gate evidence:
+
+- backup owner, backup owner delegate, backup schedule, review cadence, and evidence location;
+- PostgreSQL backup identifier, timestamp, retention policy, checksum/identifier, and access control;
+- PostgreSQL restore rehearsal output, target environment, validation queries, and recovered data proof;
+- object-storage evidence/report backup, replication, versioning, retention, or export proof;
+- object-storage restore rehearsal with evidence-code path, metadata, and checksum validation;
+- configuration and secret recovery ownership without committed secrets;
+- RPO/RTO target definition and actual measured recovery values;
+- disaster recovery scenario rehearsal covering API, web, PostgreSQL, object storage, n8n, AI/staging jobs, governed evidence, issued reports, and work-order records;
+- governance recovery validation for audit logs, evidence links, calculation snapshots, review gates, report versions, and work orders;
+- recovery escalation matrix, accepted-risk record, and human DR signoff.
+
+AI/n8n/service actors cannot approve P5-4 gates, accept backup evidence, approve restore readiness, approve DR signoff, accept residual DR risk, close DR gaps, waive missing recovery evidence, or authorize production go-live.

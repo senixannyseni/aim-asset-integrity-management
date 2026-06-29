@@ -59,3 +59,6 @@ P5-2 implements the documentation/evidence-control layer for the deployment auto
 
 P5-3 implements the documentation/evidence-control layer for the observability, alerting, incident-response, and hypercare workstreams. It does not change runtime behavior. Its output is a controlled evidence set for monitoring ownership, dashboard baseline, service health checks, alert routing verification, log review, incident severity triage, incident response tabletop, governance incident routing, hypercare cadence, incident closure evidence, and human observability signoff.
 
+## P5-4 Execution Pack
+
+P5-4 implements the documentation/evidence-control layer for the backup/restore/DR maturity workstream. It does not change runtime behavior. Its output is a controlled evidence set for backup ownership, PostgreSQL backup and restore rehearsal, object-storage backup and restore validation, configuration and secret recovery ownership, RPO/RTO measurement, DR scenario rehearsal, governance recovery validation, recovery escalation, accepted-risk review, and human DR signoff.

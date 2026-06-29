@@ -1,5 +1,15 @@
 # Sprint / Release Status
 
+## P5-4 — Backup, Restore, and DR
+
+**Status:** Prepared as Phase 5 documentation/evidence-control package after P5-3.
+
+P5-4 prepares backup, restore, RPO/RTO, disaster-recovery rehearsal, governance recovery validation, recovery escalation, accepted-risk, and human DR signoff records for production-pilot readiness. It covers PostgreSQL backup evidence, PostgreSQL restore rehearsal, object-storage backup/restore validation, configuration and secret recovery ownership, RPO/RTO targets and measured results, DR scenario rehearsal, governance chain-of-custody recovery, escalation ownership, residual DR risk, and final human DR signoff.
+
+P5-4 is not a runtime feature package. It does not change API behavior, database schema, formulas, AI/n8n behavior, object-storage behavior, approvals, work orders, report issue gates, or CMMS integration.
+
+AI/n8n/service actors cannot accept backup evidence, approve restore readiness, approve DR signoff, accept residual DR risk, close DR gaps, waive missing recovery evidence, or authorize production go-live.
+
 ## P5-3 — Observability and Incident Response
 
 **Status:** Prepared as Phase 5 documentation/evidence-control package after P5-2.

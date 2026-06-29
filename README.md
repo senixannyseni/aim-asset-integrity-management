@@ -922,3 +922,12 @@ P5-3 does not add runtime APIs, database migrations, formulas, AI behavior, n8n 
 
 AI/n8n/service actors cannot accept observability evidence, close incidents, accept residual operational risk, approve hypercare handoff, or authorize production go-live.
 
+## P5-4 Backup, Restore, and DR
+
+Status: Phase 5 documentation/evidence-control package.
+
+P5-4 adds concrete backup, restore, and disaster-recovery evidence records for PostgreSQL backup ownership, PostgreSQL restore rehearsal, object-storage backup/restore validation, configuration and secret recovery ownership, RPO/RTO definition and measurement, DR scenario rehearsal, governance recovery validation, recovery escalation, accepted-risk review, and human DR signoff.
+
+P5-4 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept backup evidence, approve restore readiness, approve DR signoff, accept residual DR risk, waive missing recovery evidence, close DR gaps, or authorize production go-live.
