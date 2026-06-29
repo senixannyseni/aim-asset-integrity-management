@@ -381,3 +381,27 @@ The Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack
 This mapping depends on the Commercial MVP Launch Control and Customer Onboarding Evidence Pack. Customer success and commercial operations evidence does not authorize unapproved runtime APIs, tenant billing, payment processing, contract execution, external CMMS integration, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept customer success evidence, approve customer success readiness, approve renewal readiness, approve expansion readiness, approve commercial operations handoff, approve SLA exceptions, accept customer lifecycle risks, waive customer success evidence, or sign customer lifecycle closure.
+
+
+## Commercial Governance and Scale Readiness Mapping
+
+The Commercial Governance, Sales Enablement, and Scale Readiness Evidence Pack extends the Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack into controlled broader commercial scale-readiness evidence.
+
+| Evidence ID | Evidence area | Primary record |
+|---|---|---|
+| COMM-GOV-001 | Commercial governance baseline | `docs/commercial/commercial_governance_control_record.md` |
+| COMM-GOV-002 | Sales/demo safety controls | `docs/commercial/sales_enablement_demo_safety_record.md` |
+| COMM-GOV-003 | Sales enablement approval | `docs/commercial/sales_enablement_demo_safety_record.md` |
+| COMM-GOV-004 | Pricing and discount authority | `docs/commercial/commercial_governance_control_record.md` |
+| COMM-GOV-005 | Proposal/SOW commitment boundary | `docs/commercial/commercial_governance_control_record.md` |
+| COMM-GOV-006 | Legal/compliance posture review | `docs/commercial/commercial_governance_control_record.md` |
+| COMM-GOV-007 | Customer qualification and intake | `docs/commercial/sales_enablement_demo_safety_record.md` |
+| COMM-GOV-008 | Partner/channel readiness | `docs/commercial/scale_readiness_partner_channel_record.md` |
+| COMM-GOV-009 | Implementation scale model | `docs/commercial/scale_readiness_partner_channel_record.md` |
+| COMM-GOV-010 | Support/SLA scale readiness | `docs/commercial/scale_readiness_partner_channel_record.md` |
+| COMM-GOV-011 | Commercial scale risk register | `docs/commercial/commercial_governance_control_record.md` |
+| COMM-GOV-012 | Final commercial governance/scale signoff | `docs/commercial/scale_readiness_partner_channel_record.md` |
+
+This mapping depends on the Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack. Commercial governance and scale-readiness evidence does not authorize unapproved runtime APIs, tenant billing, payment processing, contract execution, partner contract execution, external CMMS integration, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, waive commercial governance evidence, or sign commercial governance closure.
