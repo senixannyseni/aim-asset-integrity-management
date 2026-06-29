@@ -3,6 +3,7 @@ import Link from 'next/link';
 const navigationItems = [
   { href: '/login', label: 'Login', description: 'Start a JWT-authenticated AIM session.' },
   { href: '/dashboard', label: 'Governance Dashboard', description: 'View read-only readiness, evidence, report, work-order, and governance summaries.' },
+  { href: '/assets', label: 'Asset Register', description: 'Review tank assets and RC4-R asset integrity package readiness.' },
   { href: '/calculations', label: 'Calculations', description: 'Review deterministic calculation runs and engineering warnings.' },
   { href: '/evidence', label: 'Evidence', description: 'Open the evidence repository and linkage workspace.' },
   { href: '/evidence-traceability', label: 'Evidence Traceability', description: 'Review cross-module evidence coverage and missing evidence indicators.' },

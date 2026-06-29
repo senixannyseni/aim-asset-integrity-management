@@ -524,3 +524,7 @@ Status: implemented in patch package.
 ## RC4-Q — Inspection Event Detail + Inspection Package Readiness
 
 Status: implemented in this patch. Adds read-only inspection package readiness API and `/inspections` detail workspace for evidence, NDT, findings, calculation, review/approval, downstream, and audit traceability.
+
+## RC4-R — Asset Detail + Asset Integrity Package Readiness
+
+Status: implemented in this patch. Adds read-only asset integrity package readiness API and `/assets/[assetId]` detail workspace for master data, geometry, shell courses, evidence, inspections, NDT, findings, calculation, review/approval, downstream decision/report/work-order, and audit traceability.
