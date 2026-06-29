@@ -3854,6 +3854,28 @@ paths:
       security:
       - bearerAuth: []
 
+  /api/v1/production-validation/readiness:
+    get:
+      summary: RC4-V production environment validation and release candidate signoff readiness
+      description: Read-only production validation evidence endpoint covering release tag/build artifact verification, environment configuration, database migration, object-storage runtime validation, API/frontend smoke tests, backup/restore drill, monitoring/alerting, security review, open defect disposition, and human go/no-go signoff evidence. AI/n8n/service actors cannot finalize production validation or approve go-live. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      x-permission-required: golive_readiness.view
+      x-read-only: true
+      x-audit-event-generated: none
+      x-ai-n8n-finalization: prohibited
+      responses:
+        '200':
+          description: Production validation readiness
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProductionValidationReadiness'
+        '403':
+          description: AI/n8n/service actor blocked or missing permission
+      security:
+      - bearerAuth: []
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -6518,3 +6540,92 @@ components:
           type: object
           additionalProperties: true
 
+    ProductionValidationReadiness:
+      type: object
+      description: RC4-V read-only production environment validation and release-candidate signoff readiness. AI/n8n/service actors cannot finalize production validation or approve go-live. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        permission_required:
+          type: string
+        read_only:
+          type: boolean
+        production_validation_status:
+          type: string
+        ready_for_go_live_without_conditions:
+          type: boolean
+        release_candidate_ready_for_human_go_no_go_review:
+          type: boolean
+        completion_estimate:
+          type: object
+          additionalProperties: true
+        gate_summary:
+          type: object
+          additionalProperties: true
+        production_validation_chain:
+          type: array
+          items:
+            type: string
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductionValidationReadinessGate'
+        production_evidence_pack:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        final_signoff_roles:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        smoke_test_matrix:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        prohibited_controls:
+          type: array
+          items:
+            type: string
+        safe_navigation_links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ProductionValidationReadinessGate:
+      type: object
+      description: RC4-V production validation gate. It captures target-environment evidence only; no API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - release_tag_verified
+          - build_artifact_verified
+          - environment_configuration_verified
+          - database_migration_verified
+          - object_storage_runtime_verified
+          - api_smoke_tests_passed
+          - frontend_route_smoke_tests_passed
+          - backup_restore_drill_verified
+          - monitoring_alerting_verified
+          - security_access_review_verified
+          - open_defect_disposition_recorded
+          - human_go_no_go_signoff_ready
+          - no_formula_execution
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - attention_required
+          - blocked
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
