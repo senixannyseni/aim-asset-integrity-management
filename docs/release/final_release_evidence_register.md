@@ -445,3 +445,24 @@ This mapping follows the Commercial Scale Operating Model and Partner Implementa
 | COMM-FINAL-012 | Final commercial closure signoff | Human approval/no-go/carryover decision | Product Owner / Operations / Lead Engineer | Pending |
 
 AI/n8n/service actors cannot accept commercial final closure evidence, approve enterprise scale roadmap, approve enterprise investment priority, accept enterprise scale gaps, approve customer/partner expansion commitments, waive commercial final evidence, or sign commercial final closure.
+
+## Enterprise Runtime Hardening and Multi-Tenant Commercialization Mapping
+
+This mapping follows the Commercial Final Closure and Enterprise Scale Roadmap Consolidation Pack and records the evidence required before AIM can start governed runtime implementation for enterprise hardening, tenant isolation, customer rollout tooling, partner implementation support, billing/payment boundaries, and enterprise security/compliance backlog items.
+
+| Evidence ID | Evidence area | Required artifact | Owner | Status |
+|---|---|---|---|---|
+| ENT-RUNTIME-001 | Enterprise runtime baseline | Commercial final closure, operations closure, productization, customer success, and scale operating-model references | Product Owner / Lead Engineer | Pending |
+| ENT-RUNTIME-002 | Multi-tenant architecture decision | Tenant model, data isolation model, permission boundary, and migration approach | Product Owner / Lead Engineer / Security Owner | Pending |
+| ENT-RUNTIME-003 | Tenant data isolation backlog | DB/schema/object-storage/audit/evidence isolation backlog with acceptance criteria | Lead Engineer / DBA / Security Owner | Pending |
+| ENT-RUNTIME-004 | Enterprise identity/session hardening backlog | SSO/MFA/session/refresh-token/browser/API-client hardening backlog | Security Owner / Lead Engineer | Pending |
+| ENT-RUNTIME-005 | Enterprise RBAC/service actor hardening backlog | Tenant-aware RBAC, service-account boundaries, n8n/API-only access, and SoD controls | Security Owner / Lead Engineer | Pending |
+| ENT-RUNTIME-006 | Billing/payment commercialization boundary | Billing, invoicing, pricing, usage metering, payment-processing boundary and non-scope decisions | Product Owner / Finance / Legal | Pending |
+| ENT-RUNTIME-007 | Customer production rollout implementation backlog | Customer rollout workflow, migration support, onboarding automation, rollback/offboarding controls | Product Owner / Operations / Customer Success | Pending |
+| ENT-RUNTIME-008 | Partner implementation tooling backlog | Partner portal/access/training/evidence collection/tooling assumptions | Partner Manager / Security Owner | Pending |
+| ENT-RUNTIME-009 | Enterprise observability/support automation backlog | Tenant-aware monitoring, support tickets, SLA dashboards, customer health, incident integration | Operations / Customer Success / Lead Engineer | Pending |
+| ENT-RUNTIME-010 | Enterprise compliance/legal/data-residency backlog | PDP/privacy, retention, data residency, audit export, customer evidence archive, legal terms backlog | Legal / Security Owner / Product Owner | Pending |
+| ENT-RUNTIME-011 | Enterprise runtime risk and dependency register | Runtime, security, tenancy, customer, partner, support, billing, and compliance risks | Product Owner / Risk Owner | Pending |
+| ENT-RUNTIME-012 | Final enterprise runtime backlog authorization | Human approval/no-go/carryover decision for runtime implementation sequencing | Product Owner / Lead Engineer / Security Owner / Operations | Pending |
+
+AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve multi-tenant runtime implementation, approve tenant isolation readiness, approve enterprise security hardening priority, approve billing/payment implementation, approve customer production rollout scope, accept enterprise runtime risks, waive enterprise runtime evidence, or sign enterprise runtime hardening closure.

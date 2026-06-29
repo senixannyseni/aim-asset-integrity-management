@@ -351,3 +351,19 @@ Exit criteria:
 - final commercial closure signoff is human-only.
 
 AI/n8n/service actors cannot accept commercial final closure evidence, approve enterprise scale roadmap, approve enterprise investment priority, accept enterprise scale gaps, approve commercial KPI/SLA exceptions, approve customer/partner expansion commitments, waive commercial final evidence, or sign commercial final closure.
+
+## Enterprise Runtime Hardening and Multi-Tenant Commercialization Gate
+
+The Enterprise Runtime Hardening and Multi-Tenant Commercialization Implementation Backlog Pack is accepted only when `ENT-RUNTIME-001 through ENT-RUNTIME-012` are mapped to named owners, reviewed against commercial final closure, and authorized by named humans before runtime implementation starts.
+
+Required gate evidence:
+
+- commercial final closure and enterprise-scale roadmap baseline;
+- tenant architecture decision and tenant isolation backlog;
+- enterprise identity/session/RBAC/service-actor hardening backlog;
+- billing/payment commercialization boundary and non-scope decision;
+- customer rollout, partner tooling, observability/support, compliance/legal/data-residency backlog items;
+- enterprise runtime risk/dependency register;
+- final human runtime backlog authorization.
+
+AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve multi-tenant runtime implementation, approve tenant isolation readiness, approve enterprise security hardening priority, approve billing/payment implementation, approve customer production rollout scope, accept enterprise runtime risks, waive enterprise runtime evidence, or sign enterprise runtime hardening closure.
