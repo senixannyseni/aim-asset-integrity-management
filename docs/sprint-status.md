@@ -778,3 +778,21 @@ The commercial governance and scale readiness pack adds `COMM-GOV-001` through `
 Commercial governance and scale readiness does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, tenant billing, payment processing, contract execution, partner contract execution, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, or sign commercial governance closure.
+
+## Commercial Scale Operating Model and Partner Implementation Readiness Pack
+
+Status: Documentation/evidence-control package prepared after Commercial Governance, Sales Enablement, and Scale Readiness Evidence Pack.
+
+Evidence IDs: `SCALE-OPS-001` through `SCALE-OPS-012`.
+
+Primary outputs:
+
+- scale operating model and delivery governance record;
+- partner implementation readiness record;
+- multi-customer rollout and support capacity record;
+- scale operating-model runbook;
+- regression coverage in `apps/api/tests/commercial-scale-operating-model-partner-implementation.test.ts`.
+
+No runtime APIs, database migrations, formula changes, AI behavior, n8n behavior, object-storage behavior, report/work-order behavior, tenant billing, payment processing, external CMMS implementation, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas are introduced.
+
+AI/n8n/service actors cannot accept scale operating model evidence, approve partner implementation readiness, approve multi-customer rollout readiness, approve support escalation handoff, accept scale operating risks, or sign scale operating model closure.

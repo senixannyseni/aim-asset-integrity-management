@@ -320,3 +320,18 @@ Required gate evidence:
 - final human commercial governance and scale-readiness signoff.
 
 AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, waive commercial governance evidence, or sign commercial governance closure.
+
+## Commercial Scale Operating Model and Partner Implementation Gate
+
+The Commercial Scale Operating Model and Partner Implementation Gate requires `SCALE-OPS-001 through SCALE-OPS-012` to be attached, reviewed, and approved by named humans before broader customer rollout or partner-led implementation can be treated as controlled.
+
+Exit criteria:
+
+- delivery roles and implementation methodology are documented;
+- partner readiness, access scope, training, and evidence responsibilities are reviewed;
+- multi-customer rollout gates, support escalation, and rollback/customer-acceptance routes are recorded;
+- scale capacity, staffing, risks, and dependencies are owned;
+- scale backlog/release/customer communication governance is recorded;
+- final scale operating-model signoff is human-only.
+
+AI/n8n/service actors cannot accept scale operating model evidence, approve partner implementation readiness, approve multi-customer rollout readiness, approve support escalation handoff, accept scale operating risks, waive scale operating evidence, or sign scale operating model closure.
