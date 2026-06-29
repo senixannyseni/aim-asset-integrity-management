@@ -1,6 +1,6 @@
 # AIM+n8n Tank Integrity Module
 
-Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A through RC4-W implemented and post-review closed; RC4-X Final Release Decision Pack Cleanup complete; RC4-Y Final Release Operations Evidence Collection prepared as a documentation/evidence-control closure package. Current state is MVP release-candidate complete, with final production go-live still conditional on attached operations evidence and human go/no-go signoff.**
+Sprint status: **RC3-A through RC3-J implemented as scoped hardening packages; RC4-A through RC4-W implemented and post-review closed; RC4-X Final Release Decision Pack Cleanup complete; RC4-Y Final Release Operations Evidence Collection prepared; RC4-Z Final Go/No-Go Signoff Preparation prepared as documentation/evidence-control closure package. Current state is MVP release-candidate complete, with final production go-live still conditional on attached operations evidence and human go/no-go signoff.**
 
 This repository implements the AIM+n8n Tank Integrity Module MVP through RC3-J final UAT / release candidate closure and production operations readiness governance: Tank Asset Register, governance hardening, Evidence Repository, AI extraction/staging, NDT Data Room, Engineering Validation Engine, controlled Formula Registry metadata/versioning, approved Formula Registry to formula_versions synchronization, guided universal deterministic calculation execution, FFS trigger workflow governance, RBI interface trigger governance, report generation/issue gates, integrity decision approval, and internal AIM work order fallback. It does **not** implement API/API-ASME formula expressions, full API 579/API 581 assessment, 3D processing, or external CMMS integration.
 
@@ -15,6 +15,15 @@ Status: Documentation/evidence-control closure package.
 RC4-Y adds the final operations evidence collection layer for release decisioning. It provides a single runbook, evidence collection matrix, and cutover/rollback evidence record for attaching proof of test/lint, repository hygiene, migration/seed validation, environment validation, backup/restore, security scan, monitoring/alert routing, UAT signoff, final go/no-go, and hypercare ownership. RC4-Y does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration.
 
 Production go-live remains conditional until every required RC4-Y evidence item is attached or formally marked not applicable with owner approval. AI/n8n/service actors cannot approve the final release decision or substitute for human signoff.
+
+
+## RC4-Z Final Go/No-Go Signoff Preparation
+
+Status: Documentation/evidence-control closure package.
+
+RC4-Z adds the final human signoff preparation layer for production go/no-go decisioning. It provides a signoff packet, final go/no-go meeting minutes template, and final go-live authorization record that tie RC4-Y operations evidence and the final release evidence register into named human approvals. RC4-Z does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, or external CMMS integration.
+
+Production go-live remains conditional until the RC4-Z signoff packet and authorization record are completed by named humans. AI/n8n/service actors cannot sign final authorization, accept evidence, approve go-live, or replace human signoff.
 
 ## Non-negotiable Architecture Boundary
 

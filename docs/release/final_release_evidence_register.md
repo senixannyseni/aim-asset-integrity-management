@@ -62,3 +62,26 @@ docs/operations/final_release_cutover_rollback_evidence_record.md
 The EV-FINAL register remains the high-level release evidence register. RC4-Y adds detailed `EV-OPS-001` through `EV-OPS-017` operational evidence items covering Git baseline, tests, lint/typecheck, repository hygiene, migration/seed, environment validation, object storage, backup/restore, security, monitoring, incident response, UAT signoff, governance denial proof, report issue gates, work-order closure, final go/no-go, and hypercare handoff.
 
 AI/n8n/service actors cannot accept evidence, approve go-live, sign final records, or replace human signoff.
+
+
+## 5. RC4-Z Final Signoff Evidence Mapping
+
+RC4-Z adds the final human signoff preparation layer maintained in:
+
+```text
+docs/release/final_go_no_go_signoff_packet.md
+docs/release/final_go_no_go_meeting_minutes_template.md
+docs/release/final_go_live_authorization_record.md
+```
+
+The signoff packet maps evidence from `EV-FINAL-001` through `EV-FINAL-017` and `EV-OPS-001` through `EV-OPS-017` into a human decision workflow. RC4-Z does not approve production go-live by itself. The final authorization record must be completed by named humans only. AI/n8n/service actors cannot sign final authorization, accept evidence, approve go-live, or replace human signoff.
+
+Required RC4-Z signoff evidence items:
+
+| Evidence ID | Area | Required Artifact | Owner | Status |
+|---|---|---|---|---|
+| EV-SIGNOFF-001 | Signoff packet | Completed `final_go_no_go_signoff_packet.md` or completed controlled copy | Product Owner | Pending |
+| EV-SIGNOFF-002 | Meeting minutes | Completed final go/no-go meeting minutes | Decision Owner | Pending |
+| EV-SIGNOFF-003 | Final authorization | Completed `final_go_live_authorization_record.md` or completed controlled copy | Product Owner / Approver | Pending |
+| EV-SIGNOFF-004 | Human approval proof | Named human approvals for required roles | Product Owner | Pending |
+| EV-SIGNOFF-005 | Archive location | Evidence package location, final tag, commit SHA, and decision date recorded | DevOps / Decision Owner | Pending |

@@ -1,5 +1,15 @@
 # Sprint / Release Status
 
+## RC4-Z Final Go/No-Go Signoff Preparation
+
+**Status:** Prepared as documentation/evidence-control closure package after RC4-Y.
+
+RC4-Z prepares the final human decision package for production go/no-go. It adds a signoff packet, final go/no-go meeting minutes template, and final go-live authorization record that reference the final release evidence register and RC4-Y operations evidence collection.
+
+RC4-Z is not a runtime feature package. It does not change API behavior, database schema, formulas, AI/n8n behavior, object-storage behavior, approvals, work orders, report issue gates, or CMMS integration.
+
+Production go-live remains conditional until named humans complete the signoff packet and authorization record. AI/n8n/service actors cannot approve go-live, sign authorization, accept evidence, or replace human signoff.
+
 ## RC4-Y Final Release Operations Evidence Collection
 
 **Status:** Prepared as documentation/evidence-control closure package after RC4-X.
