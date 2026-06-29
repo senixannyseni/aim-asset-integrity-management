@@ -198,3 +198,7 @@ This package is not runtime implementation. It defines the acceptance gates requ
 ## Enterprise Multi-Tenant Runtime Implementation Sprint 0 — Architecture and Guardrails Pack
 
 This package follows the enterprise runtime backlog and prepares Sprint 1 runtime implementation by defining tenant isolation, tenant-aware RBAC/service actors, migration/rollout controls, object-storage boundaries, audit/evidence continuity, and human-only closure gates. It does not implement runtime multi-tenancy.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 1 — Tenant Context and Database Isolation Foundation
+
+Sprint 1 begins runtime implementation by adding tenant context, tenant membership loading, tenant selection headers, tenant visibility endpoints, database tenant_id foundation columns, and tenant RBAC permission synchronization. Sprint 2 should implement tenant filters across route query/mutation paths and harden tenant-scoped object storage paths.

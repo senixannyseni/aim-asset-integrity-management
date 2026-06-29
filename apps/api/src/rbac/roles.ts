@@ -126,12 +126,16 @@ export const PERMISSIONS = [
   'approval_record.create',
   'approval_record.approve',
   'approval_record.reject',
-  'admin.manage'
+  'admin.manage',
+  'tenant.context.read',
+  'tenant.read',
+  'tenant.manage'
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
 
 const readOnlyPermissions: Permission[] = [
+  'tenant.context.read',
   'asset.read',
   'inspection.read',
   'evidence.read',
@@ -524,6 +528,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'admin_governance.manage_roles',
     'admin_governance.manage_settings',
     'admin.manage',
+    'tenant.context.read',
+    'tenant.read',
+    'tenant.manage',
     'asset.read',
     'finding.read',
     'evidence.read',

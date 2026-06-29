@@ -1113,3 +1113,11 @@ Status: Documentation/evidence-control architecture guardrail package.
 Enterprise Multi-Tenant Runtime Sprint 0 defines the architecture, tenant isolation, tenant-aware RBAC/service actor, migration, object-storage, audit/evidence continuity, rollout, and Sprint 1 readiness guardrails required before multi-tenant runtime code begins. Enterprise Multi-Tenant Runtime Sprint 0 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, approval behavior, report issue behavior, work-order behavior, external CMMS integration, billing/payment implementation, tenant data migration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 0 evidence, approve tenant architecture, approve tenant isolation readiness, approve tenant-aware RBAC changes, approve service actor tenant scope, approve migration rollout readiness, sign multi-tenant Sprint 0 closure, or waive multi-tenant guardrail evidence. n8n remains orchestration-only. AIM remains the system of record.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 1 — Tenant Context and Database Isolation Foundation
+
+This repository now includes the Enterprise Multi-Tenant Runtime Implementation Sprint 1 tenant context and database isolation foundation pack. Sprint 1 adds runtime tenant context resolution, DB-backed tenant memberships, tenant context headers, tenant visibility endpoints, tenant_id database foundation columns, and tenant RBAC permission synchronization.
+
+Enterprise Multi-Tenant Runtime Sprint 1 adds runtime tenant context foundation but does not complete production multi-tenant rollout, billing/payment processing, customer onboarding automation, route-wide tenant filtering, or tenant isolation production certification.
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 1 evidence, cannot approve tenant context implementation, cannot approve tenant isolation readiness, cannot approve tenant-aware database migration, cannot approve tenant-aware RBAC changes, cannot sign multi-tenant Sprint 1 closure, and cannot waive multi-tenant Sprint 1 evidence.

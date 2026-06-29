@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import pinoHttpModule from 'pino-http';
 import { config } from './config/env.js';
 import { authenticateRequest } from './middleware/request-context.js';
+import { resolveRequestTenantContext } from './middleware/tenant-context.js';
 import { assetsRouter } from './routes/assets.js';
 import { healthRouter } from './routes/health.js';
 import { operationsRouter } from './routes/operations.js';
@@ -32,12 +33,13 @@ import { integrityWorkspaceRouter } from "./routes/integrity-workspace.js";
 import { releaseClosureRouter } from "./routes/release-closure.js";
 import { productionValidationRouter } from "./routes/production-validation.js";
 import { securityMonitoringRouter } from "./routes/security-monitoring.js";
+import { tenantsRouter } from "./routes/tenants.js";
 
 const pinoHttp = pinoHttpModule as unknown as () => express.RequestHandler;
 
 export function allowedCorsHeaders(): string {
-  const baseHeaders = ['Content-Type', 'Authorization', 'x-request-id'];
-  const demoHeaders = ['x-aim-demo-roles', 'x-aim-demo-user-id', 'x-aim-demo-email', 'x-aim-demo-full-name'];
+  const baseHeaders = ['Content-Type', 'Authorization', 'x-request-id', 'x-aim-tenant-id', 'x-aim-tenant-slug'];
+  const demoHeaders = ['x-aim-demo-roles', 'x-aim-demo-user-id', 'x-aim-demo-email', 'x-aim-demo-full-name', 'x-aim-demo-tenant-id', 'x-aim-demo-tenant-slug', 'x-aim-demo-tenant-name'];
   return [...baseHeaders, ...(config.allowLocalDemoAuth ? demoHeaders : [])].join(', ');
 }
 
@@ -59,6 +61,7 @@ export function createApp() {
   app.use(express.json({ limit: '2mb' }));
   app.use(pinoHttp());
   app.use(authenticateRequest);
+  app.use(resolveRequestTenantContext);
 
   app.use(healthRouter);
   app.use('/api/v1', assetsRouter);
@@ -91,6 +94,7 @@ export function createApp() {
   app.use('/api/v1', releaseClosureRouter);
   app.use('/api/v1', productionValidationRouter);
   app.use('/api/v1', securityMonitoringRouter);
+  app.use('/api/v1', tenantsRouter);
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === 'number'
       ? Number((error as { statusCode: number }).statusCode)
