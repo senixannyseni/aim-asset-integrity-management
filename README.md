@@ -767,3 +767,18 @@ RC4-T adds the consolidated integrity package workspace:
 - `/integrity-workspace/[assetId]`
 
 The workspace links the complete AIM integrity chain: Asset → Inspection → Evidence → NDT → Findings → Calculation → Review/Approval → Integrity Decision → FFS/RBI → Report → Work Order. Module-specific readiness gates remain authoritative. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize end-to-end integrity package readiness.
+
+### RC4-U Final UAT Evidence Pack + Production Readiness Closure
+
+RC4-U adds the final release closure workspace:
+
+- `GET /api/v1/release-closure/readiness`
+- `/release-closure`
+- final UAT evidence pack index
+- production readiness checklist
+- deployment verification and rollback checklist
+- hypercare and go/no-go signoff matrix
+- known MVP exclusions
+- completion estimate visibility
+
+RC4-U is read-only. It does not approve/reject records, run formulas, issue reports, close work orders, mutate object storage, promote AI staging records, execute n8n workflows, or allow AI/n8n/service actors to finalize release closure readiness.

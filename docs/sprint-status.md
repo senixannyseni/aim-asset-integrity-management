@@ -539,3 +539,9 @@ RC4-S does not add API 579/API 581/FFS/RBI formulas, does not declare fitness fo
 Status: implemented in this patch. Adds read-only consolidated workspace APIs and `/integrity-workspace` pages for the full chain: Asset → Inspection → Evidence → NDT → Findings → Calculation → Review/Approval → Integrity Decision → FFS/RBI → Report → Work Order.
 
 RC4-T does not replace module-specific gates, run formulas, approve/reject records, issue reports, close work orders, mutate object storage, promote AI staging records, or allow AI/n8n/service actors to finalize release candidate readiness.
+
+## RC4-U — Final UAT Evidence Pack + Production Readiness Closure
+
+Status: implemented in this patch. Adds read-only final release closure readiness API and `/release-closure` dashboard for UAT evidence, production readiness, deployment verification, rollback, hypercare, known exclusions, completion estimate, and human go/no-go signoff matrix.
+
+RC4-U does not replace module-specific gates, run formulas, approve/reject records, issue reports, close work orders, mutate object storage, promote AI staging records, execute n8n workflows, or allow AI/n8n/service actors to finalize release closure readiness.

@@ -3827,6 +3827,33 @@ paths:
       security:
       - bearerAuth: []
 
+
+  /api/v1/release-closure/readiness:
+    get:
+      summary: Get final UAT evidence pack and production readiness closure
+      description: Read-only RC4-U final release closure readiness for UAT evidence, deployment verification, rollback, hypercare, known exclusions, and human go/no-go signoff. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed by this endpoint.
+      x-permission-required: golive_readiness.view
+      x-read-only: true
+      x-audit-event-generated: none
+      x-no-calculation-boundary: "No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed"
+      x-ai-n8n-boundary: AI/n8n/service actors cannot finalize release closure readiness or approve go-live.
+      responses:
+        '200':
+          description: Final UAT and production readiness closure preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReleaseClosureReadiness'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+
 components:
   securitySchemes:
     DemoRoleHeaders:
@@ -6391,6 +6418,98 @@ components:
           - pass
           - warning
           - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ReleaseClosureReadiness:
+      type: object
+      description: Read-only RC4-U final UAT evidence pack and production readiness closure preview. It does not approve, reject, calculate, issue, close, upload, download, promote, execute n8n workflows, or allow AI/n8n/service actors to finalize go-live readiness.
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        permission_required:
+          type: string
+          example: golive_readiness.view
+        read_only:
+          type: boolean
+        overall_release_closure_status:
+          type: string
+        ready_for_go_live_without_conditions:
+          type: boolean
+        release_candidate_ready_for_human_go_no_go_review:
+          type: boolean
+        completion_estimate:
+          type: object
+          additionalProperties: true
+        gate_summary:
+          type: object
+          additionalProperties: true
+        release_chain:
+          type: array
+          items:
+            type: string
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseClosureReadinessGate'
+        uat_evidence_pack:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        production_closure_checklists:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        signoff_matrix:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        known_exclusions:
+          type: array
+          items:
+            type: string
+        safe_navigation_links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        prohibited_controls:
+          type: array
+          items:
+            type: string
+    ReleaseClosureReadinessGate:
+      type: object
+      description: RC4-U release closure gate. It checks final UAT and production readiness evidence only; no API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - uat_evidence_pack_present
+          - uat_execution_evidence_attached
+          - production_deployment_verified
+          - rollback_plan_verified
+          - security_backup_restore_dr_closure
+          - hypercare_plan_ready
+          - known_exclusions_documented
+          - release_signoff_matrix_present
+          - module_readiness_chain_visible
+          - no_formula_execution
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - attention_required
+          - blocked
         blocking:
           type: boolean
         message:
