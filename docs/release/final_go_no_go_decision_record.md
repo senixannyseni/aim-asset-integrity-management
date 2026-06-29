@@ -147,3 +147,18 @@ docs/release/final_go_live_authorization_record.md
 The RC4-Z signoff packet confirms that RC4-Y operations evidence, the final release evidence register, the cutover/rollback evidence record, UAT signoff, security evidence, monitoring evidence, backup/restore evidence, and hypercare ownership have been reviewed by named humans. Missing RC4-Z signoff, meeting minutes, authorization record, or evidence package location is a No-Go condition.
 
 AI/n8n/service actors cannot sign RC4-Z records, approve final go-live, accept evidence, or replace the Product Owner, Lead Engineer, Approver, IT Admin / DevOps, Security Owner, UAT Lead, or Operations / Hypercare Owner.
+
+## 14. AIM MVP Final Evidence Bundle Gate
+
+Before a Go or Conditional Go decision is recorded, the decision owner must confirm that the final evidence bundle has been assembled and archived:
+
+```text
+docs/release/aim_mvp_final_go_no_go_evidence_bundle.md
+docs/release/final_evidence_bundle_index.md
+docs/release/final_release_handoff_record.md
+```
+
+Missing final evidence bundle, missing archive location, missing tag, missing commit SHA, missing human signoff, or unresolved blocker/critical/governance evidence gaps must result in No-Go unless formally resolved and retested.
+
+AI/n8n/service actors cannot approve the final evidence bundle, accept missing evidence, sign final authorization, or replace human decision owners.
+

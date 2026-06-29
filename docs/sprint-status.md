@@ -1,5 +1,15 @@
 # Sprint / Release Status
 
+## AIM MVP Final Go/No-Go Evidence Bundle
+
+**Status:** Prepared as documentation/evidence-control closure package after RC4-Z.
+
+The final evidence bundle consolidates RC4-X decision records, RC4-Y operations evidence, and RC4-Z human signoff artifacts into an archive-ready release package. It records the tag, commit SHA, decision date, decision owner, evidence coordinator, evidence bundle location, and final decision state.
+
+This is not a runtime feature package. It does not change API behavior, database schema, formulas, AI/n8n behavior, object-storage behavior, approvals, work orders, report issue gates, or CMMS integration.
+
+Production go-live remains conditional until the bundle is completed, archived, and approved by named humans. AI/n8n/service actors cannot approve the final evidence bundle, waive missing evidence, sign authorization, or replace human signoff.
+
 ## RC4-Z Final Go/No-Go Signoff Preparation
 
 **Status:** Prepared as documentation/evidence-control closure package after RC4-Y.

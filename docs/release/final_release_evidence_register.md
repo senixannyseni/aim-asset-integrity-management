@@ -85,3 +85,18 @@ Required RC4-Z signoff evidence items:
 | EV-SIGNOFF-003 | Final authorization | Completed `final_go_live_authorization_record.md` or completed controlled copy | Product Owner / Approver | Pending |
 | EV-SIGNOFF-004 | Human approval proof | Named human approvals for required roles | Product Owner | Pending |
 | EV-SIGNOFF-005 | Archive location | Evidence package location, final tag, commit SHA, and decision date recorded | DevOps / Decision Owner | Pending |
+
+## 6. AIM MVP Final Go/No-Go Evidence Bundle Mapping
+
+The final evidence bundle is maintained in:
+
+```text
+docs/release/aim_mvp_final_go_no_go_evidence_bundle.md
+docs/release/final_evidence_bundle_index.md
+docs/release/final_release_handoff_record.md
+```
+
+The final evidence bundle consolidates RC4-X decision records, RC4-Y operations evidence, and RC4-Z human signoff records into one archive-ready release evidence package. It adds `EV-BUNDLE-001` through `EV-BUNDLE-010` for Git baseline, full verification, migration/seed evidence, environment validation, backup/restore/DR, security/service actor evidence, monitoring/incident response, UAT evidence, governance denial proof, and final go/no-go signoff evidence.
+
+AI/n8n/service actors cannot accept the final evidence bundle, waive missing evidence, approve go-live, sign the final release, or replace named human signoff.
+
