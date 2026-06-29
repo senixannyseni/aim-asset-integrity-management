@@ -132,3 +132,18 @@ Any of these conditions triggers **No-Go** unless formally resolved and retested
 Before selecting Go or Conditional Go, reviewers must confirm that `docs/release/final_release_operations_evidence_collection.md` is complete or formally marked not applicable with owner approval for every EV-OPS item. Missing evidence for tests, lint/typecheck, repository hygiene, migration/seed, environment validation, backup/restore, security, monitoring, UAT signoff, governance denial proof, report issue gates, work-order closure, final decision, or hypercare handoff is a No-Go condition unless the item is explicitly non-applicable and approved.
 
 AI/n8n/service actors cannot approve this evidence gate or replace human signoff.
+
+
+## RC4-Z Final Human Signoff Gate
+
+Before the final decision is selected, reviewers must complete or reference:
+
+```text
+docs/release/final_go_no_go_signoff_packet.md
+docs/release/final_go_no_go_meeting_minutes_template.md
+docs/release/final_go_live_authorization_record.md
+```
+
+The RC4-Z signoff packet confirms that RC4-Y operations evidence, the final release evidence register, the cutover/rollback evidence record, UAT signoff, security evidence, monitoring evidence, backup/restore evidence, and hypercare ownership have been reviewed by named humans. Missing RC4-Z signoff, meeting minutes, authorization record, or evidence package location is a No-Go condition.
+
+AI/n8n/service actors cannot sign RC4-Z records, approve final go-live, accept evidence, or replace the Product Owner, Lead Engineer, Approver, IT Admin / DevOps, Security Owner, UAT Lead, or Operations / Hypercare Owner.
