@@ -194,3 +194,7 @@ AI/n8n/service actors cannot accept commercial final closure evidence, approve e
 This roadmap item follows Commercial Final Closure and Enterprise Scale Roadmap Consolidation. It converts the enterprise-scale roadmap into a governed implementation backlog for runtime hardening, tenant isolation, enterprise identity/session controls, tenant-aware RBAC/service actors, billing/payment boundaries, customer rollout tooling, partner implementation support, tenant-aware observability/support automation, and enterprise compliance/legal/data-residency gaps.
 
 This package is not runtime implementation. It defines the acceptance gates required before enterprise runtime work can begin. AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve multi-tenant runtime implementation, approve tenant isolation readiness, approve enterprise security hardening priority, approve billing/payment implementation, approve customer production rollout scope, accept enterprise runtime risks, waive enterprise runtime evidence, or sign enterprise runtime hardening closure.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 0 — Architecture and Guardrails Pack
+
+This package follows the enterprise runtime backlog and prepares Sprint 1 runtime implementation by defining tenant isolation, tenant-aware RBAC/service actors, migration/rollout controls, object-storage boundaries, audit/evidence continuity, and human-only closure gates. It does not implement runtime multi-tenancy.

@@ -315,3 +315,12 @@ AI/n8n/service actors cannot approve enterprise investment priority, accept ente
 | ENT-RUNTIME-BL-005 | Define observability/support automation, compliance/legal/data-residency, and risk register backlog | ENT-RUNTIME-009, ENT-RUNTIME-010, ENT-RUNTIME-011 | High | Operations / Legal / Risk Owner |
 
 AI/n8n/service actors cannot approve backlog priority, approve multi-tenant runtime implementation, approve billing/payment implementation, accept enterprise runtime risks, waive enterprise runtime evidence, or sign enterprise runtime hardening closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 0 Architecture and Guardrails Mapping
+
+| Backlog item | Evidence IDs | Priority | Notes |
+|---|---|---|---|
+| Tenant architecture and isolation decision | MT-S0-001 through MT-S0-003 | P0 | Required before Sprint 1 runtime code |
+| Tenant-aware RBAC/service actor guardrails | MT-S0-004 through MT-S0-005 | P0 | Must preserve existing governance boundaries |
+| API/DB/object-storage/audit continuity guardrails | MT-S0-006 through MT-S0-009 | P0 | Required before migrations/routes are changed |
+| Sprint 1 readiness, risks, and signoff | MT-S0-010 through MT-S0-012 | P0 | Human-only approval required |

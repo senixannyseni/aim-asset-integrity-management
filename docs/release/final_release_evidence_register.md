@@ -466,3 +466,22 @@ This mapping follows the Commercial Final Closure and Enterprise Scale Roadmap C
 | ENT-RUNTIME-012 | Final enterprise runtime backlog authorization | Human approval/no-go/carryover decision for runtime implementation sequencing | Product Owner / Lead Engineer / Security Owner / Operations | Pending |
 
 AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve multi-tenant runtime implementation, approve tenant isolation readiness, approve enterprise security hardening priority, approve billing/payment implementation, approve customer production rollout scope, accept enterprise runtime risks, waive enterprise runtime evidence, or sign enterprise runtime hardening closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 0 Architecture and Guardrails Mapping
+
+| Evidence ID | Evidence item | Source document |
+|---|---|---|
+| MT-S0-001 | Sprint 0 baseline | `docs/enterprise/enterprise_multitenant_runtime_sprint0_architecture_guardrails_pack.md` |
+| MT-S0-002 | Tenant architecture decision | `docs/enterprise/tenant_isolation_architecture_decision_record.md` |
+| MT-S0-003 | Tenant data isolation guardrail | `docs/enterprise/tenant_isolation_architecture_decision_record.md` |
+| MT-S0-004 | Tenant-aware RBAC guardrail | `docs/enterprise/multitenant_rbac_service_actor_guardrails_record.md` |
+| MT-S0-005 | Service actor tenant scope | `docs/enterprise/multitenant_rbac_service_actor_guardrails_record.md` |
+| MT-S0-006 | API contract guardrail | `docs/enterprise/tenant_isolation_architecture_decision_record.md` |
+| MT-S0-007 | Database migration guardrail | `docs/enterprise/multitenant_migration_runtime_rollout_guardrails_record.md` |
+| MT-S0-008 | Object-storage tenant boundary | `docs/enterprise/tenant_isolation_architecture_decision_record.md` |
+| MT-S0-009 | Audit/evidence continuity | `docs/enterprise/multitenant_rbac_service_actor_guardrails_record.md` |
+| MT-S0-010 | Sprint 1 implementation readiness | `docs/enterprise/multitenant_migration_runtime_rollout_guardrails_record.md` |
+| MT-S0-011 | Multi-tenant risk register | `docs/enterprise/multitenant_migration_runtime_rollout_guardrails_record.md` |
+| MT-S0-012 | Human Sprint 0 signoff | `docs/operations/enterprise_multitenant_runtime_sprint0_architecture_guardrails_runbook.md` |
+
+Baseline dependency: Enterprise Runtime Hardening and Multi-Tenant Commercialization Implementation Backlog Pack. AI/n8n/service actors cannot accept multi-tenant Sprint 0 evidence or sign multi-tenant Sprint 0 closure.
