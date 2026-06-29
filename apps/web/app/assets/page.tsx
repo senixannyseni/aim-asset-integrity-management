@@ -214,9 +214,9 @@ export default function TankAssetRegisterPage() {
     <main className="app-shell">
       <header className="page-header">
         <div>
-          <p className="eyebrow">RC4-B</p>
+          <p className="eyebrow">RC4-B / RC4-R</p>
           <h1>Tank Asset Register</h1>
-          <p>Manage tank asset master data through AIM APIs. Frontend validation improves UX only; backend validation remains authoritative.</p>
+          <p>Manage tank asset master data through AIM APIs. RC4-R adds Asset Integrity Package Readiness links while backend validation remains authoritative.</p>
         </div>
         <div className="action-row">
           <Link className="secondary-button" href="/evidence">Evidence</Link>
@@ -260,7 +260,7 @@ export default function TankAssetRegisterPage() {
           <section className="panel">
             <div className="panel-heading">
               <h2>Asset List</h2>
-              <p>Search and open asset detail records for geometry, shell-course, material, evidence, NDT, calculation, audit, and report context.</p>
+              <p>Search and open asset detail records for Asset Integrity Package Readiness across geometry, shell-course, material, evidence, NDT, calculation, audit, and report context.</p>
             </div>
             <div className="search-row">
               <label className="wide-field">

@@ -739,3 +739,12 @@ RC4-Q adds the inspection package workspace:
 - `/inspections/[inspectionEventId]`
 
 The readiness endpoint is read-only and summarizes inspection scope, package evidence, NDT coverage, findings, deterministic calculation traceability, review/approval trace, downstream decisions/reports/work-orders, and audit events. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize inspection package readiness.
+
+### RC4-R Asset Detail + Asset Integrity Package Readiness
+
+RC4-R adds the asset integrity package workspace:
+
+- `GET /api/v1/assets/{assetId}/readiness`
+- `/assets/[assetId]`
+
+The readiness endpoint is read-only and summarizes asset master data, geometry, shell courses, material traceability, evidence coverage, inspection history, NDT coverage, findings, deterministic calculation traceability, review/approval trace, integrity decisions, downstream reports/work-orders, and audit events. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize asset integrity package readiness.

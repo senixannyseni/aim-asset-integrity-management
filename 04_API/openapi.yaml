@@ -94,6 +94,40 @@ paths:
           description: Asset retired/deleted
       security:
       - bearerAuth: []
+  /api/v1/assets/{assetId}/readiness:
+    get:
+      summary: Get read-only asset integrity package readiness
+      description: Read-only RC4-R preview for asset master data, geometry, shell courses, evidence coverage, inspection history, NDT coverage, findings, deterministic calculation traceability, human review/approval trace, downstream decisions/reports/work-orders, and audit events. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      x-permission-required: asset.read
+      x-read-only: true
+      x-audit-event-generated: none
+      parameters:
+      - in: path
+        name: assetId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Asset integrity package readiness preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AssetIntegrityPackageReadiness'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Asset not found
+      security:
+      - bearerAuth: []
   /api/v1/assets/{assetId}/geometry:
     get:
       summary: Get tank geometry for an asset
@@ -5880,6 +5914,89 @@ components:
           - validation_not_blocked
           - downstream_calculation_trace_visible
           - finding_traceability_visible
+          - ai_n8n_finalization_absent
+        gate_status:
+          type: string
+          enum:
+          - pass
+          - warning
+          - fail
+        blocking:
+          type: boolean
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    AssetIntegrityPackageReadiness:
+      type: object
+      description: Read-only RC4-R asset integrity package readiness preview. It summarizes asset master data, geometry, shell courses, evidence coverage, inspection history, NDT measurement coverage, findings, deterministic calculation traceability, human review/approval trace, downstream integrity decisions/reports/work-orders, and audit events. It does not update assets, upload evidence, approve, reject, calculate, issue reports, close work orders, or finalize engineering records. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed.
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        tank_tag:
+          type: string
+        ready_for_integrity_use:
+          type: boolean
+        gate_summary:
+          type: object
+          additionalProperties: true
+        asset:
+          type: object
+          additionalProperties: true
+        geometry:
+          type: object
+          nullable: true
+          additionalProperties: true
+        shell_courses:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        readiness_gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetIntegrityPackageReadinessGate'
+        evidence_traceability:
+          type: object
+          additionalProperties: true
+        package_counts:
+          type: object
+          additionalProperties: true
+        linked_context:
+          type: object
+          additionalProperties: true
+        audit_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        governance_notes:
+          type: array
+          items:
+            type: string
+    AssetIntegrityPackageReadinessGate:
+      type: object
+      description: Asset integrity package readiness gate for master data, geometry, shell courses, evidence, inspections, NDT, findings, deterministic calculation traceability, human review/approval trace, downstream outputs, and AI/n8n finalization boundaries.
+      properties:
+        gate_type:
+          type: string
+          enum:
+          - asset_recorded
+          - asset_master_data_complete
+          - geometry_recorded
+          - shell_courses_present
+          - material_traceability_visible
+          - evidence_package_linked
+          - inspection_history_visible
+          - ndt_measurement_coverage_visible
+          - finding_triage_visible
+          - calculation_traceability_visible
+          - integrity_decision_trace_visible
+          - report_work_order_trace_visible
+          - review_or_approval_trace_present
           - ai_n8n_finalization_absent
         gate_status:
           type: string
