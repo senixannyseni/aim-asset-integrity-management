@@ -545,3 +545,9 @@ RC4-T does not replace module-specific gates, run formulas, approve/reject recor
 Status: implemented in this patch. Adds read-only final release closure readiness API and `/release-closure` dashboard for UAT evidence, production readiness, deployment verification, rollback, hypercare, known exclusions, completion estimate, and human go/no-go signoff matrix.
 
 RC4-U does not replace module-specific gates, run formulas, approve/reject records, issue reports, close work orders, mutate object storage, promote AI staging records, execute n8n workflows, or allow AI/n8n/service actors to finalize release closure readiness.
+
+## RC4-V — Production Environment Validation + Release Candidate Signoff Evidence
+
+Status: implemented in this patch. Adds read-only production validation readiness API and `/production-validation` dashboard for release tag/build artifact verification, environment configuration, database migration, object-storage runtime validation, API/frontend smoke tests, backup/restore drill, monitoring/alerting, security review, open defect disposition, and human go/no-go signoff evidence.
+
+RC4-V does not replace module-specific gates, run formulas, approve/reject records, issue reports, close work orders, mutate object storage, promote AI staging records, execute n8n workflows, or allow AI/n8n/service actors to finalize production validation readiness.

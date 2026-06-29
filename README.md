@@ -782,3 +782,17 @@ RC4-U adds the final release closure workspace:
 - completion estimate visibility
 
 RC4-U is read-only. It does not approve/reject records, run formulas, issue reports, close work orders, mutate object storage, promote AI staging records, execute n8n workflows, or allow AI/n8n/service actors to finalize release closure readiness.
+
+### RC4-V Production Environment Validation + Release Candidate Signoff Evidence
+
+RC4-V adds the production validation workspace:
+
+- `GET /api/v1/production-validation/readiness`
+- `/production-validation`
+- production environment validation evidence checklist
+- smoke test execution record
+- backup/restore drill record
+- monitoring and alerting verification
+- release candidate signoff evidence matrix
+
+The workspace is read-only and separates release-candidate evidence from final production go-live approval. No API 579/API 581/FFS/RBI/corrosion-rate/remaining-life formula is executed, and AI/n8n/service actors cannot finalize production validation or approve go-live.
