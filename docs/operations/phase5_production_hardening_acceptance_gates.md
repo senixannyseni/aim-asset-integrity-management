@@ -285,3 +285,19 @@ Required gate evidence:
 AI/n8n/service actors cannot accept commercial launch evidence, approve commercial launch, approve customer onboarding, approve customer acceptance, approve SLA commitments, accept commercial launch risks, or sign commercial launch authorization.
 
 Commercial MVP launch control is not runtime delivery, not tenant billing/payment processing implementation, not contract execution, and not a waiver of production governance gates.
+
+
+## Customer Success and Commercial Operations Gate
+
+The Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack adds `CS-OPS-001 through CS-OPS-012` as post-commercial-launch evidence gates for customer lifecycle operations.
+
+Exit gate requirements:
+
+- customer success owner, commercial owner, support owner, and product owner are named;
+- customer health, adoption/value realization, and issue/escalation evidence are attached;
+- support operations, SLA/KPI review, and commercial operations handoff are reviewed by named humans;
+- renewal readiness, expansion readiness, and customer lifecycle risks are reviewed by named humans;
+- customer PII, real customer data, commercial terms, invoice/payment details, tenant billing details, payment processing data, secrets, signed URLs, and credentials are not pasted into repository evidence;
+- AI/n8n/service actors cannot accept customer success evidence, approve customer success readiness, approve renewal readiness, approve expansion readiness, approve commercial operations handoff, approve SLA exceptions, accept customer lifecycle risks, or sign customer lifecycle closure.
+
+This gate is documentation/evidence-control only and does not authorize runtime implementation, tenant billing, payment processing, contract execution, external CMMS integration, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
