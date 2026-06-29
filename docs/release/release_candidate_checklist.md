@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This checklist determines whether the AIM Tank Integrity MVP baseline is stable enough to be treated as a release candidate after Phase 2.0 release readiness and Phase 2.1 controlled UAT execution support.
+This checklist determines whether the AIM Tank Integrity MVP baseline is stable enough to be treated as a release candidate after RC4-A through RC4-W implementation and RC4-X final decision-pack cleanup. It does not approve production go-live by itself.
 
 This checklist does not add new business functionality. It verifies readiness, dry-run evidence, defect closure, rollback, and sign-off.
 
@@ -69,7 +69,7 @@ This checklist does not add new business functionality. It verifies readiness, d
 
 | Gate | Required Result | Evidence | Status |
 |---|---|---|---|
-| No out-of-scope implementation added | No full API 579, full API 581, external SAP/Maximo/CMMS integration, 3D processing, frontend UI implementation, or invented formulas | Static test output and code review | Pending |
+| No out-of-scope implementation added | No full API 579, full API 581, external SAP/Maximo/CMMS integration, 3D processing, unapproved frontend scope outside governed RC4 screens, or invented formulas | Static test output and code review | Pending |
 | AIM system-of-record preserved | All final data changes through AIM backend | Review evidence | Pending |
 | AI staging-only preserved | AI output remains extraction/staging only | UAT evidence | Pending |
 | Human review preserved | Promotion/approval/issue gates require human authorization | UAT evidence | Pending |
@@ -78,7 +78,17 @@ This checklist does not add new business functionality. It verifies readiness, d
 | Rollback plan confirmed | Rollback steps reviewed | Deployment runbook reference | Pending |
 | Release notes drafted | Candidate notes ready for review | Release notes draft | Pending |
 
-## 8. Sign-Off Roles Completed
+## 8. RC4-X Final Decision Pack Gates
+
+| Gate | Acceptance Criteria | Evidence Required | Status |
+|---|---|---|---|
+| Final readiness status reviewed | `docs/release/final_release_readiness_status.md` reviewed and accepted | Review note / initials | Pending |
+| Final go/no-go decision record prepared | `docs/release/final_go_no_go_decision_record.md` completed with branch/tag/SHA and evidence references | Completed decision record | Pending |
+| Final evidence register prepared | `docs/release/final_release_evidence_register.md` populated or linked to actual evidence | Evidence register | Pending |
+| Required human signoffs complete | Product Owner, Lead Engineer, Approver, IT Admin/DevOps, Security Owner, UAT Lead, Operations/Hypercare Owner | Signed table / approval record | Pending |
+| Production go-live not auto-approved | AI/n8n/service actors and static tests do not approve go-live | Decision record and RBAC/service-actor evidence | Pending |
+
+## 9. Sign-Off Roles Completed
 
 | Role | Name | Sign-Off | Date | Notes |
 |---|---|---|---|---|
@@ -89,7 +99,7 @@ This checklist does not add new business functionality. It verifies readiness, d
 | Security Owner |  | Pending |  |  |
 | UAT Lead |  | Pending |  |  |
 
-## 9. Release Candidate Decision
+## 10. Release Candidate Decision
 
 | Decision | Criteria |
 |---|---|

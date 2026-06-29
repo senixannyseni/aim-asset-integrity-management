@@ -1,5 +1,10 @@
 # AIM Phase 2.0 Release Readiness Report
 
+## RC4-X Supersession Note
+
+This Phase 2.0 report is retained as historical release-readiness evidence. Final release decisioning after RC4-A through RC4-W is governed by `docs/release/final_release_readiness_status.md`, `docs/release/final_go_no_go_decision_record.md`, and `docs/release/final_release_evidence_register.md`. Older references to no frontend UI are superseded: governed frontend screens were added through RC4-B through RC4-W.
+
+
 **Sprint:** Phase 2.0 — MVP Release Readiness Pack  
 **Baseline:** After Phase 1 Governance Closure / Phase 1.7 final reconciliation  
 **Status:** Release-readiness documentation and static test pack prepared for local/UAT validation.
@@ -276,7 +281,7 @@ Phase 2.0 does not implement:
 - full API 581 implementation,
 - SAP/Maximo/CMMS integration,
 - 3D processing,
-- frontend UI implementation,
+- unapproved frontend scope outside governed RC4 screens,
 - invented API/ASME formulas,
 - production security hardening such as SSO, SIEM, WAF, DLP, or penetration remediation,
 - real client dataset import.
@@ -319,5 +324,5 @@ Boundary confirmation:
 - no full API 581 implementation
 - no SAP/Maximo/CMMS integration
 - no 3D processing
-- no frontend UI implementation
+- no unapproved frontend scope outside governed RC4 screens
 

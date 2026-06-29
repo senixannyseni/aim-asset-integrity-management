@@ -1,5 +1,9 @@
 # AIM Tank Integrity MVP — Phase 2 Release Candidate Notes Draft
 
+## RC4-X Supersession Note
+
+This Phase 2 release notes draft is retained as historical release-candidate evidence. Final release decisioning after RC4-A through RC4-W is governed by `docs/release/final_release_readiness_status.md`, `docs/release/final_go_no_go_decision_record.md`, and `docs/release/final_release_evidence_register.md`. Older references to no frontend UI are superseded: governed RC4 frontend screens were added through RC4-B through RC4-W.
+
 ## 1. Release Summary
 
 This release-candidate draft summarizes the AIM Tank Integrity MVP baseline after Phase 1 Governance Closure, Phase 2.0 MVP Release Readiness Pack, Phase 2.1 Controlled UAT Dataset + UAT Execution Support, and Phase 2.2 UAT Dry Run / Defect Closure / Release Candidate Stabilization.
@@ -58,7 +62,7 @@ The release candidate remains limited to the approved atmospheric storage tank M
 - No full API 581 implementation is included.
 - No SAP/Maximo/CMMS integration is included.
 - No 3D processing is included.
-- No frontend UI implementation is included in this release-candidate stabilization pack.
+- No unapproved frontend scope outside governed RC4 screens is included in this release-candidate stabilization pack.
 - No invented API/ASME formulas are included.
 - Evidence files in the UAT seed are metadata placeholders only.
 - The UAT seed must be applied only to local/UAT databases.
@@ -72,7 +76,7 @@ The following are explicitly out of scope for this release candidate:
 - full API 581 implementation;
 - external SAP/Maximo/CMMS integration;
 - 3D processing;
-- frontend UI implementation;
+- unapproved frontend scope outside governed RC4 screens;
 - invented API/ASME formulas;
 - production credentials, production object storage keys, or real client evidence.
 
