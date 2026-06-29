@@ -86,3 +86,25 @@ Required P5-4 gate evidence:
 - recovery escalation matrix, accepted-risk record, and human DR signoff.
 
 AI/n8n/service actors cannot approve P5-4 gates, accept backup evidence, approve restore readiness, approve DR signoff, accept residual DR risk, close DR gaps, waive missing recovery evidence, or authorize production go-live.
+
+
+## P5-5 Execution Pack
+
+P5-5 operationalizes `P5-GATE-006 Performance/reliability gate` and the data lifecycle portions of Phase 5 through `P5-PERF-001` through `P5-PERF-012`.
+
+Required P5-5 gate evidence:
+
+- performance baseline owner, target environment, evidence location, and review cadence;
+- API load smoke test result for health, auth, protected routes, evidence/governance routes, and calculation/report gates;
+- report export throughput, artifact size, timeout behavior, retry/error evidence, and owner decision;
+- object-storage upload/download throughput, checksum validation, and signed-URL/raw-key redaction evidence;
+- database query review, pagination/limit review, index backlog, and slow-query notes;
+- frontend route responsiveness smoke for critical workspaces;
+- capacity assumptions for users, assets, inspections, evidence files, NDT rows, calculations, reports, work orders, and audit logs;
+- timeout, retry, and error policy for API, report export, object storage, n8n-triggered workflows, and AI staging jobs;
+- data retention matrix for governed records, object files, reports, audit logs, staging records, and release evidence exports;
+- archive/export/purge lifecycle procedure with redacted sample evidence and named human ownership;
+- accepted-risk register for performance and lifecycle gaps;
+- human performance and lifecycle signoff.
+
+AI/n8n/service actors cannot approve P5-5 gates, accept performance evidence, approve performance readiness, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, waive missing lifecycle evidence, or authorize production go-live.

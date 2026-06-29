@@ -931,3 +931,14 @@ P5-4 adds concrete backup, restore, and disaster-recovery evidence records for P
 P5-4 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept backup evidence, approve restore readiness, approve DR signoff, accept residual DR risk, waive missing recovery evidence, close DR gaps, or authorize production go-live.
+
+
+## P5-5 Performance, Scale, and Data Lifecycle
+
+Status: Phase 5 documentation/evidence-control package.
+
+P5-5 adds concrete performance, scale, reliability, and data-lifecycle evidence records for performance baseline ownership, API load smoke testing, report export throughput, object-storage upload/download throughput, database query and pagination review, frontend route responsiveness, capacity assumptions, timeout/retry/error policy, data retention matrix, archive/export/purge lifecycle procedure, accepted-risk review, and human performance/lifecycle signoff.
+
+P5-5 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept performance evidence, approve performance readiness, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, or authorize production go-live.

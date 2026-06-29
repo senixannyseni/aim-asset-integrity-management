@@ -62,3 +62,8 @@ P5-3 implements the documentation/evidence-control layer for the observability, 
 ## P5-4 Execution Pack
 
 P5-4 implements the documentation/evidence-control layer for the backup/restore/DR maturity workstream. It does not change runtime behavior. Its output is a controlled evidence set for backup ownership, PostgreSQL backup and restore rehearsal, object-storage backup and restore validation, configuration and secret recovery ownership, RPO/RTO measurement, DR scenario rehearsal, governance recovery validation, recovery escalation, accepted-risk review, and human DR signoff.
+
+
+## P5-5 Execution Pack
+
+P5-5 implements the documentation/evidence-control layer for the performance, reliability, scalability, and data lifecycle governance workstreams. It does not change runtime behavior. Its output is a controlled evidence set for performance baseline ownership, API load smoke tests, report export throughput, object-storage throughput, database query/pagination review, frontend responsiveness, capacity assumptions, timeout/retry/error policy, data retention, archive/export/purge lifecycle procedure, accepted-risk review, and human performance/lifecycle signoff.
