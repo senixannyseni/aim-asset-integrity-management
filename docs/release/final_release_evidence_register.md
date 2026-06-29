@@ -163,3 +163,20 @@ docs/operations/p5_4_backup_restore_dr_runbook.md
 The P5-4 evidence set expands `EV-FINAL-009`, `EV-FINAL-014`, `EV-FINAL-015`, and `EV-FINAL-017` with `P5-DR-001` through `P5-DR-012`, covering backup ownership, PostgreSQL backup evidence, PostgreSQL restore rehearsal, object-storage backup evidence, object-storage restore rehearsal, configuration and secret recovery ownership, RPO/RTO definition and measurement, disaster recovery scenario rehearsal, governance recovery validation, recovery escalation, DR accepted-risk review, and final human DR signoff.
 
 AI/n8n/service actors cannot accept backup evidence, approve restore readiness, approve DR signoff, accept residual DR risk, close DR gaps, waive missing recovery evidence, sign recovery readiness, or authorize production go-live.
+
+
+## 11. P5-5 Performance, Scale, and Data Lifecycle Mapping
+
+P5-5 adds detailed performance, reliability, scale, and data-lifecycle evidence maintained in:
+
+```text
+docs/operations/p5_5_performance_scale_data_lifecycle_pack.md
+docs/operations/p5_5_performance_reliability_evidence_record.md
+docs/operations/p5_5_data_lifecycle_retention_record.md
+docs/operations/p5_5_capacity_query_review_record.md
+docs/operations/p5_5_performance_scale_data_lifecycle_runbook.md
+```
+
+The P5-5 evidence set expands `EV-FINAL-002`, `EV-FINAL-003`, `EV-FINAL-004`, `EV-FINAL-007`, `EV-FINAL-014`, `EV-FINAL-016`, and `EV-FINAL-017` with `P5-PERF-001` through `P5-PERF-012`, covering performance baseline ownership, API load smoke testing, report export throughput, object-storage upload/download throughput, database query and pagination review, frontend route responsiveness, capacity assumptions, timeout/retry/error policy, data retention matrix, archive/export/purge lifecycle procedure, performance/lifecycle accepted-risk review, and final human performance/lifecycle signoff.
+
+AI/n8n/service actors cannot accept performance evidence, approve performance readiness, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, waive missing lifecycle evidence, sign performance/lifecycle readiness, or authorize production go-live.

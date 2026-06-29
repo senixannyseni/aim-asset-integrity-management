@@ -90,3 +90,22 @@ P5-4 addresses the evidence-control portion of these backlog items:
 | P5-021 | `P5-DR-002`, `P5-DR-003`, `P5-DR-004`, `P5-DR-005`, `P5-DR-009` |
 
 P5-4 is evidence-control only; future runtime automation may still be needed for automated backups, restore pipelines, PITR operations, object-storage replication, DR orchestration, recovery validation automation, and evidence-bundle archive automation.
+
+
+## P5-5 Backlog Mapping
+
+P5-5 maps the Phase 5 performance, reliability, and data lifecycle backlog into controlled evidence records:
+
+| Backlog ID | P5-5 evidence mapping | Notes |
+|---|---|---|
+| P5-013 | P5-PERF-009 | Evidence retention policy and approved retention matrix |
+| P5-014 | P5-PERF-010 | Evidence archive/export/purge procedure and sample redacted lifecycle evidence |
+| P5-015 | P5-PERF-002 | API load smoke test result and bottleneck notes |
+| P5-016 | P5-PERF-004 | Object-storage upload/download throughput evidence and thresholds |
+| P5-017 | P5-PERF-003 | Report export throughput evidence and timeout/error policy |
+| P5-018 | P5-PERF-005 | Database query review, pagination review, and index backlog |
+| P5-021 | P5-PERF-010 | Go/no-go evidence archive/export lifecycle procedure |
+| P5-022 | P5-PERF-011 | Performance/lifecycle accepted-risk workflow |
+| P5-030 | P5-PERF-009 / P5-PERF-010 | Long-term audit/compliance evidence retention and export strategy |
+
+AI/n8n/service actors cannot accept performance evidence, approve data-retention exceptions, close lifecycle gaps, accept residual performance risk, or authorize production go-live.
