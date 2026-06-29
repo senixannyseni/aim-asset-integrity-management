@@ -54,3 +54,8 @@ Phase 5 work should not be treated as complete until evidence exists for securit
 ## P5-2 Execution Pack
 
 P5-2 implements the documentation/evidence-control layer for the deployment automation and environment/infrastructure hardening workstreams. It does not change runtime behavior. Its output is a controlled evidence set for deployment baseline, environment configuration, migration/seed rehearsal, smoke testing, rollback readiness, and human deployment signoff.
+
+## P5-3 Execution Pack
+
+P5-3 implements the documentation/evidence-control layer for the observability, alerting, incident-response, and hypercare workstreams. It does not change runtime behavior. Its output is a controlled evidence set for monitoring ownership, dashboard baseline, service health checks, alert routing verification, log review, incident severity triage, incident response tabletop, governance incident routing, hypercare cadence, incident closure evidence, and human observability signoff.
+

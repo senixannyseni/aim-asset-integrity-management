@@ -911,3 +911,14 @@ P5-2 adds concrete deployment and environment evidence records for release basel
 P5-2 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept deployment evidence, approve environment readiness, accept rollback readiness, waive missing evidence, sign deployment readiness, or authorize production go-live.
+
+## P5-3 Observability and Incident Response
+
+Status: Phase 5 documentation/evidence-control package.
+
+P5-3 adds concrete observability and incident-response evidence records for monitoring ownership, dashboard baseline, service health checks, alert routing verification, audit/error/workflow/correlation log review, log retention/redaction, incident severity triage, incident response tabletop, governance incident routing, hypercare cadence, incident closure evidence, and human observability signoff.
+
+P5-3 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept observability evidence, close incidents, accept residual operational risk, approve hypercare handoff, or authorize production go-live.
+

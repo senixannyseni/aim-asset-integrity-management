@@ -62,3 +62,18 @@ P5-2 addresses the evidence-control portion of these backlog items:
 | P5-008 | `P5-ENV-006`, `P5-ENV-007` |
 
 P5-2 is evidence-control only; future runtime automation may still be needed for CI/CD, environment promotion, and rollback automation.
+
+## P5-3 Backlog Mapping
+
+P5-3 addresses the evidence-control portion of these backlog items:
+
+| Backlog ID | P5-3 evidence mapping |
+|---|---|
+| P5-009 | `P5-OBS-001`, `P5-OBS-002`, `P5-OBS-003` |
+| P5-010 | `P5-OBS-004`, `P5-OBS-005`, `P5-OBS-006`, `P5-OBS-009` |
+| P5-019 | `P5-OBS-010`, `P5-OBS-011`, `P5-OBS-012` |
+| P5-020 | `P5-OBS-007`, `P5-OBS-008`, `P5-OBS-009`, `P5-OBS-011` |
+| P5-027 | `P5-OBS-004`, `P5-OBS-007`, `P5-OBS-010`, `P5-OBS-012` |
+
+P5-3 is evidence-control only; future runtime automation may still be needed for dashboards, alert integrations, incident tooling, log pipelines, and SLO automation.
+

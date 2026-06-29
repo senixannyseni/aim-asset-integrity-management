@@ -47,3 +47,24 @@ Required P5-2 gate evidence:
 - rollback readiness record and human deployment signoff.
 
 AI/n8n/service actors cannot approve P5-2 gates, accept deployment evidence, accept rollback readiness, or authorize production go-live.
+
+## P5-3 Execution Pack
+
+P5-3 operationalizes `P5-GATE-004 Observability gate` through `P5-OBS-001` through `P5-OBS-012`.
+
+Required P5-3 gate evidence:
+
+- monitoring ownership, backup owner, review cadence, and evidence location;
+- dashboard baseline for backend, frontend, PostgreSQL, object storage, n8n, AI/staging jobs, report exports, and work-order workflow visibility;
+- service health checks for production-pilot operations;
+- alert routing verification to named human owners;
+- audit, error, workflow, and correlation log review;
+- log retention and redaction verification;
+- incident severity triage and escalation matrix;
+- incident response tabletop with availability and governance scenarios;
+- governance incident route for AI promotion, report issue, evidence loss, unauthorized approval, and n8n boundary incidents;
+- hypercare cadence, support channel, rollback owner, and open-incident handling;
+- incident closure evidence and human observability signoff.
+
+AI/n8n/service actors cannot approve P5-3 gates, accept observability evidence, close incidents, accept residual operational risk, approve hypercare handoff, or authorize production go-live.
+

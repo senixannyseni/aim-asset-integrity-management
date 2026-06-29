@@ -131,3 +131,20 @@ docs/operations/p5_2_deployment_environment_evidence_runbook.md
 The P5-2 evidence set expands `EV-FINAL-001`, `EV-FINAL-005`, `EV-FINAL-007`, `EV-FINAL-010`, and `EV-FINAL-013` with `P5-ENV-001` through `P5-ENV-012`, covering release baseline traceability, build artifact provenance, environment variable inventory, `.env.example` parity, production configuration validation, PostgreSQL access validation, migration and seed rehearsal, object-storage environment validation, n8n API-only environment boundary, deployment smoke tests, rollback readiness, and final human deployment signoff.
 
 AI/n8n/service actors cannot accept deployment evidence, approve environment readiness, accept rollback readiness, waive missing evidence, sign deployment readiness, or authorize production go-live.
+
+## 9. P5-3 Observability and Incident Response Mapping
+
+P5-3 adds detailed observability and incident-response evidence maintained in:
+
+```text
+docs/operations/p5_3_observability_incident_response_pack.md
+docs/operations/p5_3_monitoring_alerting_evidence_record.md
+docs/operations/p5_3_incident_response_escalation_record.md
+docs/operations/p5_3_hypercare_observability_handoff_record.md
+docs/operations/p5_3_observability_incident_response_runbook.md
+```
+
+The P5-3 evidence set expands `EV-FINAL-014`, `EV-FINAL-015`, and `EV-FINAL-016` with `P5-OBS-001` through `P5-OBS-012`, covering monitoring ownership, dashboard baseline, service health checks, alert routing verification, audit/error/workflow/correlation log review, log retention/redaction, incident severity triage, incident response tabletop, governance incident route, hypercare cadence, incident closure evidence, and final human observability signoff.
+
+AI/n8n/service actors cannot accept observability evidence, close incidents, accept residual operational risk, waive missing evidence, approve hypercare handoff, sign observability readiness, or authorize production go-live.
+
