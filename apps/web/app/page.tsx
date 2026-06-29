@@ -4,6 +4,7 @@ const navigationItems = [
   { href: '/login', label: 'Login', description: 'Start a JWT-authenticated AIM session.' },
   { href: '/dashboard', label: 'Governance Dashboard', description: 'View read-only readiness, evidence, report, work-order, and governance summaries.' },
   { href: '/integrity-workspace', label: 'Integrity Workspace', description: 'Review the RC4-T end-to-end integrity package chain from asset through work order.' },
+  { href: '/release-closure', label: 'Release Closure', description: 'Review RC4-U final UAT evidence, production readiness, rollback, hypercare, and signoff closure.' },
   { href: '/assets', label: 'Asset Register', description: 'Review tank assets and RC4-R asset integrity package readiness.' },
   { href: '/calculations', label: 'Calculations', description: 'Review deterministic calculation runs and engineering warnings.' },
   { href: '/evidence', label: 'Evidence', description: 'Open the evidence repository and linkage workspace.' },
