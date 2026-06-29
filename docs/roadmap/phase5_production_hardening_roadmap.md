@@ -123,3 +123,11 @@ Primary outputs:
 This package is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, report/work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, approve support handoff, accept residual BAU risks, close BAU transition gaps, or sign BAU transition authorization.
+
+## Final Production Operations Closure and Continuous Improvement Backlog Pack
+
+The Final Production Operations Closure and Continuous Improvement Backlog Pack closes the post-go-live evidence-control track after BAU transition authorization. It converts remaining operational findings, risks, defects, capacity items, integration improvements, governance maturity items, and enterprise-readiness gaps into a named continuous-improvement backlog.
+
+This package is not a runtime feature package and does not reopen the production go-live baseline. It introduces `OPS-CLOSE-001` through `OPS-CLOSE-012` as the final production operations closure evidence set.
+
+AI/n8n/service actors cannot accept operations closure evidence, approve continuous improvement priority, approve KPI/SLA exceptions, close operations closure gaps, accept residual operational risks, or sign final operations closure.

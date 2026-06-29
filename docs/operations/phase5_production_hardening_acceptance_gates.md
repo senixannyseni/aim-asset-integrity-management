@@ -225,3 +225,21 @@ Gate conditions:
 - final BAU transition authorization is signed by named humans only.
 
 AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, close BAU transition gaps, accept residual BAU risks, approve support handoff, waive BAU transition evidence, or sign BAU transition authorization.
+
+## Final Production Operations Closure and Continuous Improvement Gate
+
+`OPS-CLOSE-001 through OPS-CLOSE-012` must be complete before the production operations evidence-control baseline can be closed and future work can move into continuous-improvement/change-control mode.
+
+Gate conditions:
+
+- final go-live, hypercare, and BAU transition records are referenced;
+- BAU ownership for support, monitoring, security, DR, evidence archive, and product governance is active;
+- KPI/SLA operating-state review is completed and exceptions are approved by named humans;
+- incidents/problems/defects are reconciled and accepted carryover is owned;
+- residual operational risks have severity, owner, target date, mitigation, and approval;
+- continuous-improvement backlog is prioritized with owners and target releases/dates;
+- governance controls remain active for evidence, AI staging, calculation, report, work order, audit, object storage, and n8n boundary;
+- evidence archive, retention, export, purge, and recovery ownership are assigned;
+- final operations closure authorization is signed by named humans only.
+
+AI/n8n/service actors cannot accept operations closure evidence, approve continuous improvement priority, approve KPI/SLA exceptions, close operations closure gaps, accept residual operational risks, waive operations closure evidence, or sign final operations closure.

@@ -291,3 +291,21 @@ AIM remains the system of record. n8n remains orchestration-only.
 | BAU-012 | Final BAU transition authorization | `docs/bau/post_golive_hypercare_closure_bau_transition_authorization_record.md` | Named human decision required |
 
 The BAU transition package depends on the Post-Go-Live Hypercare and Production Stabilization Evidence Pack and the Final Production Go-Live Authorization Evidence Pack. AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, accept residual BAU risks, approve support handoff, waive BAU transition evidence, or sign BAU transition authorization.
+
+## Final Production Operations Closure Mapping
+
+Final Production Operations Closure and Continuous Improvement Backlog Pack evidence is maintained in:
+
+```text
+docs/operations/final_production_operations_closure_pack.md
+docs/operations/final_production_operations_closure_authorization_record.md
+docs/operations/continuous_improvement_backlog_record.md
+docs/operations/production_operations_kpi_sla_governance_record.md
+docs/operations/final_production_operations_closure_runbook.md
+```
+
+The operations closure evidence set expands the post-go-live evidence register with `OPS-CLOSE-001` through `OPS-CLOSE-012`, covering final production operations baseline, BAU ownership, KPI/SLA operating-state review, incident/problem reconciliation, residual operational risk review, continuous-improvement backlog, governance continuity review, data lifecycle and archive ownership, security/access watch closure, DR and recovery ownership closure, commercial/enterprise readiness carryover, and final human operations closure signoff.
+
+This mapping depends on the Final Production Go-Live Authorization Evidence Pack, the Post-Go-Live Hypercare and Production Stabilization Evidence Pack, and the Post-Go-Live Hypercare Closure and BAU Transition Authorization Pack.
+
+AI/n8n/service actors cannot accept operations closure evidence, approve continuous improvement priority, approve KPI/SLA exceptions, close operations closure gaps, accept residual operational risks, waive operations closure evidence, or sign final operations closure.
