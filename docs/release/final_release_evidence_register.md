@@ -115,3 +115,19 @@ docs/operations/p5_1_security_evidence_runbook.md
 The P5-1 evidence set expands `EV-FINAL-011` and `EV-FINAL-012` with `P5-SEC-001` through `P5-SEC-012`, covering secret scan evidence, dependency vulnerability review, environment-file hygiene, RBAC/service actor review, n8n direct-DB-write exclusion, token/session hardening, audit-log redaction, signed URL/raw object key exposure, accepted-risk approval, incident-response security route, and final human security signoff.
 
 AI/n8n/service actors cannot accept security evidence, accept residual risk, waive missing evidence, sign the security review, or authorize production go-live.
+
+## 8. P5-2 Deployment and Environment Hardening Mapping
+
+P5-2 adds detailed deployment and environment evidence maintained in:
+
+```text
+docs/deployment/p5_2_deployment_environment_hardening_pack.md
+docs/deployment/p5_2_environment_configuration_evidence_record.md
+docs/deployment/p5_2_migration_seed_validation_record.md
+docs/deployment/p5_2_deployment_smoke_rollback_record.md
+docs/operations/p5_2_deployment_environment_evidence_runbook.md
+```
+
+The P5-2 evidence set expands `EV-FINAL-001`, `EV-FINAL-005`, `EV-FINAL-007`, `EV-FINAL-010`, and `EV-FINAL-013` with `P5-ENV-001` through `P5-ENV-012`, covering release baseline traceability, build artifact provenance, environment variable inventory, `.env.example` parity, production configuration validation, PostgreSQL access validation, migration and seed rehearsal, object-storage environment validation, n8n API-only environment boundary, deployment smoke tests, rollback readiness, and final human deployment signoff.
+
+AI/n8n/service actors cannot accept deployment evidence, approve environment readiness, accept rollback readiness, waive missing evidence, sign deployment readiness, or authorize production go-live.

@@ -901,3 +901,13 @@ P5-1 turns the Phase 5 security roadmap into concrete evidence records for secre
 P5-1 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept security evidence, approve accepted risks, waive missing evidence, sign the security review, or authorize production go-live.
+
+## P5-2 Deployment and Environment Hardening
+
+Status: Phase 5 documentation/evidence-control package.
+
+P5-2 adds concrete deployment and environment evidence records for release baseline traceability, build provenance, environment variable inventory, `.env.example` parity, production configuration validation, PostgreSQL privilege review, migration and seed rehearsal, object-storage configuration validation, n8n environment boundary review, deployment smoke testing, rollback readiness, and human deployment signoff.
+
+P5-2 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, report issue behavior, approval behavior, work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept deployment evidence, approve environment readiness, accept rollback readiness, waive missing evidence, sign deployment readiness, or authorize production go-live.

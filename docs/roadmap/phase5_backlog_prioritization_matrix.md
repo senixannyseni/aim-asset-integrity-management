@@ -49,3 +49,16 @@
 ## Non-Negotiable Carry-Forward Boundaries
 
 AIM remains system of record; n8n remains orchestration-only; AI output remains staging-only; human engineering review remains mandatory; and AI/n8n/service actors cannot approve engineering data, release evidence, accepted risks, or production go-live.
+
+## P5-2 Backlog Mapping
+
+P5-2 addresses the evidence-control portion of these backlog items:
+
+| Backlog ID | P5-2 evidence mapping |
+|---|---|
+| P5-005 | `P5-ENV-001`, `P5-ENV-002` |
+| P5-006 | `P5-ENV-011` |
+| P5-007 | `P5-ENV-003`, `P5-ENV-004`, `P5-ENV-005`, `P5-ENV-008`, `P5-ENV-009` |
+| P5-008 | `P5-ENV-006`, `P5-ENV-007` |
+
+P5-2 is evidence-control only; future runtime automation may still be needed for CI/CD, environment promotion, and rollback automation.

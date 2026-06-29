@@ -622,3 +622,11 @@ Status: prepared as Phase 5 documentation/evidence-control package.
 P5-1 adds the concrete security evidence pack for secret scanning, environment-file hygiene, dependency vulnerability review, RBAC/service actor review, token/session hardening, audit-log redaction, signed URL/raw object key exposure review, accepted-risk approval, incident-response security routing, and final human security signoff.
 
 P5-1 is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
+
+## P5-2 — Deployment and Environment Hardening
+
+Status: prepared as Phase 5 documentation/evidence-control package.
+
+P5-2 expands the deployment/environment workstream into `P5-ENV-001` through `P5-ENV-012`, covering release baseline traceability, build provenance, environment variable inventory, `.env.example` parity, production configuration validation, PostgreSQL access validation, migration/seed rehearsal, object-storage environment validation, n8n environment boundary review, deployment smoke tests, rollback readiness, and human deployment signoff.
+
+P5-2 is documentation/evidence-control only. It does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
