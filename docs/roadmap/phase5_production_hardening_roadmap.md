@@ -97,3 +97,13 @@ It adds `GOLIVE-001` through `GOLIVE-012` and reconciles pilot closure, Phase 5 
 Final production go-live authorization is not runtime implementation. It does not add APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, report/work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot approve final production go-live or sign final production authorization.
+
+## Post-Go-Live Hypercare and Production Stabilization Evidence Pack
+
+The Post-Go-Live Hypercare and Production Stabilization Evidence Pack follows Final Production Go-Live Authorization and converts the initial production support window into controlled stabilization evidence.
+
+It adds `HYPERCARE-001` through `HYPERCARE-012` and reconciles hypercare baseline, cadence, production monitoring, incidents, defects/problems, governance workflow monitoring, user support/adoption, security/access watch, performance/capacity watch, rollback/watch conditions, BAU handoff readiness, and final human hypercare closure signoff.
+
+Post-go-live hypercare is not runtime implementation. It does not add APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, report/work-order behavior, external CMMS integration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept hypercare evidence, close production incidents, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.
