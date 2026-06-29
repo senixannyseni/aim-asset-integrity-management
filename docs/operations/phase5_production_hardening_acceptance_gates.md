@@ -335,3 +335,19 @@ Exit criteria:
 - final scale operating-model signoff is human-only.
 
 AI/n8n/service actors cannot accept scale operating model evidence, approve partner implementation readiness, approve multi-customer rollout readiness, approve support escalation handoff, accept scale operating risks, waive scale operating evidence, or sign scale operating model closure.
+
+## Commercial Final Closure and Enterprise Scale Roadmap Gate
+
+The Commercial Final Closure and Enterprise Scale Roadmap Gate requires `COMM-FINAL-001 through COMM-FINAL-012` to be attached, reviewed, and approved by named humans before the commercial MVP baseline can be treated as closed or future enterprise-scale work can be treated as governed.
+
+Exit criteria:
+
+- predecessor commercial evidence baselines are referenced and reconciled;
+- commercial closure inventory and evidence archive ownership are recorded;
+- customer/partner expansion readiness criteria and no-go triggers are documented;
+- enterprise-scale roadmap and investment backlog have named owners, priorities, dependencies, and decision status;
+- commercial KPI/SLA governance and compliance/legal/data-readiness gaps are owned;
+- customer onboarding, partner/channel scale, and release/change-control cadence are documented;
+- final commercial closure signoff is human-only.
+
+AI/n8n/service actors cannot accept commercial final closure evidence, approve enterprise scale roadmap, approve enterprise investment priority, accept enterprise scale gaps, approve commercial KPI/SLA exceptions, approve customer/partner expansion commitments, waive commercial final evidence, or sign commercial final closure.
