@@ -1066,3 +1066,13 @@ The commercial governance and scale readiness pack adds `COMM-GOV-001` through `
 Commercial governance and scale readiness does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, approval/report/work-order behavior, tenant billing, payment processing, contract execution, partner contract execution, external CMMS integration, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, or sign commercial governance closure.
+
+## Commercial Scale Operating Model and Partner Implementation Readiness Pack
+
+The Commercial Scale Operating Model and Partner Implementation Readiness Pack follows commercial governance, sales enablement, and scale readiness. It converts scale planning into a controlled operating model for repeatable delivery, partner implementation, multi-customer rollout, support escalation, capacity assumptions, implementation evidence archive, and final human scale operating-model signoff.
+
+This package introduces `SCALE-OPS-001` through `SCALE-OPS-012` and preserves the production/commercial baseline without reopening runtime scope.
+
+Commercial scale operating model does not add runtime APIs, database migrations, formulas, AI/n8n behavior, object-storage behavior, report/work-order behavior, external CMMS implementation, tenant billing, payment processing, partner portal functionality, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept scale operating model evidence, approve partner implementation readiness, approve multi-customer rollout readiness, approve delivery role assignments, approve support escalation handoff, accept scale operating risks, or sign scale operating model closure.

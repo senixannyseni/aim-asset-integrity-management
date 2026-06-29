@@ -281,3 +281,14 @@ The Commercial Governance, Sales Enablement, and Scale Readiness Evidence Pack m
 | Enterprise readiness | COMM-GOV-008 / COMM-GOV-009 / COMM-GOV-010 / COMM-GOV-011 | Partner, implementation, support, and residual risk scale evidence |
 
 AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, or sign commercial governance closure.
+
+## Commercial Scale Operating Model and Partner Implementation Backlog Mapping
+
+| Backlog ID | Item | Evidence IDs | Priority | Owner |
+|---|---|---|---|---|
+| SCALE-OPS-BL-001 | Define delivery RACI and implementation methodology | SCALE-OPS-001, SCALE-OPS-002, SCALE-OPS-003 | High | Product Owner / Delivery Lead |
+| SCALE-OPS-BL-002 | Define partner implementation readiness, access, training, and evidence responsibilities | SCALE-OPS-004, SCALE-OPS-007, SCALE-OPS-008 | High | Partner Manager / Security Owner |
+| SCALE-OPS-BL-003 | Define multi-customer rollout gates, support escalation, and scale capacity assumptions | SCALE-OPS-005, SCALE-OPS-006, SCALE-OPS-009 | High | Operations / Support Owner |
+| SCALE-OPS-BL-004 | Consolidate scale risks and governed release/change-control cadence | SCALE-OPS-010, SCALE-OPS-011, SCALE-OPS-012 | High | Product Owner / Lead Engineer |
+
+AI/n8n/service actors cannot approve backlog priority, accept scale operating risks, waive scale operating evidence, or sign scale operating model closure.

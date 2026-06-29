@@ -172,3 +172,11 @@ The commercial governance and scale readiness pack extends productization, comme
 This package is documentation/evidence-control only and does not authorize runtime changes, tenant billing, payment processing, contract execution, partner contract execution, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, or sign commercial governance closure.
+
+## Commercial Scale Operating Model and Partner Implementation Readiness Pack
+
+This package follows Commercial Governance, Sales Enablement, and Scale Readiness. It defines the evidence-control track for repeatable implementation, partner delivery, multi-customer rollout, support escalation, scale capacity, change-control cadence, customer/partner data safety, and final human scale operating-model authorization.
+
+It does not authorize runtime changes, tenant billing, payment processing, partner portal functionality, external CMMS implementation, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept scale operating model evidence, approve partner implementation readiness, approve multi-customer rollout readiness, approve support escalation handoff, accept scale operating risks, or sign scale operating model closure.

@@ -405,3 +405,22 @@ The Commercial Governance, Sales Enablement, and Scale Readiness Evidence Pack e
 This mapping depends on the Customer Success, Commercial Operations, and Renewal Readiness Evidence Pack. Commercial governance and scale-readiness evidence does not authorize unapproved runtime APIs, tenant billing, payment processing, contract execution, partner contract execution, external CMMS integration, full API 579/API 581, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept commercial governance evidence, approve sales enablement materials, approve pricing or discount exceptions, approve customer commitments, approve partner/channel readiness, approve scale readiness, accept commercial scale risks, waive commercial governance evidence, or sign commercial governance closure.
+
+## Commercial Scale Operating Model and Partner Implementation Mapping
+
+This mapping follows the Commercial Governance, Sales Enablement, and Scale Readiness Evidence Pack and records the evidence required before AIM can treat broader commercial scaling and partner implementation as operationally controlled.
+
+| Evidence ID | Evidence area | Required artifact | Owner | Status |
+|---|---|---|---|---|
+| SCALE-OPS-001 | Scale operating baseline | Production/BAU/customer-success/commercial-governance baseline references | Product Owner / Operations | Pending |
+| SCALE-OPS-002 | Delivery role model | Delivery RACI and escalation route | Product Owner / Delivery Lead | Pending |
+| SCALE-OPS-003 | Implementation methodology | Repeatable implementation phase/gate checklist | Delivery Lead | Pending |
+| SCALE-OPS-004 | Partner implementation governance | Partner qualification, access, training, supervision record | Partner Manager / Security Owner | Pending |
+| SCALE-OPS-005 | Multi-customer rollout control | Wave, entry/exit, freeze, rollback, acceptance criteria | Product Owner / Operations | Pending |
+| SCALE-OPS-006 | Support escalation model | L1/L2/L3/security/DevOps/partner escalation route | Operations / Support Owner | Pending |
+| SCALE-OPS-007 | Implementation evidence archive | Evidence index and retention ownership | Evidence Coordinator | Pending |
+| SCALE-OPS-008 | Partner/customer data safety | Demo/sandbox/production-data boundary | Security Owner / Partner Manager | Pending |
+| SCALE-OPS-009 | Scale capacity and staffing | Delivery/support/security/DevOps/customer-success assumptions | Product Owner / Operations | Pending |
+| SCALE-OPS-010 | Scale risk and dependency register | Partner/staffing/support/security/compliance risk register | Product Owner / Risk Owner | Pending |
+| SCALE-OPS-011 | Change-control and release cadence | Scale backlog/release/UAT/customer communication model | Product Owner / Lead Engineer | Pending |
+| SCALE-OPS-012 | Final scale operating-model signoff | Human approval/no-go/carryover decision | Product Owner / Operations / Lead Engineer | Pending |
