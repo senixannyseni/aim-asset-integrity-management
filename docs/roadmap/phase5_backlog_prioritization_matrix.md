@@ -191,3 +191,19 @@ The Post-Go-Live Hypercare and Production Stabilization Evidence Pack maps the p
 | P5-030 | HYPERCARE-003 / HYPERCARE-006 / HYPERCARE-012 | Audit/compliance, governance workflow monitoring, and closure traceability |
 
 AI/n8n/service actors cannot accept hypercare evidence, close production incidents, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.
+
+## Post-Go-Live BAU Transition Backlog Mapping
+
+The Post-Go-Live Hypercare Closure and BAU Transition Authorization Pack maps post-hypercare stabilization into controlled BAU transition evidence records:
+
+| Backlog ID | BAU transition mapping | Notes |
+|---|---|---|
+| P5-021 | BAU-001 / BAU-002 / BAU-011 / BAU-012 | Hypercare baseline, evidence completion, archive readiness, and final authorization |
+| P5-022 | BAU-003 / BAU-004 | Incident closure review and residual defect carryover |
+| P5-026 | BAU-005 / BAU-012 | Support model, business ownership, and final transition authorization |
+| P5-027 | BAU-006 / BAU-010 | Monitoring ownership and performance/capacity BAU watch |
+| P5-028 | BAU-005 / BAU-006 / BAU-012 | BAU support handoff, escalation model, and final signoff |
+| P5-029 | BAU-004 / BAU-012 | Residual commercial/business risk and BAU decision readiness |
+| P5-030 | BAU-007 / BAU-011 / BAU-012 | Governance continuity, audit archive, and transition traceability |
+
+AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, approve support handoff, accept residual BAU risks, close BAU defects, waive BAU transition evidence, or sign BAU transition authorization.

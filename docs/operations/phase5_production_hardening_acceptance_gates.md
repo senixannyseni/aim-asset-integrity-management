@@ -209,3 +209,19 @@ Required gate evidence:
 - BAU handoff readiness and final human hypercare closure signoff recorded.
 
 AI/n8n/service actors cannot accept hypercare evidence, close production incidents, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.
+
+## Post-Go-Live Hypercare Closure and BAU Transition Gate
+
+`BAU-001 through BAU-012` must be complete before temporary hypercare can be closed and the system can transition to BAU support.
+
+Gate conditions:
+
+- HYPERCARE-001 through HYPERCARE-012 are closed, extended, or risk-accepted by named humans;
+- blocker/critical production incidents are closed or formally accepted with owner and target date;
+- carryover defects have severity, workaround, owner, target release/date, and business acceptance;
+- BAU support model, SLA, escalation route, and monitoring ownership are active;
+- governance controls remain active for evidence, AI staging, calculation, report, work order, audit, and n8n boundary;
+- security/access, backup/restore/DR, performance/capacity, and evidence archive ownership are assigned;
+- final BAU transition authorization is signed by named humans only.
+
+AI/n8n/service actors cannot accept BAU transition evidence, approve BAU transition, close BAU transition gaps, accept residual BAU risks, approve support handoff, waive BAU transition evidence, or sign BAU transition authorization.
