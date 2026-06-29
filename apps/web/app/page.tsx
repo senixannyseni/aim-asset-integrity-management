@@ -6,6 +6,7 @@ const navigationItems = [
   { href: '/calculations', label: 'Calculations', description: 'Review deterministic calculation runs and engineering warnings.' },
   { href: '/evidence', label: 'Evidence', description: 'Open the evidence repository and linkage workspace.' },
   { href: '/evidence-traceability', label: 'Evidence Traceability', description: 'Review cross-module evidence coverage and missing evidence indicators.' },
+  { href: '/inspections', label: 'Inspections', description: 'Review inspection packages, evidence, NDT coverage, and downstream readiness.' },
   { href: '/ndt-data-room', label: 'NDT Data Room', description: 'View read-only NDT method, component, CML/TML/Grid, and evidence linkage readiness.' },
   { href: '/workflow-console', label: 'Workflow Console', description: 'View read-only n8n/workflow orchestration and notification status.' },
   { href: '/integrity-decisions', label: 'Integrity Decisions', description: 'Review integrity decisions and evidence gates.' },
