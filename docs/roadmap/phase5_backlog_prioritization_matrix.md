@@ -175,3 +175,19 @@ The Final Production Go-Live Authorization Evidence Pack maps the final pilot-to
 | P5-030 | GOLIVE-001 / GOLIVE-003 / GOLIVE-012 | Long-term audit/compliance evidence archive and final authorization traceability |
 
 AI/n8n/service actors cannot approve final production go-live, authorize cutover, approve hypercare activation, close go-live gaps, accept final residual risks, or sign final production authorization.
+
+## Post-Go-Live Hypercare Backlog Mapping
+
+The Post-Go-Live Hypercare and Production Stabilization Evidence Pack maps the post-authorization production stabilization window into controlled evidence records:
+
+| Backlog ID | Hypercare mapping | Notes |
+|---|---|---|
+| P5-021 | HYPERCARE-001 / HYPERCARE-012 | Final evidence archive, baseline, and human closure traceability |
+| P5-022 | HYPERCARE-004 / HYPERCARE-005 / HYPERCARE-010 | Incident, defect/problem, residual risk, rollback/watch condition handling |
+| P5-026 | HYPERCARE-007 / HYPERCARE-011 | User support/adoption and BAU handoff readiness |
+| P5-027 | HYPERCARE-003 / HYPERCARE-004 / HYPERCARE-012 | Production monitoring, incident response, and closure signoff |
+| P5-028 | HYPERCARE-002 / HYPERCARE-011 / HYPERCARE-012 | Hypercare cadence, support handoff, and final closure |
+| P5-029 | HYPERCARE-007 / HYPERCARE-011 | Business adoption and BAU readiness |
+| P5-030 | HYPERCARE-003 / HYPERCARE-006 / HYPERCARE-012 | Audit/compliance, governance workflow monitoring, and closure traceability |
+
+AI/n8n/service actors cannot accept hypercare evidence, close production incidents, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.

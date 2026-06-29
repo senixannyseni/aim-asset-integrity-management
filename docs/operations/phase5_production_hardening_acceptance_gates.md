@@ -192,3 +192,20 @@ Required evidence:
 - final human production go-live authorization.
 
 This gate is satisfied only when the final authorization record is signed by named humans. AI/n8n/service actors cannot approve final production go-live, authorize cutover, accept final residual risks, approve hypercare activation, close go-live gaps, waive missing evidence, or sign final production authorization.
+
+## Post-Go-Live Hypercare and Production Stabilization Gate
+
+The Post-Go-Live Hypercare and Production Stabilization Evidence Pack controls the stabilization gate after final production go-live authorization.
+
+Required gate evidence:
+
+- `HYPERCARE-001 through HYPERCARE-012` completed or explicitly marked not applicable with rationale and named human approval;
+- final production go-live authorization record attached;
+- hypercare window, cadence, owner, and evidence archive location recorded;
+- production monitoring, alert routing, audit/error logs, and n8n workflow health reviewed;
+- production incident/problem/defect register maintained;
+- governance workflow controls remain intact under production usage;
+- security/access, performance/capacity, backup/restore, and rollback watch conditions reviewed;
+- BAU handoff readiness and final human hypercare closure signoff recorded.
+
+AI/n8n/service actors cannot accept hypercare evidence, close production incidents, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.

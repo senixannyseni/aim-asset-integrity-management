@@ -252,3 +252,23 @@ Final production go-live authorization requires the Production Pilot Evidence Ex
 AI/n8n/service actors cannot approve final production go-live, accept final residual risks, authorize cutover, approve hypercare activation, close go-live gaps, waive missing evidence, or sign final production authorization.
 
 AIM remains the system of record. n8n remains orchestration-only.
+
+## 16. Post-Go-Live Hypercare and Production Stabilization Mapping
+
+The Post-Go-Live Hypercare and Production Stabilization Evidence Pack adds post-authorization production stabilization evidence maintained in:
+
+```text
+docs/hypercare/post_golive_hypercare_stabilization_pack.md
+docs/hypercare/post_golive_hypercare_plan.md
+docs/hypercare/post_golive_incident_problem_defect_record.md
+docs/hypercare/post_golive_stabilization_bau_handoff_record.md
+docs/operations/post_golive_hypercare_stabilization_runbook.md
+```
+
+The post-go-live hypercare evidence set adds `HYPERCARE-001` through `HYPERCARE-012`, covering hypercare baseline, hypercare cadence, production monitoring review, incident intake and severity, defect/problem management, governance workflow monitoring, user support/adoption, security/access watch, performance/capacity watch, rollback/watch conditions, BAU handoff readiness, and final human hypercare closure signoff.
+
+This mapping depends on the Final Production Go-Live Authorization Evidence Pack remaining attached and reconciled. Post-go-live hypercare is production stabilization evidence, not a substitute for human operational ownership.
+
+AI/n8n/service actors cannot accept hypercare evidence, close production incidents, close hypercare defects, approve BAU handoff, approve residual operational risk, waive missing evidence, or sign hypercare closure.
+
+AIM remains the system of record. n8n remains orchestration-only.
