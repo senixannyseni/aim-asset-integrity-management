@@ -840,3 +840,11 @@ Status: Completed as architecture/evidence-control package.
 Evidence IDs: `MT-S0-001` through `MT-S0-012`.
 
 The package creates architecture and guardrail records for tenant isolation, tenant-aware RBAC/service actors, migration/rollout controls, object-storage boundaries, audit/evidence continuity, Sprint 1 readiness, risk ownership, and final human Sprint 0 signoff. No runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, billing/payment implementation, tenant data migration, or external CMMS integration are added.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 1 — Tenant Context and Database Isolation Foundation
+
+Status: Added as runtime foundation plus evidence-control baseline after Sprint 0 guardrails.
+
+Evidence IDs: `MT-S1-001` through `MT-S1-012`.
+
+Scope: tenant schema foundation, tenant memberships, request tenant context resolution, tenant visibility routes, tenant_id foundation columns/indexes, tenant RBAC permissions, and Sprint 2 route-filter backlog. Production multi-tenant rollout remains gated by human review.

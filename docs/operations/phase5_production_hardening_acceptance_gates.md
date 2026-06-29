@@ -373,3 +373,11 @@ AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve
 Gate evidence: `MT-S0-001 through MT-S0-012`.
 
 The gate is satisfied only when tenant architecture, tenant isolation guardrails, tenant-aware RBAC/service actor rules, API contract conventions, database migration guardrails, object-storage tenant boundary, audit/evidence continuity, rollout readiness, residual risks, and human Sprint 0 closure are documented and approved by named humans. AI/n8n/service actors cannot accept multi-tenant Sprint 0 evidence or sign multi-tenant Sprint 0 closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 1 Tenant Context and Database Isolation Gate
+
+Gate evidence: `MT-S1-001 through MT-S1-012`.
+
+Pass condition: tenant context runtime, tenant membership loading, tenant_id database foundation, and tenant RBAC controls are present, tested, and human-reviewed. Sprint 1 does not authorize production multi-tenant rollout until route-level tenant filters and production migration evidence are complete.
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 1 evidence or approve tenant isolation readiness.

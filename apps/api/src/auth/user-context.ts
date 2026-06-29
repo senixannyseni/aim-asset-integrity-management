@@ -1,4 +1,5 @@
 import { pool } from '../db/client.js';
+import { normalizeTenantMemberships, type TenantMembership } from '../modules/tenancy/tenant-context.js';
 import { isPermission, isRole, type Permission, type Role } from '../rbac/roles.js';
 
 export type AuthenticatedUserContext = {
@@ -7,6 +8,7 @@ export type AuthenticatedUserContext = {
   fullName: string;
   roles: Role[];
   permissions: Permission[];
+  tenantMemberships: TenantMembership[];
   authType: 'jwt' | 'local_demo';
   tokenId?: string;
 };
@@ -19,6 +21,7 @@ type UserContextRow = {
   locked_until: Date | string | null;
   roles: string[] | string | null;
   permissions: string[] | string | null;
+  tenant_memberships: unknown;
 };
 
 function toStringArray(value: string[] | string | null | undefined): string[] {
@@ -41,12 +44,25 @@ export async function loadUserContextById(userId: string, tokenId?: string): Pro
        u.status,
        u.locked_until,
        coalesce(array_agg(distinct r.role_code) filter (where r.role_code is not null), '{}') as roles,
-       coalesce(array_agg(distinct p.permission_code) filter (where p.permission_code is not null), '{}') as permissions
+       coalesce(array_agg(distinct p.permission_code) filter (where p.permission_code is not null), '{}') as permissions,
+       coalesce(
+         jsonb_agg(distinct jsonb_build_object(
+           'tenantId', t.id::text,
+           'tenantSlug', t.tenant_slug,
+           'tenantName', t.tenant_name,
+           'status', utm.status,
+           'isDefault', utm.is_default,
+           'roleScope', coalesce(utm.role_scope, '[]'::jsonb)
+         )) filter (where t.id is not null),
+         '[]'::jsonb
+       ) as tenant_memberships
      from users u
      left join user_roles ur on ur.user_id = u.id
      left join roles r on r.id = ur.role_id
      left join role_permissions rp on rp.role_id = r.id
      left join permissions p on p.id = rp.permission_id
+     left join user_tenant_memberships utm on utm.user_id = u.id
+     left join tenants t on t.id = utm.tenant_id
      where u.id = $1
      group by u.id`,
     [userId]
@@ -63,6 +79,7 @@ export async function loadUserContextById(userId: string, tokenId?: string): Pro
     fullName: row.full_name,
     roles: toStringArray(row.roles).filter(isRole),
     permissions: toStringArray(row.permissions).filter(isPermission),
+    tenantMemberships: normalizeTenantMemberships(row.tenant_memberships),
     authType: 'jwt',
     tokenId
   };

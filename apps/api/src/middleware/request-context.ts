@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { extractBearerToken, verifyAuthToken } from '../auth/jwt.js';
 import { loadUserContextById, type AuthenticatedUserContext } from '../auth/user-context.js';
 import { config } from '../config/env.js';
+import { DEFAULT_SINGLE_TENANT_NAME, DEFAULT_SINGLE_TENANT_SLUG, DEFAULT_SINGLE_TENANT_ID } from '../modules/tenancy/tenant-context.js';
 import { isRole, permissionsForRoles, type Permission, type Role } from '../rbac/roles.js';
 
 declare global {
@@ -50,6 +51,14 @@ export function demoRequestContext(req: Request, _res: Response, next: NextFunct
     fullName: req.header('x-aim-demo-full-name') ?? 'Local Demo User',
     roles,
     permissions,
+    tenantMemberships: [{
+      tenantId: req.header('x-aim-demo-tenant-id') ?? DEFAULT_SINGLE_TENANT_ID,
+      tenantSlug: req.header('x-aim-demo-tenant-slug') ?? DEFAULT_SINGLE_TENANT_SLUG,
+      tenantName: req.header('x-aim-demo-tenant-name') ?? DEFAULT_SINGLE_TENANT_NAME,
+      status: 'active',
+      isDefault: true,
+      roleScope: []
+    }],
     authType: 'local_demo'
   };
   next();

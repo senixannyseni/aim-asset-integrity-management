@@ -324,3 +324,14 @@ AI/n8n/service actors cannot approve backlog priority, approve multi-tenant runt
 | Tenant-aware RBAC/service actor guardrails | MT-S0-004 through MT-S0-005 | P0 | Must preserve existing governance boundaries |
 | API/DB/object-storage/audit continuity guardrails | MT-S0-006 through MT-S0-009 | P0 | Required before migrations/routes are changed |
 | Sprint 1 readiness, risks, and signoff | MT-S0-010 through MT-S0-012 | P0 | Human-only approval required |
+
+## Enterprise Multi-Tenant Runtime Sprint 1 Tenant Context and Database Isolation Backlog Mapping
+
+| Backlog item | Priority | Status |
+|---|---:|---|
+| MT-S1 tenant schema and membership foundation | P0 | Added |
+| MT-S1 request tenant context middleware | P0 | Added |
+| MT-S1 tenant visibility endpoints | P1 | Added |
+| MT-S1 tenant_id foundation columns and indexes | P0 | Added |
+| MT-S2 route-level tenant filters | P0 | Carry forward |
+| MT-S2 object-storage tenant path enforcement | P0 | Carry forward |

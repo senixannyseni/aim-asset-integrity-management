@@ -485,3 +485,22 @@ AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve
 | MT-S0-012 | Human Sprint 0 signoff | `docs/operations/enterprise_multitenant_runtime_sprint0_architecture_guardrails_runbook.md` |
 
 Baseline dependency: Enterprise Runtime Hardening and Multi-Tenant Commercialization Implementation Backlog Pack. AI/n8n/service actors cannot accept multi-tenant Sprint 0 evidence or sign multi-tenant Sprint 0 closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 1 Tenant Context and Database Isolation Mapping
+
+| Evidence ID | Evidence item | Artifact |
+|---|---|---|
+| MT-S1-001 | Sprint 1 baseline | Merge/tag/commit/test evidence |
+| MT-S1-002 | Tenant schema foundation | `db/migrations/0028_enterprise_multitenant_sprint1_tenant_context.sql` |
+| MT-S1-003 | Tenant context middleware | `apps/api/src/middleware/tenant-context.ts` |
+| MT-S1-004 | Tenant header selection | Tenant context runtime evidence |
+| MT-S1-005 | User membership loading | `apps/api/src/auth/user-context.ts` |
+| MT-S1-006 | Local demo tenant boundary | Request context demo tenant evidence |
+| MT-S1-007 | Tenant route visibility | `apps/api/src/routes/tenants.ts` |
+| MT-S1-008 | Tenant_id foundation columns | Migration/index evidence |
+| MT-S1-009 | Tenant-aware RBAC | `apps/api/src/rbac/roles.ts` and migration permissions |
+| MT-S1-010 | Tenant boundary helpers | `apps/api/src/modules/tenancy/tenant-context.ts` |
+| MT-S1-011 | Sprint 2 route-filter backlog | `docs/enterprise/tenant_database_isolation_foundation_record.md` |
+| MT-S1-012 | Human Sprint 1 signoff | Sprint 1 closure decision evidence |
+
+Enterprise Multi-Tenant Runtime Sprint 1 follows the Enterprise Multi-Tenant Runtime Sprint 0 Architecture and Guardrails Pack and precedes Sprint 2 route-level tenant filtering.

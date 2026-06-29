@@ -26,6 +26,87 @@ x-internal-routes-excluded:
   - /api/v1/rbac/demo/asset-read
   - /api/v1/rbac/demo/calculation-approve
 paths:
+  /api/v1/tenant/context:
+    get:
+      summary: Get current tenant context and available tenant memberships
+      description: Returns the resolved tenant context for the authenticated user and the tenant memberships available to that user. Tenant context is selected only from authenticated user membership; AI/n8n/service actors cannot approve tenant context or tenant isolation readiness.
+      x-permission-required: tenant.context.read
+      x-audit-event-generated: none
+      x-human-review-required: false
+      x-tenant-aware: true
+      responses:
+        '200':
+          description: Current tenant context and available memberships
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_context:
+                    type: object
+                    additionalProperties: true
+                  available_tenants:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  governance:
+                    type: object
+                    properties:
+                      aim_system_of_record:
+                        type: boolean
+                      n8n_orchestration_only:
+                        type: boolean
+                      human_approval_required:
+                        type: boolean
+                      service_actor_boundary:
+                        type: string
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+  /api/v1/tenant/isolation-health:
+    get:
+      summary: Get tenant isolation health for the current tenant context
+      description: Returns tenant isolation guardrail status for the authenticated tenant context. This is a read-only Sprint 1 foundation endpoint; route-wide tenant filtering and production tenant isolation certification remain future Sprint 2+ work.
+      x-permission-required: tenant.context.read
+      x-audit-event-generated: none
+      x-human-review-required: false
+      x-tenant-aware: true
+      x-read-only: true
+      responses:
+        '200':
+          description: Tenant isolation health summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_id:
+                    type: string
+                    format: uuid
+                  tenant_slug:
+                    type: string
+                  isolation_controls:
+                    type: array
+                    items:
+                      type: string
+                  n8n_boundary:
+                    type: string
+                  system_of_record:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/assets:
     get:
       summary: List tank assets
