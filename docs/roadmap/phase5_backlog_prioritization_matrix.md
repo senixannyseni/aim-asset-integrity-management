@@ -143,3 +143,18 @@ The Phase 5 Final Production Hardening Closure Pack maps the remaining release-g
 P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure is not production go-live approval.
 
 AI/n8n/service actors cannot accept Phase 5 closure evidence, approve production go-live, close Phase 5 final closure gaps, sign Phase 5 final closure, accept residual risks, or waive missing evidence.
+## Production Pilot Evidence Execution Backlog Mapping
+
+The Production Pilot Evidence Execution Pack maps the Phase 5 closure baseline into controlled pilot evidence records:
+
+| Backlog ID | Pilot evidence mapping | Notes |
+|---|---|---|
+| P5-021 | PILOT-001 / PILOT-002 / PILOT-012 | Go/no-go evidence archive, baseline, entry gate, and final pilot decision |
+| P5-022 | PILOT-009 / PILOT-011 | Defect, residual-risk, and exception handling |
+| P5-026 | PILOT-003 / PILOT-004 / PILOT-010 | Pilot users/RBAC, authorized data, adoption and KPI evidence |
+| P5-027 | PILOT-007 / PILOT-008 / PILOT-012 | Monitoring, incident response, support handoff, and final decision |
+| P5-028 | PILOT-007 / PILOT-008 / PILOT-012 | Operational readiness, hypercare handoff, and final pilot decision |
+| P5-029 | PILOT-010 / PILOT-011 / PILOT-012 | Commercial/pilot readiness, residual risk, and wider go-live recommendation |
+| P5-030 | PILOT-004 / PILOT-005 / PILOT-012 | Long-term pilot evidence archive and audit/compliance traceability |
+
+Production pilot evidence execution is not production-wide go-live approval. AI/n8n/service actors cannot accept production pilot evidence, approve pilot completion, approve production-wide go-live, close pilot defects, or accept residual pilot risks.

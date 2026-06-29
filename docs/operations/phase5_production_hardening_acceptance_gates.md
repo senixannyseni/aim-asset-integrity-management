@@ -154,3 +154,23 @@ P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure
 AI/n8n/service actors cannot approve Phase 5 final closure gates, accept Phase 5 closure evidence, approve production go-live, accept residual risks, waive missing evidence, close Phase 5 final closure gaps, or sign Phase 5 final closure.
 
 P5-GATE-001 through P5-GATE-008 are reconciled by P5-FINAL-001 through P5-FINAL-012.
+## Production Pilot Evidence Execution Pack
+
+The Production Pilot Evidence Execution Pack executes a limited pilot evidence layer after Phase 5 final closure through `PILOT-001 through PILOT-012`.
+
+Required pilot evidence:
+
+- pilot baseline and scope;
+- pilot entry gate referencing Phase 5 final closure;
+- pilot users, RBAC, and denied-action evidence;
+- pilot data and evidence set authorization;
+- pilot execution scenarios for critical workflows;
+- engineering governance validation;
+- operational smoke and monitoring;
+- incident, rollback, and recovery readiness;
+- defect and issue triage;
+- pilot KPI and adoption evidence;
+- residual-risk and exception review;
+- final pilot decision and handoff.
+
+Production pilot evidence execution is not production-wide go-live approval. AI/n8n/service actors cannot approve pilot gates, accept production pilot evidence, approve pilot completion, approve production-wide go-live, close pilot defects, or accept residual pilot risks.
