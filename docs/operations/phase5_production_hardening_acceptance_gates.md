@@ -130,3 +130,27 @@ Required P5-6 gate evidence:
 
 AI/n8n/service actors cannot approve P5-6 gates, accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, or authorize production go-live.
 
+## Phase 5 Final Closure Execution Pack
+
+The Phase 5 Final Production Hardening Closure Pack reconciles `P5-GATE-001` through `P5-GATE-008` through `P5-FINAL-001` through `P5-FINAL-012`.
+
+Required final closure evidence:
+
+- package inventory for P5-1 through P5-6;
+- security closure trace;
+- deployment/environment closure trace;
+- observability/incident closure trace;
+- backup/restore/DR closure trace;
+- performance/lifecycle closure trace;
+- integration closure trace;
+- gate reconciliation matrix;
+- residual-risk consolidation;
+- evidence archive readiness;
+- production-pilot recommendation;
+- final human closure signoff.
+
+P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure is not production go-live approval.
+
+AI/n8n/service actors cannot approve Phase 5 final closure gates, accept Phase 5 closure evidence, approve production go-live, accept residual risks, waive missing evidence, close Phase 5 final closure gaps, or sign Phase 5 final closure.
+
+P5-GATE-001 through P5-GATE-008 are reconciled by P5-FINAL-001 through P5-FINAL-012.

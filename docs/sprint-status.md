@@ -673,3 +673,13 @@ P5-6 is documentation/evidence-control only. It does not add runtime APIs, datab
 
 AI/n8n/service actors cannot accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, or authorize production go-live.
 
+## Phase 5 Final Production Hardening Closure Pack
+
+Status: implemented in this documentation/evidence-control package.
+
+- Adds final closure pack, closure evidence index, closure decision record, and closure runbook.
+- Consolidates P5-1 through P5-6 evidence-control packages.
+- Introduces `P5-FINAL-001` through `P5-FINAL-012` for package inventory, gate reconciliation, residual-risk roll-up, evidence archive readiness, production-pilot recommendation, and final human closure signoff.
+- P5-1 through P5-6 are closed as evidence-control baseline.
+- Phase 5 final closure is not production go-live approval.
+- AI/n8n/service actors cannot accept Phase 5 closure evidence or approve production go-live.

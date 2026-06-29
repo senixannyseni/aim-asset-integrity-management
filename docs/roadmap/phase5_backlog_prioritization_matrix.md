@@ -126,3 +126,20 @@ P5-6 maps the Phase 5 integration readiness backlog into controlled evidence rec
 
 AI/n8n/service actors cannot accept integration evidence, approve integration readiness, approve external CMMS cutover, close integration gaps, accept residual integration risk, or authorize production go-live.
 
+## Phase 5 Final Closure Backlog Mapping
+
+The Phase 5 Final Production Hardening Closure Pack maps the remaining release-governance and enterprise-readiness backlog into controlled closure evidence records:
+
+| Backlog ID | Final closure mapping | Notes |
+|---|---|---|
+| P5-021 | P5-FINAL-010 | Go/no-go evidence archive readiness, evidence index, checksum/location, owner, and retention |
+| P5-022 | P5-FINAL-009 | Residual-risk consolidation and accepted-risk approvals |
+| P5-026 | P5-FINAL-008 / P5-FINAL-011 | Enterprise readiness gate reconciliation and production-pilot recommendation |
+| P5-027 | P5-FINAL-004 / P5-FINAL-011 | Observability/support readiness and production-pilot recommendation |
+| P5-028 | P5-FINAL-010 / P5-FINAL-012 | Operational handoff evidence and final human signoff |
+| P5-029 | P5-FINAL-011 | Commercial/production-pilot recommendation and exclusions |
+| P5-030 | P5-FINAL-010 | Long-term audit/compliance evidence archive readiness |
+
+P5-1 through P5-6 are closed as evidence-control baseline. Phase 5 final closure is not production go-live approval.
+
+AI/n8n/service actors cannot accept Phase 5 closure evidence, approve production go-live, close Phase 5 final closure gaps, sign Phase 5 final closure, accept residual risks, or waive missing evidence.
