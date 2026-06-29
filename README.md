@@ -1105,3 +1105,11 @@ Primary outputs:
 Enterprise runtime hardening does not add runtime APIs, database migrations, formula changes, AI behavior, n8n behavior, object-storage behavior, report/work-order behavior, tenant billing, payment processing, external CMMS implementation, customer production rollout execution, full API 579/API 581 implementation, 3D processing, or copied API/API-ASME formulas.
 
 AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve multi-tenant runtime implementation, approve tenant isolation readiness, approve enterprise security hardening priority, approve billing/payment implementation, approve customer production rollout scope, accept enterprise runtime risks, waive enterprise runtime evidence, or sign enterprise runtime hardening closure.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 0 — Architecture and Guardrails Pack
+
+Status: Documentation/evidence-control architecture guardrail package.
+
+Enterprise Multi-Tenant Runtime Sprint 0 defines the architecture, tenant isolation, tenant-aware RBAC/service actor, migration, object-storage, audit/evidence continuity, rollout, and Sprint 1 readiness guardrails required before multi-tenant runtime code begins. Enterprise Multi-Tenant Runtime Sprint 0 does not add runtime APIs, database migrations, formulas, AI behavior, n8n behavior, object-storage behavior, approval behavior, report issue behavior, work-order behavior, external CMMS integration, billing/payment implementation, tenant data migration, full API 579, full API 581, 3D processing, or copied API/API-ASME formulas.
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 0 evidence, approve tenant architecture, approve tenant isolation readiness, approve tenant-aware RBAC changes, approve service actor tenant scope, approve migration rollout readiness, sign multi-tenant Sprint 0 closure, or waive multi-tenant guardrail evidence. n8n remains orchestration-only. AIM remains the system of record.

@@ -367,3 +367,9 @@ Required gate evidence:
 - final human runtime backlog authorization.
 
 AI/n8n/service actors cannot accept enterprise runtime backlog evidence, approve multi-tenant runtime implementation, approve tenant isolation readiness, approve enterprise security hardening priority, approve billing/payment implementation, approve customer production rollout scope, accept enterprise runtime risks, waive enterprise runtime evidence, or sign enterprise runtime hardening closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 0 Architecture and Guardrails Gate
+
+Gate evidence: `MT-S0-001 through MT-S0-012`.
+
+The gate is satisfied only when tenant architecture, tenant isolation guardrails, tenant-aware RBAC/service actor rules, API contract conventions, database migration guardrails, object-storage tenant boundary, audit/evidence continuity, rollout readiness, residual risks, and human Sprint 0 closure are documented and approved by named humans. AI/n8n/service actors cannot accept multi-tenant Sprint 0 evidence or sign multi-tenant Sprint 0 closure.
