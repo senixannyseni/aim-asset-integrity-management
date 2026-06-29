@@ -27,3 +27,23 @@ A gate fails if evidence is missing, if a blocker/critical/governance defect rem
 ## Completion Rule
 
 Phase 5 is considered complete only when all P5 gates have attached evidence, no unresolved blocker/critical/governance defect remains, and the final human go/no-go decision references the accepted Phase 5 evidence bundle.
+
+## P5-2 Execution Pack
+
+P5-2 operationalizes `P5-GATE-002 Deployment gate` and `P5-GATE-003 Environment gate` through `P5-ENV-001` through `P5-ENV-012`.
+
+Required P5-2 gate evidence:
+
+- release tag, commit SHA, branch, PR, and clean working tree evidence;
+- build artifact identifier and checksum;
+- environment variable inventory with redacted values only;
+- `.env.example` parity review;
+- API/frontend/CORS/TLS/NODE_ENV configuration review;
+- PostgreSQL application/migration privilege review;
+- migration/seed rehearsal and rollback plan;
+- object-storage bucket/private access/signed URL/checksum review;
+- n8n remains orchestration-only and has no direct PostgreSQL write access;
+- deployment smoke test evidence;
+- rollback readiness record and human deployment signoff.
+
+AI/n8n/service actors cannot approve P5-2 gates, accept deployment evidence, accept rollback readiness, or authorize production go-live.

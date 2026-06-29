@@ -50,3 +50,7 @@ Phase 5 does not reopen RC4 scope. It does not add runtime APIs, database migrat
 ## 5. Release Gate
 
 Phase 5 work should not be treated as complete until evidence exists for security, deployment, observability, backup/restore/DR, performance, external integration readiness, and support ownership. AI/n8n/service actors cannot approve Phase 5 gates or production go-live.
+
+## P5-2 Execution Pack
+
+P5-2 implements the documentation/evidence-control layer for the deployment automation and environment/infrastructure hardening workstreams. It does not change runtime behavior. Its output is a controlled evidence set for deployment baseline, environment configuration, migration/seed rehearsal, smoke testing, rollback readiness, and human deployment signoff.
