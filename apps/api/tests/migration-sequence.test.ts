@@ -6,7 +6,7 @@ const repoRoot = path.resolve(__dirname, '../../..');
 const migrationsDir = path.join(repoRoot, 'db', 'migrations');
 
 describe('database migration sequence', () => {
-  it('tracks all migrations required for a clean Sprint 10 database setup', () => {
+  it('tracks all migrations required for a clean Enterprise multi-tenant Sprint 1 database setup', () => {
     const files = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql')).sort();
 
     expect(files).toEqual([
@@ -37,6 +37,7 @@ describe('database migration sequence', () => {
       '0025_ndt_data_room_visualization.sql',
       '0026_hypercare_golive_readiness.sql',
       '0027_findings_anomaly_foundation.sql',
+      '0028_enterprise_multitenant_sprint1_tenant_context.sql',
     ]);
   });
 });

@@ -674,3 +674,27 @@ on conflict do nothing;
 
 -- RC3-B report export object-storage permission synchronization.
 -- ai_agent intentionally receives no report generation, export, approval, issue, or finalization permissions.
+
+-- Enterprise multi-tenant Sprint 1 tenant permissions synchronization.
+insert into permissions(permission_code, description) values
+  ('tenant.context.read', 'Read current tenant context and available tenant memberships'),
+  ('tenant.read', 'Read tenant records and tenant membership metadata'),
+  ('tenant.manage', 'Manage tenant records and tenant membership assignments with human approval')
+on conflict (permission_code) do update set description = excluded.description;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code = 'tenant.context.read'
+where r.role_code in ('admin','it_admin','management','client_viewer')
+on conflict do nothing;
+
+insert into role_permissions(role_id, permission_id)
+select r.id, p.id
+from roles r
+join permissions p on p.permission_code in ('tenant.read','tenant.manage')
+where r.role_code in ('admin','it_admin')
+on conflict do nothing;
+
+-- AI/n8n/service actors intentionally receive no tenant management, tenant isolation, or tenant context approval permissions.
+
