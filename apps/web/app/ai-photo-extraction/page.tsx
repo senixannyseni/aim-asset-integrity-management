@@ -43,7 +43,7 @@ export default function AiPhotoExtractionPage() {
               <thead><tr><th>Run</th><th>Evidence</th><th>Asset</th><th>Photos</th><th>Status</th></tr></thead>
               <tbody>
                 <tr><td><code>run-001</code></td><td>EVD-2024-000001</td><td><code>AST-0042</code></td><td>36</td><td><span className="badge badge-warning">Partial Review</span></td></tr>
-                <tr><td><code>run-002</code></td><td>EVD-2024-000002</td><td><code>AST-0043</code></td><td>22</td><td><span className="badge badge-success">Approved</span></td></tr>
+                <tr><td><code>run-002</code></td><td>EVD-2024-000002</td><td><code>AST-0043</code></td><td>22</td><td><span className="badge badge-success">Human Reviewed</span></td></tr>
                 <tr><td><code>run-003</code></td><td>EVD-2025-000001</td><td><code>AST-0042</code></td><td>14</td><td><span className="badge badge-warning">Staged</span></td></tr>
               </tbody>
             </table>

@@ -14,6 +14,8 @@ Included changes:
 
 ## Governance Boundaries Preserved
 
+- Database migration history remains unchanged. Already-tagged migrations `0028` and `0029` must not be rewritten by this frontend package; any database correction must be handled in a separate forward-only migration package.
+
 - Frontend does not write directly to PostgreSQL, object storage, or n8n.
 - Login continues to call the backend auth API through `loginToAim`.
 - Dashboard data continues to come from `/api/v1/governance-dashboard/overview`.
@@ -29,6 +31,7 @@ Included changes:
 - `apps/web/app/dashboard/GovernanceDashboardClient.tsx`
 - `apps/web/app/ai-photo-extraction/page.tsx`
 - `docs/operations/frontend_ux_redesign_aim_preview_alignment.md`
+- `docs/operations/frontend_ux_redesign_validation_fix.md`
 
 ## Validation Commands
 
@@ -60,7 +63,7 @@ Open:
 - Confirm login page has AIM Preview visual alignment and still uses real API authentication.
 - Confirm sidebar appears on non-login routes and active navigation follows route changes.
 - Confirm dashboard loads backend data when authenticated and shows a controlled error message when unauthenticated.
-- Confirm existing pages remain reachable from the new sidebar.
+- Confirm existing pages remain reachable from the new sidebar, including `/data-dictionary`, `/validation`, and `/validation/history`.
 - Confirm `/ai-photo-extraction` is clearly labelled as frontend UX alignment and does not expose unsafe mutation controls.
 - Confirm responsive behavior at desktop and tablet widths.
 
@@ -74,3 +77,7 @@ Implement AI Photo Extraction as a real backend-backed module only after adding 
 - engineer review action, correction reason, rejection reason;
 - linkage to findings, reports, and integrity decisions;
 - audit events for every review/correction/link action.
+
+## Database migration correction
+
+If a local copy of this frontend package touched `db/migrations/0028_enterprise_multitenant_sprint1_tenant_context.sql` or `db/migrations/0029_enterprise_multitenant_sprint2_route_filtering_object_boundary.sql`, revert those files to the already-tagged MT Sprint 1/Sprint 2 baseline. Frontend UX alignment must not rewrite historical migrations.
