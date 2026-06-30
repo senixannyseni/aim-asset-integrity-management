@@ -400,3 +400,10 @@ Acceptance criteria:
 - `assertTenantRouteRegressionCoverage` passes against the actual route inventory.
 - `0030_enterprise_multitenant_sprint3_route_expansion_regression_harness.sql` is included in the migration sequence.
 - AI/n8n/service actors cannot approve route expansion, tenant exceptions, tenant regression results, evidence waivers, or Sprint 3 closure.
+
+
+## Enterprise Multi-Tenant Runtime Sprint 4 Frontend Tenant UX Gate
+
+Gate: Tenant context must be visible to users without moving enforcement to the frontend. Tenant Admin Console must remain read/switch UX only, backend membership validation must remain authoritative, and AI/n8n/service actors cannot approve tenant UX/admin changes.
+
+Evidence: MT-S4-001 through MT-S4-012.

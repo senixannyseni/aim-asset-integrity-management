@@ -1,3 +1,5 @@
+import { getAimTenantSelection } from './tenant-session';
+
 export const API_BASE = process.env.NEXT_PUBLIC_AIM_API_BASE_URL ?? 'http://localhost:4000';
 
 const DEMO_HEADERS_ENABLED = process.env.NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED === 'true';
@@ -62,6 +64,14 @@ export function apiFetch(path: string, init: RequestInit = {}): Promise<Response
   const token = getAimAccessToken();
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const tenantSelection = getAimTenantSelection();
+  if (tenantSelection.tenantId && !headers.has('x-aim-tenant-id')) {
+    headers.set('x-aim-tenant-id', tenantSelection.tenantId);
+  }
+  if (tenantSelection.tenantSlug && !headers.has('x-aim-tenant-slug')) {
+    headers.set('x-aim-tenant-slug', tenantSelection.tenantSlug);
   }
 
   if (DEMO_HEADERS_ENABLED) {
