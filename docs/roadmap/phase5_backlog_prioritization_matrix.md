@@ -381,3 +381,17 @@ Priority: High. Sprint 5 closes evidence lifecycle and export-control foundation
 | Human-only customer activation | High | Added via runtime blockers and DB service-actor constraints |
 | Billing/payment processing | Deferred | Explicitly out of scope |
 | Final tenant isolation certification | Deferred | MT Final Closure |
+
+## Enterprise Multi-Tenant Runtime Final Closure Backlog Mapping
+
+| Backlog item | Priority | Final closure disposition |
+|---|---:|---|
+| Reconcile Sprint 0 through Sprint 6 evidence | High | Added in MT Final Closure |
+| Certify route registry and tenant isolation regression coverage | High | Added in MT Final Closure |
+| Confirm migration continuity through 0033 | High | Added in MT Final Closure; no final migration added |
+| Consolidate residual tenant isolation risks and exceptions | High | Added in MT Final Closure |
+| Prepare final go/no-go record | High | Added in MT Final Closure |
+| Customer-specific production rollout evidence | Future | Separate customer pilot/production package |
+| Billing/payment implementation | Future | Separate commercial runtime package |
+
+AI/n8n/service actors cannot approve backlog closure, tenant isolation certification, residual risk acceptance, final go/no-go, or final closure signoff.

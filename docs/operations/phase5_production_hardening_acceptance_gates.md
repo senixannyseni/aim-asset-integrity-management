@@ -419,3 +419,18 @@ Sprint 6 acceptance requires tenant/customer onboarding plans, onboarding readin
 Evidence: MT-S6-001 through MT-S6-012.
 
 The gate does not authorize final enterprise tenant isolation certification, billing/payment processing, external support-ticketing integration, or automatic tenant provisioning. AI/n8n/service actors cannot approve Sprint 6 customer onboarding, support SLA exception, support escalation closure, BAU handoff, evidence waiver, or closure gates.
+
+## Enterprise Multi-Tenant Runtime Final Closure Certification Gate
+
+Gate evidence: MT-FC-001 through MT-FC-012.
+
+Acceptance criteria:
+
+- Sprint 0 through Sprint 6 evidence reconciled.
+- `TENANT_ROUTE_REGISTRY` covers every current API route file.
+- Tenant-scoped routes have explicit runtime boundaries.
+- Migration history remains forward-only through 0033.
+- Final closure adds no migration and does not rewrite 0028 through 0033.
+- Tenant export, restore, backup, lifecycle deletion, onboarding activation, support escalation closure, BAU handoff, residual risk acceptance, and final closure remain human-approved.
+
+AI/n8n/service actors cannot approve enterprise tenant isolation certification, final go/no-go, risk acceptance, evidence waivers, or final closure.
