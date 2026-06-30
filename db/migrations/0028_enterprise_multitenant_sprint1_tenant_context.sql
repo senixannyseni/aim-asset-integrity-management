@@ -86,15 +86,87 @@ update inspection_events set tenant_id = '00000000-0000-0000-0000-000000000001':
 update evidence_files set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
 update ndt_measurements set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
 update findings set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update calculation_runs set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update engineering_reviews set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update approval_records set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update integrity_decisions set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update reports set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update internal_work_orders set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update audit_logs set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update workflow_events set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
-update error_logs set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid where tenant_id is null;
+alter table calculation_runs disable trigger trg_prevent_locked_calculation_run_update;
+
+alter table calculation_runs disable trigger trg_prevent_locked_calculation_run_update;
+
+update calculation_runs
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table calculation_runs enable trigger trg_prevent_locked_calculation_run_update;
+
+
+alter table engineering_reviews disable trigger user;
+
+update engineering_reviews
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table engineering_reviews enable trigger user;
+
+
+alter table approval_records disable trigger user;
+
+update approval_records
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table approval_records enable trigger user;
+
+
+alter table integrity_decisions disable trigger user;
+
+update integrity_decisions
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table integrity_decisions enable trigger user;
+
+
+alter table reports disable trigger user;
+
+update reports
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table reports enable trigger user;
+
+
+alter table internal_work_orders disable trigger user;
+
+update internal_work_orders
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table internal_work_orders enable trigger user;
+
+
+alter table audit_logs disable trigger user;
+
+update audit_logs
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table audit_logs enable trigger user;
+
+
+alter table workflow_events disable trigger user;
+
+update workflow_events
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table workflow_events enable trigger user;
+
+
+alter table error_logs disable trigger user;
+
+update error_logs
+set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+where tenant_id is null;
+
+alter table error_logs enable trigger user;
 
 create index if not exists idx_assets_tenant_id on assets(tenant_id);
 create index if not exists idx_inspection_events_tenant_id on inspection_events(tenant_id);

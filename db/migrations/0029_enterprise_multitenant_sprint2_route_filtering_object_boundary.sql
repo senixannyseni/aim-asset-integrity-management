@@ -6,9 +6,16 @@
 alter table if exists evidence_upload_sessions add column if not exists tenant_id uuid references tenants(id) on delete restrict;
 
 update evidence_upload_sessions eus
-set tenant_id = coalesce(ef.tenant_id, a.tenant_id, '00000000-0000-0000-0000-000000000001'::uuid)
+set tenant_id = coalesce(
+  (
+    select ef.tenant_id
+    from evidence_files ef
+    where ef.id = eus.evidence_id
+  ),
+  a.tenant_id,
+  '00000000-0000-0000-0000-000000000001'::uuid
+)
 from assets a
-left join evidence_files ef on ef.id = eus.evidence_id
 where eus.asset_id = a.id
   and eus.tenant_id is null;
 
