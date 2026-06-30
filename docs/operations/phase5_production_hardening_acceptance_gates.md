@@ -387,3 +387,16 @@ AI/n8n/service actors cannot accept multi-tenant Sprint 1 evidence or approve te
 Sprint 2 is accepted only when MT-S2-001 through MT-S2-012 are present, regression-tested, and reviewed by named humans. The gate confirms tenant-scoped query helper behavior, high-risk asset/evidence/report route filtering evidence, tenant-prefixed object-storage keys, evidence upload-session tenant_id, report-export tenant_id, and residual route gaps for Sprint 3.
 
 AI/n8n/service actors cannot approve route-wide tenant filtering, tenant object-storage boundary readiness, tenant-scoped route rollout, or Sprint 2 closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 3 Route Expansion and Regression Harness Gate
+
+**Gate evidence:** MT-S3-001 through MT-S3-012.
+
+Acceptance criteria:
+
+- Every implemented route file is present in `TENANT_ROUTE_REGISTRY`.
+- Tenant-scoped routes have recognized runtime boundary classification.
+- Auth, health, local-demo, tenant control-plane, and global/system exceptions are explicitly documented.
+- `assertTenantRouteRegressionCoverage` passes against the actual route inventory.
+- `0030_enterprise_multitenant_sprint3_route_expansion_regression_harness.sql` is included in the migration sequence.
+- AI/n8n/service actors cannot approve route expansion, tenant exceptions, tenant regression results, evidence waivers, or Sprint 3 closure.

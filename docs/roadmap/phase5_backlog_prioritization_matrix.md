@@ -346,3 +346,13 @@ AI/n8n/service actors cannot approve backlog priority, approve multi-tenant runt
 | Residual historical route expansion for Sprint 3 | P1 | MT-S2-010 |
 
 AI/n8n/service actors cannot approve tenant-scoped route rollout or waive multi-tenant Sprint 2 evidence.
+
+## Enterprise Multi-Tenant Runtime Sprint 3 Route Expansion Regression Harness Backlog Mapping
+
+| Backlog item | Priority | Status | Notes |
+|---|---:|---|---|
+| Complete route inventory registry | P0 | Prepared | Every `apps/api/src/routes/*.ts` file must be mapped in `TENANT_ROUTE_REGISTRY`. |
+| Tenant isolation regression harness | P0 | Prepared | Fails closed when route files are missing, duplicated, or tenant-scoped without runtime boundary classification. |
+| Route exception register | P0 | Prepared | Auth, health, local demo, tenant control-plane, and global/system exceptions must be explicit. |
+| Historical SQL tenant predicate hardening | P1 | Future package | Registry makes remaining route-family work visible before final customer tenant certification. |
+| Frontend tenant UX and tenant admin console | P1 | Future package | Planned after Sprint 3 route regression baseline. |

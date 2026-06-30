@@ -523,3 +523,22 @@ Enterprise Multi-Tenant Runtime Sprint 1 follows the Enterprise Multi-Tenant Run
 | MT-S2-012 | Human Sprint 2 signoff | `docs/operations/enterprise_multitenant_runtime_sprint2_route_filtering_object_boundary_runbook.md` |
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 2 evidence or sign multi-tenant Sprint 2 closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 3 Route Expansion and Tenant Isolation Regression Harness Mapping
+
+| Evidence ID | Evidence item | Source artifact |
+|---|---|---|
+| MT-S3-001 | Sprint 3 baseline | Enterprise Multi-Tenant Runtime Sprint 2 Route Filtering and Object Storage Boundary Mapping |
+| MT-S3-002 | Complete route registry | `apps/api/src/modules/tenancy/tenant-route-registry.ts` |
+| MT-S3-003 | Asset route boundary carry-forward | Sprint 2 asset route filter evidence plus Sprint 3 registry entry |
+| MT-S3-004 | Evidence route/object boundary carry-forward | Sprint 2 evidence route/object boundary evidence plus Sprint 3 registry entry |
+| MT-S3-005 | Report route/object boundary carry-forward | Sprint 2 report route/object boundary evidence plus Sprint 3 registry entry |
+| MT-S3-006 | Core tenant-scoped route expansion inventory | Inspection, NDT, findings, calculations, engineering reviews, integrity decisions, work orders, FFS, RBI, workspace route entries |
+| MT-S3-007 | Operational tenant visibility inventory | Audit logs, governance dashboard, workflow console, AI staging, engineering validation route entries |
+| MT-S3-008 | Control-plane route classification | Tenant, admin, security, operations, production validation, go-live, release closure routes |
+| MT-S3-009 | Auth/public/local-demo route exceptions | Auth, health, and RBAC demo entries |
+| MT-S3-010 | Regression harness | `apps/api/src/modules/tenancy/tenant-regression-harness.ts` and Sprint 3 test |
+| MT-S3-011 | Route exception register | `docs/enterprise/multitenant_sprint3_route_exception_register.md` |
+| MT-S3-012 | Human Sprint 3 signoff | `docs/operations/enterprise_multitenant_runtime_sprint3_route_expansion_regression_harness_runbook.md` |
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence or sign multi-tenant Sprint 3 closure.

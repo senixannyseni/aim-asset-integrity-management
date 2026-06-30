@@ -208,3 +208,7 @@ Sprint 1 begins runtime implementation by adding tenant context, tenant membersh
 Sprint 2 expands Sprint 1 tenant context into runtime filtering and object-storage boundaries. It introduces tenant-scoped route helpers, high-risk asset/evidence/report route filtering evidence, tenant-prefixed evidence/report artifact keys, and migration support for tenant_id on evidence upload sessions and report exports.
 
 Sprint 3 should continue broader route expansion and frontend tenant-switching readiness.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 3 — Full Route Expansion and Tenant Isolation Regression Harness
+
+Sprint 3 follows Sprint 2 by closing the route inventory gap. It adds a route registry, tenant isolation regression harness, route exception register, review-table migration, and human-control evidence for route expansion. This prepares the product for frontend tenant UX, tenant-scoped evidence lifecycle operations, customer onboarding runtime, and final tenant isolation certification.
