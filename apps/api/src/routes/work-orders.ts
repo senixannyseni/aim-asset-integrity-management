@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import type { PoolClient } from "pg";
 import { pool } from "../db/client.js";
 import { requirePermission } from "../middleware/rbac.js";
+import { requireTenantContextFromRequest } from "../modules/tenancy/tenant-scope.js";
 
 export const workOrdersRouter = Router();
 
@@ -74,8 +75,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {},
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -85,9 +88,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -151,6 +155,7 @@ function gate(
 
 async function buildWorkOrderCreationGates(
   client: PoolClient,
+  tenantId: string,
   sourceEntityType: string,
   sourceEntityId: string,
   preliminaryInternalMode: boolean,
@@ -164,8 +169,8 @@ async function buildWorkOrderCreationGates(
 }> {
   if (sourceEntityType === "integrity_decision") {
     const result = await client.query<DbRow>(
-      "select * from integrity_decisions where id = $1",
-      [sourceEntityId],
+      "select * from integrity_decisions where id = $1 and tenant_id = $2::uuid",
+      [sourceEntityId, tenantId],
     );
     const decision = result.rows[0];
     if (!decision) {
@@ -217,8 +222,8 @@ async function buildWorkOrderCreationGates(
 
   if (sourceEntityType === "report") {
     const result = await client.query<DbRow>(
-      "select * from reports where id = $1",
-      [sourceEntityId],
+      "select * from reports where id = $1 and tenant_id = $2::uuid",
+      [sourceEntityId, tenantId],
     );
     const report = result.rows[0];
     if (!report) {
@@ -235,9 +240,9 @@ async function buildWorkOrderCreationGates(
     const decisionResult = asString(report.calculation_run_id)
       ? await client.query<DbRow>(
           `select * from integrity_decisions
-           where calculation_run_id = $1 and decision_status = 'approved'
+           where calculation_run_id = $1 and tenant_id = $2::uuid and decision_status = 'approved'
            order by approved_at desc nulls last, created_at desc limit 1`,
-          [report.calculation_run_id],
+          [report.calculation_run_id, tenantId],
         )
       : { rows: [], rowCount: 0 };
     const decision = decisionResult.rows[0];
@@ -343,11 +348,12 @@ function mapAuditEvent(row: DbRow): Record<string, unknown> {
 async function loadWorkOrder(
   client: PoolClient,
   workOrderId: string,
+  tenantId: string,
   forUpdate = false,
 ): Promise<DbRow | undefined> {
   const result = await client.query<DbRow>(
-    `select * from internal_work_orders where id = $1${forUpdate ? " for update" : ""}`,
-    [workOrderId],
+    `select * from internal_work_orders where id = $1 and tenant_id = $2::uuid${forUpdate ? " for update" : ""}`,
+    [workOrderId, tenantId],
   );
   return result.rows[0];
 }
@@ -355,6 +361,7 @@ async function loadWorkOrder(
 async function loadWorkOrderEvidenceLinks(
   client: PoolClient,
   workOrderId: string,
+  tenantId: string,
 ): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select
@@ -368,10 +375,10 @@ async function loadWorkOrderEvidenceLinks(
        ef.original_filename,
        ef.checksum_sha256
      from evidence_links el
-     join evidence_files ef on ef.id = el.evidence_file_id
+     join evidence_files ef on ef.id = el.evidence_file_id and ef.tenant_id = $2::uuid
      where el.linked_entity_type = 'internal_work_order' and el.linked_entity_id = $1
      order by el.created_at desc`,
-    [workOrderId],
+    [workOrderId, tenantId],
   );
   return result.rows;
 }
@@ -379,14 +386,15 @@ async function loadWorkOrderEvidenceLinks(
 async function loadWorkOrderAuditEvents(
   client: PoolClient,
   workOrderId: string,
+  tenantId: string,
 ): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select id, event_type, actor_user_id, actor_role_codes, request_id, metadata_json, created_at
      from audit_logs
-     where entity_type = 'internal_work_order' and entity_id = $1
+     where tenant_id = $2::uuid and entity_type = 'internal_work_order' and entity_id = $1
      order by created_at desc
      limit 50`,
-    [workOrderId],
+    [workOrderId, tenantId],
   );
   return result.rows;
 }
@@ -394,6 +402,7 @@ async function loadWorkOrderAuditEvents(
 async function loadWorkOrderSourceTrace(
   client: PoolClient,
   workOrder: DbRow,
+  tenantId: string,
 ): Promise<Record<string, unknown>> {
   const trace: Record<string, unknown> = {
     source_entity_type: workOrder.source_entity_type,
@@ -410,8 +419,8 @@ async function loadWorkOrderSourceTrace(
   if (asString(workOrder.report_id)) {
     const reportResult = await client.query<DbRow>(
       `select id, report_code, report_status, asset_id, calculation_run_id, issued_at
-       from reports where id = $1`,
-      [workOrder.report_id],
+       from reports where id = $1 and tenant_id = $2::uuid`,
+      [workOrder.report_id, tenantId],
     );
     trace.report = reportResult.rows[0] ?? null;
   }
@@ -419,8 +428,8 @@ async function loadWorkOrderSourceTrace(
   if (asString(workOrder.integrity_decision_id)) {
     const decisionResult = await client.query<DbRow>(
       `select id, decision_code, decision_status, integrity_status, required_action, calculation_run_id, approved_at
-       from integrity_decisions where id = $1`,
-      [workOrder.integrity_decision_id],
+       from integrity_decisions where id = $1 and tenant_id = $2::uuid`,
+      [workOrder.integrity_decision_id, tenantId],
     );
     trace.integrity_decision = decisionResult.rows[0] ?? null;
   }
@@ -431,15 +440,16 @@ async function loadWorkOrderSourceTrace(
 async function buildWorkOrderClosureReadiness(
   client: PoolClient,
   workOrder: DbRow,
+  tenantId: string,
   options: {
     completionNote?: string;
     closureEvidenceLinkId?: string | null;
   } = {},
 ): Promise<Record<string, unknown>> {
   const workOrderId = String(workOrder.id);
-  const evidenceLinks = await loadWorkOrderEvidenceLinks(client, workOrderId);
-  const auditEvents = await loadWorkOrderAuditEvents(client, workOrderId);
-  const sourceTrace = await loadWorkOrderSourceTrace(client, workOrder);
+  const evidenceLinks = await loadWorkOrderEvidenceLinks(client, workOrderId, tenantId);
+  const auditEvents = await loadWorkOrderAuditEvents(client, workOrderId, tenantId);
+  const sourceTrace = await loadWorkOrderSourceTrace(client, workOrder, tenantId);
   const existingClosureEvidenceLinkId =
     asString(workOrder.closure_evidence_link_id) ?? null;
   const closureEvidenceLinkId = options.closureEvidenceLinkId ?? null;
@@ -547,12 +557,20 @@ async function validateClosureEvidenceLink(
   client: PoolClient,
   workOrderId: string,
   closureEvidenceLinkId: string | null | undefined,
+  tenantId: string,
 ): Promise<void> {
   if (!closureEvidenceLinkId) return;
   const result = await client.query<DbRow>(
     `select id from evidence_links
-     where id = $1 and linked_entity_type = 'internal_work_order' and linked_entity_id = $2`,
-    [closureEvidenceLinkId, workOrderId],
+     where id = $1
+       and linked_entity_type = 'internal_work_order'
+       and linked_entity_id = $2
+       and exists (
+         select 1 from evidence_files ef
+         where ef.id = evidence_links.evidence_file_id
+           and ef.tenant_id = $3::uuid
+       )`,
+    [closureEvidenceLinkId, workOrderId, tenantId],
   );
   if (!result.rows[0]) {
     const error = new Error("WORK_ORDER_CLOSURE_EVIDENCE_LINK_MISMATCH");
@@ -564,10 +582,12 @@ async function validateClosureEvidenceLink(
 workOrdersRouter.get(
   "/work-orders",
   requirePermission("work_order.read"),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
+      const tenant = requireTenantContextFromRequest(req);
       const result = await pool.query<DbRow>(
-        "select * from internal_work_orders order by created_at desc limit 100",
+        "select * from internal_work_orders where tenant_id = $1::uuid order by created_at desc limit 100",
+        [tenant.tenantId],
       );
       res.json({ data: result.rows.map(mapWorkOrder) });
     } catch (error) {
@@ -589,7 +609,8 @@ workOrdersRouter.get(
 
     const client = await pool.connect();
     try {
-      const workOrder = await loadWorkOrder(client, workOrderId);
+      const tenant = requireTenantContextFromRequest(req);
+      const workOrder = await loadWorkOrder(client, workOrderId, tenant.tenantId);
       if (!workOrder) {
         res
           .status(404)
@@ -604,11 +625,13 @@ workOrdersRouter.get(
       const evidenceLinks = await loadWorkOrderEvidenceLinks(
         client,
         workOrderId,
+        tenant.tenantId,
       );
-      const auditEvents = await loadWorkOrderAuditEvents(client, workOrderId);
+      const auditEvents = await loadWorkOrderAuditEvents(client, workOrderId, tenant.tenantId);
       const sourceTraceability = await loadWorkOrderSourceTrace(
         client,
         workOrder,
+        tenant.tenantId,
       );
       res.json({
         data: {
@@ -643,7 +666,8 @@ workOrdersRouter.get(
 
     const client = await pool.connect();
     try {
-      const workOrder = await loadWorkOrder(client, workOrderId);
+      const tenant = requireTenantContextFromRequest(req);
+      const workOrder = await loadWorkOrder(client, workOrderId, tenant.tenantId);
       if (!workOrder) {
         res
           .status(404)
@@ -655,7 +679,7 @@ workOrdersRouter.get(
           });
         return;
       }
-      const readiness = await buildWorkOrderClosureReadiness(client, workOrder);
+      const readiness = await buildWorkOrderClosureReadiness(client, workOrder, tenant.tenantId);
       res.json({ data: readiness });
     } catch (error) {
       next(error);
@@ -718,8 +742,10 @@ workOrdersRouter.post(
     const client = await pool.connect();
     try {
       await client.query("begin");
+      const tenant = requireTenantContextFromRequest(req);
       const gateContext = await buildWorkOrderCreationGates(
         client,
+        tenant.tenantId,
         sourceEntityType,
         sourceEntityId,
         preliminaryInternalMode,
@@ -762,6 +788,7 @@ workOrdersRouter.post(
         asString(req.body.work_order_code) ?? `WO-${Date.now()}`;
       const result = await client.query<DbRow>(
         `insert into internal_work_orders(
+        tenant_id,
         work_order_code,
         asset_id,
         inspection_event_id,
@@ -785,9 +812,10 @@ workOrdersRouter.post(
         gate_checklist_json,
         closure_evidence_required,
         created_by
-      ) values ($1, $2, $3, $4, $5, $6, $7::uuid, $8, $9, $10, $11, 'open', $12, $13, $14, $15, $16, null, null, 'passed', $17::jsonb, $18, $19)
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8::uuid, $9, $10, $11, $12, 'open', $13, $14, $15, $16, $17, null, null, 'passed', $18::jsonb, $19, $20)
       returning *`,
         [
+          tenant.tenantId,
           workOrderCode,
           gateContext.assetId,
           gateContext.inspectionEventId,
@@ -885,9 +913,10 @@ workOrdersRouter.patch(
     const client = await pool.connect();
     try {
       await client.query("begin");
+      const tenant = requireTenantContextFromRequest(req);
       const beforeResult = await client.query<DbRow>(
-        "select * from internal_work_orders where id = $1 for update",
-        [workOrderId],
+        "select * from internal_work_orders where id = $1 and tenant_id = $2::uuid for update",
+        [workOrderId, tenant.tenantId],
       );
       const before = beforeResult.rows[0];
       if (!before) {
@@ -926,7 +955,7 @@ workOrdersRouter.patch(
         assigned_role = coalesce($8, assigned_role),
         due_date = coalesce($9, due_date),
         updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $10::uuid
        returning *`,
         [
           workOrderId,
@@ -938,6 +967,7 @@ workOrdersRouter.patch(
           asString(req.body.assigned_to) ?? null,
           asString(req.body.assigned_role) ?? null,
           asString(req.body.due_date) ?? null,
+          tenant.tenantId,
         ],
       );
       const updated = result.rows[0];
@@ -1006,7 +1036,8 @@ workOrdersRouter.post(
     const client = await pool.connect();
     try {
       await client.query("begin");
-      const before = await loadWorkOrder(client, workOrderId, true);
+      const tenant = requireTenantContextFromRequest(req);
+      const before = await loadWorkOrder(client, workOrderId, tenant.tenantId, true);
       if (!before) {
         await client.query("rollback");
         res
@@ -1035,8 +1066,9 @@ workOrdersRouter.post(
         client,
         workOrderId,
         closureEvidenceLinkId,
+        tenant.tenantId,
       );
-      const readiness = await buildWorkOrderClosureReadiness(client, before, {
+      const readiness = await buildWorkOrderClosureReadiness(client, before, tenant.tenantId, {
         completionNote,
         closureEvidenceLinkId,
       });
@@ -1088,9 +1120,9 @@ workOrdersRouter.post(
         closed_by = $4,
         closed_at = now(),
         updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $5::uuid
        returning *`,
-        [workOrderId, completionNote, inferredEvidenceLinkId, actorUserId(req)],
+        [workOrderId, completionNote, inferredEvidenceLinkId, actorUserId(req), tenant.tenantId],
       );
       const updated = result.rows[0];
       const auditLogId = await writeAudit(

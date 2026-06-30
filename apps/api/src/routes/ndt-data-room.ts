@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const ndtDataRoomRouter = Router();
 
@@ -125,6 +126,8 @@ function safeMeasurement(row: DbRow): Record<string, unknown> {
 ndtDataRoomRouter.get('/ndt-data-room/overview', requirePermission('ndt_data_room.view'), async (req, res, next) => {
   try {
     if (!enforceHumanNdtDataRoomViewer(req, res)) return;
+    const tenant = requireTenantContextFromRequest(req);
+    const tenantValues = [tenant.tenantId];
 
     const [
       measurementsTotal,
@@ -147,31 +150,34 @@ ndtDataRoomRouter.get('/ndt-data-room/overview', requirePermission('ndt_data_roo
       latestMeasurements,
       evidenceLinkAuditSummary
     ] = await Promise.all([
-      countSql('select count(*)::text as total_count from ndt_measurements'),
-      groupCounts('select method as status, count(*)::text as total_count from ndt_measurements group by method order by method'),
-      groupCounts('select component as status, count(*)::text as total_count from ndt_measurements group by component order by component'),
-      groupCounts('select reviewer_status as status, count(*)::text as total_count from ndt_measurements group by reviewer_status order by reviewer_status'),
-      groupCounts('select validation_status as status, count(*)::text as total_count from ndt_measurements group by validation_status order by validation_status'),
-      countSql('select count(*)::text as total_count from ndt_measurements where evidence_file_id is not null'),
-      countSql("select count(distinct linked_entity_id)::text as total_count from evidence_links where linked_entity_type = 'ndt_measurement'"),
+      countSql('select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid', tenantValues),
+      groupCounts('select method as status, count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid group by method order by method', tenantValues),
+      groupCounts('select component as status, count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid group by component order by component', tenantValues),
+      groupCounts('select reviewer_status as status, count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid group by reviewer_status order by reviewer_status', tenantValues),
+      groupCounts('select validation_status as status, count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid group by validation_status order by validation_status', tenantValues),
+      countSql('select count(*)::text as total_count from ndt_measurements where evidence_file_id is not null and tenant_id = $1::uuid', tenantValues),
+      countSql("select count(distinct el.linked_entity_id)::text as total_count from evidence_links el join ndt_measurements nm on nm.id = el.linked_entity_id where el.linked_entity_type = 'ndt_measurement' and nm.tenant_id = $1::uuid", tenantValues),
       countSql(
         `select count(*)::text as total_count
          from ndt_measurements nm
          where nm.evidence_file_id is null
+           and nm.tenant_id = $1::uuid
            and not exists (
              select 1 from evidence_links el
-             where el.linked_entity_type = 'ndt_measurement' and el.linked_entity_id = nm.id
-           )`
+             join evidence_files ef on ef.id = el.evidence_file_id
+             where el.linked_entity_type = 'ndt_measurement' and el.linked_entity_id = nm.id and ef.tenant_id = $1::uuid
+           )`,
+        tenantValues
       ),
-      countSql('select count(*)::text as total_count from ndt_measurements where inspection_event_id is not null'),
-      pool.query<{ latest_measurement_date: string | null }>('select max(reading_date)::text as latest_measurement_date from ndt_measurements'),
-      countSql("select count(*)::text as total_count from ndt_measurements where cml_tml_id is not null and upper(cml_tml_id) like 'CML%'"),
-      countSql("select count(*)::text as total_count from ndt_measurements where cml_tml_id is not null and upper(cml_tml_id) like 'TML%'"),
-      countSql('select count(*)::text as total_count from ndt_measurements where grid_ref is not null'),
-      countSql('select count(*)::text as total_count from ndt_measurements where is_critical = true'),
-      countSql("select count(*)::text as total_count from ndt_measurements where validation_status in ('warning','blocked')"),
-      countSql("select count(*)::text as total_count from ndt_measurements where reviewer_status in ('needs_review','rejected') or validation_status in ('warning','blocked')"),
-      countSql("select count(*)::text as total_count from ndt_measurements where reviewer_status = 'rejected'"),
+      countSql('select count(*)::text as total_count from ndt_measurements where inspection_event_id is not null and tenant_id = $1::uuid', tenantValues),
+      pool.query<{ latest_measurement_date: string | null }>('select max(reading_date)::text as latest_measurement_date from ndt_measurements where tenant_id = $1::uuid', tenantValues),
+      countSql("select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid and cml_tml_id is not null and upper(cml_tml_id) like 'CML%'", tenantValues),
+      countSql("select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid and cml_tml_id is not null and upper(cml_tml_id) like 'TML%'", tenantValues),
+      countSql('select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid and grid_ref is not null', tenantValues),
+      countSql('select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid and is_critical = true', tenantValues),
+      countSql("select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid and validation_status in ('warning','blocked')", tenantValues),
+      countSql("select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid and (reviewer_status in ('needs_review','rejected') or validation_status in ('warning','blocked'))", tenantValues),
+      countSql("select count(*)::text as total_count from ndt_measurements where tenant_id = $1::uuid and reviewer_status = 'rejected'", tenantValues),
       pool.query<DbRow>(
         `select nm.id, nm.measurement_code, nm.asset_id, nm.inspection_event_id, nm.component, nm.method,
                 nm.cml_tml_id, nm.grid_ref, nm.shell_course_no, nm.measured_thickness_mm, nm.reading_date,
@@ -180,21 +186,25 @@ ndtDataRoomRouter.get('/ndt-data-room/overview', requirePermission('ndt_data_roo
                 count(el.id)::text as evidence_link_count,
                 '{}'::jsonb as metadata_json
          from ndt_measurements nm
-         left join evidence_files ef on ef.id = nm.evidence_file_id
+         left join evidence_files ef on ef.id = nm.evidence_file_id and ef.tenant_id = $1::uuid
          left join evidence_links el on el.linked_entity_type = 'ndt_measurement' and el.linked_entity_id = nm.id
+         where nm.tenant_id = $1::uuid
          group by nm.id, ef.evidence_code, coalesce(ef.upload_status, ef.status, ef.evidence_status, 'metadata_only')
          order by nm.reading_date desc, nm.created_at desc
-         limit 10`
+         limit 10`,
+        tenantValues
       ),
       pool.query<DbRow>(
         `select event_type, entity_type, count(*)::text as total_count, max(created_at) as latest_at
          from audit_logs
-         where entity_type in ('ndt_measurement', 'evidence_link', 'evidence_file')
+         where tenant_id = $1::uuid
+           and (entity_type in ('ndt_measurement', 'evidence_link', 'evidence_file')
             or lower(coalesce(event_type, '')) like '%ndt%'
-            or lower(coalesce(metadata_json::text, '')) like '%ndt%'
+            or lower(coalesce(metadata_json::text, '')) like '%ndt%')
          group by event_type, entity_type
          order by latest_at desc
-         limit 10`
+         limit 10`,
+        tenantValues
       )
     ]);
 

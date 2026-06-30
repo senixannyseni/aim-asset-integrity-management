@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import type { PoolClient } from "pg";
 import { pool } from "../db/client.js";
 import { requirePermission } from "../middleware/rbac.js";
+import { requireTenantContextFromRequest } from "../modules/tenancy/tenant-scope.js";
 import {
   ENGINEERING_REVIEW_DISCLAIMER,
   asNumber,
@@ -82,8 +83,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {},
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -93,9 +96,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -196,11 +200,12 @@ function mapRun(row: DbRow): Record<string, unknown> {
 async function loadAssetContext(
   client: Queryable,
   assetId: string,
+  tenantId: string,
   base: DeterministicCalculationRequest,
 ): Promise<DeterministicCalculationRequest> {
   const assetResult = await client.query<DbRow>(
-    "select * from assets where id = $1 and deleted_at is null",
-    [assetId],
+    "select * from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null",
+    [assetId, tenantId],
   );
   const asset = assetResult.rows[0];
   if (!asset) {
@@ -243,15 +248,15 @@ async function loadAssetContext(
        validation_status,
        is_critical
      from ndt_measurements
-     where asset_id = $1
+     where asset_id = $1 and tenant_id = $2::uuid
      order by component, shell_course_no nulls last, cml_tml_id nulls last, grid_ref nulls last, reading_date`,
-    [assetId],
+    [assetId, tenantId],
   );
   const evidenceLinkResult = await client.query<DbRow>(
     `select el.* from evidence_links el
      join evidence_files ef on ef.id = el.evidence_file_id
-     where ef.asset_id = $1`,
-    [assetId],
+     where ef.asset_id = $1 and ef.tenant_id = $2::uuid`,
+    [assetId, tenantId],
   );
 
   return {
@@ -304,12 +309,13 @@ async function nextRunVersion(
   client: Queryable,
   assetId: string,
   formulaRegistryId: string,
+  tenantId: string,
 ): Promise<number> {
   const result = await client.query<{ next_version: string }>(
     `select coalesce(max(run_version), 0) + 1 as next_version
      from calculation_runs
-     where asset_id = $1 and formula_registry_id = $2`,
-    [assetId, formulaRegistryId],
+     where asset_id = $1 and formula_registry_id = $2 and tenant_id = $3::uuid`,
+    [assetId, formulaRegistryId, tenantId],
   );
   return Number(result.rows[0]?.next_version ?? "1");
 }
@@ -468,15 +474,16 @@ function mapCalculationAuditEvent(row: DbRow): Record<string, unknown> {
 async function loadCalculationRunByIdentifier(
   client: Queryable,
   runIdentifier: string,
+  tenantId: string,
 ): Promise<DbRow | undefined> {
   const result = isUuid(runIdentifier)
     ? await client.query<DbRow>(
-        `select * from calculation_runs where id = $1::uuid limit 1`,
-        [runIdentifier],
+        `select * from calculation_runs where id = $1::uuid and tenant_id = $2::uuid limit 1`,
+        [runIdentifier, tenantId],
       )
     : await client.query<DbRow>(
-        `select * from calculation_runs where run_id = $1 limit 1`,
-        [runIdentifier],
+        `select * from calculation_runs where run_id = $1 and tenant_id = $2::uuid limit 1`,
+        [runIdentifier, tenantId],
       );
   return result.rows[0];
 }
@@ -484,6 +491,7 @@ async function loadCalculationRunByIdentifier(
 async function loadCalculationEvidenceLinks(
   client: Queryable,
   calculationRunId: string,
+  tenantId: string,
 ): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select
@@ -499,11 +507,11 @@ async function loadCalculationEvidenceLinks(
        coalesce(ef.upload_status, 'verified') as upload_status,
        'evidence_links' as source
      from evidence_links el
-     join evidence_files ef on ef.id = el.evidence_file_id
+     join evidence_files ef on ef.id = el.evidence_file_id and ef.tenant_id = $2::uuid
      where el.linked_entity_type = 'calculation_run'
        and el.linked_entity_id = $1::uuid
      order by el.created_at desc`,
-    [calculationRunId],
+    [calculationRunId, tenantId],
   );
   return result.rows;
 }
@@ -511,6 +519,7 @@ async function loadCalculationEvidenceLinks(
 async function loadCalculationAuditEvents(
   client: Queryable,
   calculationRunId: string,
+  tenantId: string,
 ): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select
@@ -523,12 +532,15 @@ async function loadCalculationAuditEvents(
        entity_type,
        entity_id
      from audit_logs
-     where (entity_type = 'calculation_run' and entity_id = $1::uuid)
-        or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where calculation_run_id = $1::uuid or (entity_type = 'calculation_run' and entity_id = $1::uuid)))
-        or (entity_type = 'approval_record' and entity_id in (select id from approval_records where calculation_run_id = $1::uuid or (entity_type = 'calculation_run' and entity_id = $1::uuid)))
+     where tenant_id = $2::uuid
+       and (
+        (entity_type = 'calculation_run' and entity_id = $1::uuid)
+        or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where tenant_id = $2::uuid and (calculation_run_id = $1::uuid or (entity_type = 'calculation_run' and entity_id = $1::uuid))))
+        or (entity_type = 'approval_record' and entity_id in (select id from approval_records where tenant_id = $2::uuid and (calculation_run_id = $1::uuid or (entity_type = 'calculation_run' and entity_id = $1::uuid))))
+       )
      order by created_at desc
      limit 30`,
-    [calculationRunId],
+    [calculationRunId, tenantId],
   );
   return result.rows;
 }
@@ -536,6 +548,7 @@ async function loadCalculationAuditEvents(
 async function buildCalculationRunReadiness(
   client: Queryable,
   run: DbRow,
+  tenantId: string,
 ): Promise<Record<string, unknown>> {
   const calculationRunId = String(run.id);
   const formulaSnapshot = isPlainObject(run.formula_version_snapshot_json)
@@ -567,46 +580,52 @@ async function buildCalculationRunReadiness(
     client.query<DbRow>(
       `select id, review_code, entity_type, entity_id, calculation_run_id, review_status, reviewer_id, reviewed_at, locked_flag, created_at, updated_at
        from engineering_reviews
-       where calculation_run_id = $1::uuid
+       where tenant_id = $2::uuid
+         and (calculation_run_id = $1::uuid
           or (entity_type = 'calculation_run' and entity_id = $1::uuid)
+         )
        order by reviewed_at desc nulls last, updated_at desc nulls last, created_at desc`,
-      [calculationRunId],
+      [calculationRunId, tenantId],
     ),
     client.query<DbRow>(
       `select id, approval_code, entity_type, entity_id, calculation_run_id, approval_status, approval_type, approver_id, approved_at, locked_flag, created_at, updated_at
        from approval_records
-       where calculation_run_id = $1::uuid
+       where tenant_id = $2::uuid
+         and (calculation_run_id = $1::uuid
           or (entity_type = 'calculation_run' and entity_id = $1::uuid)
+         )
        order by approved_at desc nulls last, updated_at desc nulls last, created_at desc`,
-      [calculationRunId],
+      [calculationRunId, tenantId],
     ),
-    loadCalculationEvidenceLinks(client, calculationRunId),
+    loadCalculationEvidenceLinks(client, calculationRunId, tenantId),
     client.query<DbRow>(
       `select id, decision_code, decision_type, decision_status, integrity_status, decision_summary, approved_at, created_at, updated_at
        from integrity_decisions
-       where calculation_run_id = $1::uuid
+       where calculation_run_id = $1::uuid and tenant_id = $2::uuid
        order by created_at desc`,
-      [calculationRunId],
+      [calculationRunId, tenantId],
     ),
     client.query<DbRow>(
       `select id, report_code, report_title, report_type, report_status, report_version, approved_at, issued_at, created_at, updated_at
        from reports
-       where calculation_run_id = $1::uuid
+       where calculation_run_id = $1::uuid and tenant_id = $2::uuid
        order by created_at desc`,
-      [calculationRunId],
+      [calculationRunId, tenantId],
     ),
     client.query<DbRow>(
       `select iwo.id, iwo.work_order_code, iwo.source_entity_type, iwo.source_entity_id, iwo.title, iwo.status, iwo.priority, iwo.created_at, iwo.updated_at, iwo.closed_at
        from internal_work_orders iwo
-       left join integrity_decisions id on id.id = iwo.source_entity_id and iwo.source_entity_type = 'integrity_decision'
-       left join reports r on r.id = iwo.source_entity_id and iwo.source_entity_type = 'report'
-       where (iwo.source_entity_type = 'calculation_run' and iwo.source_entity_id = $1::uuid)
+       left join integrity_decisions id on id.id = iwo.source_entity_id and iwo.source_entity_type = 'integrity_decision' and id.tenant_id = $2::uuid
+       left join reports r on r.id = iwo.source_entity_id and iwo.source_entity_type = 'report' and r.tenant_id = $2::uuid
+       where iwo.tenant_id = $2::uuid
+         and ((iwo.source_entity_type = 'calculation_run' and iwo.source_entity_id = $1::uuid)
           or id.calculation_run_id = $1::uuid
           or r.calculation_run_id = $1::uuid
+         )
        order by iwo.created_at desc`,
-      [calculationRunId],
+      [calculationRunId, tenantId],
     ),
-    loadCalculationAuditEvents(client, calculationRunId),
+    loadCalculationAuditEvents(client, calculationRunId, tenantId),
   ]);
 
   const directEvidenceCount = evidenceLinks.length;
@@ -790,16 +809,17 @@ calculationsRouter.get(
   requirePermission("calculation.read"),
   async (req, res, next) => {
     try {
+      const tenant = requireTenantContextFromRequest(req);
       const assetId = asString(req.query.asset_id);
-      const values: unknown[] = [];
-      const clauses: string[] = [];
+      const values: unknown[] = [tenant.tenantId];
+      const clauses: string[] = ["tenant_id = $1::uuid"];
       if (assetId) {
         values.push(assetId);
         clauses.push(`asset_id = $${values.length}`);
       }
       const result = await pool.query<DbRow>(
         `select * from calculation_runs
-       ${clauses.length > 0 ? `where ${clauses.join(" and ")}` : ""}
+       where ${clauses.join(" and ")}
        order by created_at desc
        limit 100`,
         values,
@@ -821,7 +841,8 @@ calculationsRouter.get(
         validationError(res, "runId", "runId is required.");
         return;
       }
-      const run = await loadCalculationRunByIdentifier(pool, runId);
+      const tenant = requireTenantContextFromRequest(req);
+      const run = await loadCalculationRunByIdentifier(pool, runId, tenant.tenantId);
       if (!run) {
         res
           .status(404)
@@ -834,7 +855,7 @@ calculationsRouter.get(
         return;
       }
 
-      const readiness = await buildCalculationRunReadiness(pool, run);
+      const readiness = await buildCalculationRunReadiness(pool, run, tenant.tenantId);
       res.json({ data: readiness });
     } catch (error) {
       next(error);
@@ -852,7 +873,8 @@ calculationsRouter.get(
         validationError(res, "runId", "runId is required.");
         return;
       }
-      const run = await loadCalculationRunByIdentifier(pool, runId);
+      const tenant = requireTenantContextFromRequest(req);
+      const run = await loadCalculationRunByIdentifier(pool, runId, tenant.tenantId);
       if (!run) {
         res
           .status(404)
@@ -883,23 +905,26 @@ calculationsRouter.get(
           [calculationRunId],
         ),
         pool.query<DbRow>(
-          "select * from engineering_reviews where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc",
-          [calculationRunId, "calculation_run"],
+          "select * from engineering_reviews where tenant_id = $3::uuid and (calculation_run_id = $1 or (entity_type = $2 and entity_id = $1)) order by updated_at desc",
+          [calculationRunId, "calculation_run", tenant.tenantId],
         ),
         pool.query<DbRow>(
-          "select * from approval_records where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc",
-          [calculationRunId, "calculation_run"],
+          "select * from approval_records where tenant_id = $3::uuid and (calculation_run_id = $1 or (entity_type = $2 and entity_id = $1)) order by updated_at desc",
+          [calculationRunId, "calculation_run", tenant.tenantId],
         ),
         pool.query<DbRow>(
           `select * from audit_logs
-         where (entity_type = 'calculation_run' and entity_id = $1)
-            or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where calculation_run_id = $1 or (entity_type = 'calculation_run' and entity_id = $1)))
-            or (entity_type = 'approval_record' and entity_id in (select id from approval_records where calculation_run_id = $1 or (entity_type = 'calculation_run' and entity_id = $1)))
+         where tenant_id = $2::uuid
+           and (
+            (entity_type = 'calculation_run' and entity_id = $1)
+            or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where tenant_id = $2::uuid and (calculation_run_id = $1 or (entity_type = 'calculation_run' and entity_id = $1))))
+            or (entity_type = 'approval_record' and entity_id in (select id from approval_records where tenant_id = $2::uuid and (calculation_run_id = $1 or (entity_type = 'calculation_run' and entity_id = $1))))
+           )
          order by created_at desc`,
-          [calculationRunId],
+          [calculationRunId, tenant.tenantId],
         ),
-        loadCalculationEvidenceLinks(pool, calculationRunId),
-        buildCalculationRunReadiness(pool, run),
+        loadCalculationEvidenceLinks(pool, calculationRunId, tenant.tenantId),
+        buildCalculationRunReadiness(pool, run, tenant.tenantId),
       ]);
       res.json({
         data: {
@@ -961,6 +986,7 @@ calculationsRouter.post(
     const client = await pool.connect();
     try {
       await client.query("begin");
+      const tenant = requireTenantContextFromRequest(req);
       const formula = await getApprovedFormulaVersion(
         client,
         formulaId,
@@ -1054,7 +1080,7 @@ calculationsRouter.post(
         : (req.body as ValidationContext);
       const requestedScope = asString(req.body.calculation_scope) as
         DeterministicCalculationRequest["calculation_scope"] | undefined;
-      const context = await loadAssetContext(client, assetId, {
+      const context = await loadAssetContext(client, assetId, tenant.tenantId, {
         ...suppliedContext,
         validation_scope: "calculation_readiness",
         calculation_scope: requestedScope ?? "thickness_screening",
@@ -1108,15 +1134,33 @@ calculationsRouter.post(
           ? "validation_failed"
           : "ready_for_review";
       const formulaSetVersion = `${String(formulaVersionSnapshot.formula_code)}@${String(formulaVersionSnapshot.version)}`;
+      const inspectionEventId = asString(req.body.inspection_event_id) ?? null;
+      if (inspectionEventId) {
+        const inspectionResult = await client.query(
+          "select id from inspection_events where id = $1::uuid and asset_id = $2::uuid and tenant_id = $3::uuid",
+          [inspectionEventId, assetId, tenant.tenantId],
+        );
+        if (inspectionResult.rowCount === 0) {
+          validationError(
+            res,
+            "inspection_event_id",
+            "inspection_event_id must belong to the selected tenant asset.",
+          );
+          await client.query("rollback");
+          return;
+        }
+      }
       const runVersion = await nextRunVersion(
         client,
         assetId,
         String(formula.id),
+        tenant.tenantId,
       );
       const runCode = `CALC-${Date.now()}-${runVersion}`;
 
       const runResult = await client.query<DbRow>(
         `insert into calculation_runs(
+        tenant_id,
         asset_id,
         inspection_event_id,
         formula_registry_id,
@@ -1146,13 +1190,14 @@ calculationsRouter.post(
         locked_flag
       ) values (
         $1, $2, $3, $4, $5,
-        $6, $7, $8, $9, $10, $11, $12::jsonb, 'not_reviewed', 'not_requested',
-        $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb,
-        $19, $20, $21::jsonb, $22, $23, $23, false
+        $6, $7, $8, $9, $10, $11, $12, $13::jsonb, 'not_reviewed', 'not_requested',
+        $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb,
+        $20, $21, $22::jsonb, $23, $24, $24, false
       ) returning *`,
         [
+          tenant.tenantId,
           assetId,
-          asString(req.body.inspection_event_id) ?? null,
+          inspectionEventId,
           formula.id,
           formula.formula_version_id,
           runVersion,

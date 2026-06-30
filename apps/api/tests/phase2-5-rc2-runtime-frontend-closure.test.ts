@@ -30,7 +30,7 @@ describe('Phase 2.5 RC2 runtime and frontend closure', () => {
     const openapi = readRepoFile('04_API/openapi.yaml');
 
     expect(route).toContain("integrityDecisionsRouter.get('/integrity-decisions'");
-    expect(route).toContain("countLinkedEvidence(client, 'integrity_decision', decisionId)");
+    expect(route).toContain("countLinkedEvidence(client, 'integrity_decision', decisionId, tenant.tenantId)");
     expect(route).toContain('INTEGRITY_DECISION_EVIDENCE_REQUIRED');
     expect(openapi).toContain('summary: List integrity decisions');
   });

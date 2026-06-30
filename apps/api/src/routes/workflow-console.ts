@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const workflowConsoleRouter = Router();
 
@@ -149,6 +150,8 @@ function safeRecentWorkflowEvent(row: DbRow): Record<string, unknown> {
 workflowConsoleRouter.get('/workflow-console/overview', requirePermission('workflow_console.view'), async (req, res, next) => {
   try {
     if (!enforceHumanWorkflowConsoleViewer(req, res)) return;
+    const tenant = requireTenantContextFromRequest(req);
+    const tenantValues = [tenant.tenantId];
 
     const [
       workflowTasksByStatus,
@@ -164,44 +167,54 @@ workflowConsoleRouter.get('/workflow-console/overview', requirePermission('workf
       recentWorkflowEvents,
       n8nAuditEvents
     ] = await Promise.all([
-      groupCounts('select status, count(*)::text as total_count from workflow_tasks group by status order by status'),
-      groupCounts('select task_type as status, count(*)::text as total_count from workflow_tasks group by task_type order by task_type'),
-      countSql("select count(*)::text as total_count from workflow_tasks where status in ('queued','open','in_progress','escalated') and (owner_role is not null or assigned_to is not null)"),
-      countSql("select count(*)::text as total_count from workflow_tasks where due_at is not null and due_at < now() and status in ('queued','open','in_progress','escalated','failed')"),
-      groupCounts('select status, count(*)::text as total_count from error_logs group by status order by status'),
-      groupCounts('select severity as status, count(*)::text as total_count from error_logs group by severity order by severity'),
-      groupCounts('select status, count(*)::text as total_count from notification_logs group by status order by status'),
-      groupCounts('select channel as status, count(*)::text as total_count from notification_logs group by channel order by channel'),
+      groupCounts('select wt.status, count(*)::text as total_count from workflow_tasks wt join workflow_events we on we.id = wt.workflow_event_id where we.tenant_id = $1::uuid group by wt.status order by wt.status', tenantValues),
+      groupCounts('select wt.task_type as status, count(*)::text as total_count from workflow_tasks wt join workflow_events we on we.id = wt.workflow_event_id where we.tenant_id = $1::uuid group by wt.task_type order by wt.task_type', tenantValues),
+      countSql("select count(*)::text as total_count from workflow_tasks wt join workflow_events we on we.id = wt.workflow_event_id where we.tenant_id = $1::uuid and wt.status in ('queued','open','in_progress','escalated') and (wt.owner_role is not null or wt.assigned_to is not null)", tenantValues),
+      countSql("select count(*)::text as total_count from workflow_tasks wt join workflow_events we on we.id = wt.workflow_event_id where we.tenant_id = $1::uuid and wt.due_at is not null and wt.due_at < now() and wt.status in ('queued','open','in_progress','escalated','failed')", tenantValues),
+      groupCounts('select status, count(*)::text as total_count from error_logs where tenant_id = $1::uuid group by status order by status', tenantValues),
+      groupCounts('select severity as status, count(*)::text as total_count from error_logs where tenant_id = $1::uuid group by severity order by severity', tenantValues),
+      groupCounts('select nl.status, count(*)::text as total_count from notification_logs nl join workflow_tasks wt on wt.id = nl.workflow_task_id join workflow_events we on we.id = wt.workflow_event_id where we.tenant_id = $1::uuid group by nl.status order by nl.status', tenantValues),
+      groupCounts('select nl.channel as status, count(*)::text as total_count from notification_logs nl join workflow_tasks wt on wt.id = nl.workflow_task_id join workflow_events we on we.id = wt.workflow_event_id where we.tenant_id = $1::uuid group by nl.channel order by nl.channel', tenantValues),
       pool.query<DbRow>(
-        `select id, channel, recipient, subject, status, failure_message, metadata_json, created_at
-         from notification_logs
-         where status = 'failed'
-         order by created_at desc
-         limit 10`
+        `select nl.id, nl.channel, nl.recipient, nl.subject, nl.status, nl.failure_message, nl.metadata_json, nl.created_at
+         from notification_logs nl
+         join workflow_tasks wt on wt.id = nl.workflow_task_id
+         join workflow_events we on we.id = wt.workflow_event_id
+         where we.tenant_id = $1::uuid and nl.status = 'failed'
+         order by nl.created_at desc
+         limit 10`,
+        tenantValues
       ),
       pool.query<DbRow>(
-        `select id, task_type, status, priority, owner_role, related_entity_type, related_entity_id, due_at, created_at, metadata_json
-         from workflow_tasks
-         order by created_at desc
-         limit 10`
+        `select wt.id, wt.task_type, wt.status, wt.priority, wt.owner_role, wt.related_entity_type, wt.related_entity_id, wt.due_at, wt.created_at, wt.metadata_json
+         from workflow_tasks wt
+         join workflow_events we on we.id = wt.workflow_event_id
+         where we.tenant_id = $1::uuid
+         order by wt.created_at desc
+         limit 10`,
+        tenantValues
       ),
       pool.query<DbRow>(
         `select id, workflow_id, workflow_name, event_type, event_status, source_system, related_entity_type, related_entity_id, created_at, payload_json
          from workflow_events
-         where lower(source_system) = 'n8n' or lower(coalesce(workflow_id, '')) like '%n8n%' or lower(coalesce(workflow_name, '')) like '%n8n%'
+         where tenant_id = $1::uuid
+           and (lower(source_system) = 'n8n' or lower(coalesce(workflow_id, '')) like '%n8n%' or lower(coalesce(workflow_name, '')) like '%n8n%')
          order by created_at desc
-         limit 10`
+         limit 10`,
+        tenantValues
       ),
       pool.query<DbRow>(
         `select event_type, entity_type, count(*)::text as total_count, max(created_at) as latest_at
          from audit_logs
-         where lower(coalesce(metadata_json::text, '')) like '%n8n%'
+         where tenant_id = $1::uuid
+           and (lower(coalesce(metadata_json::text, '')) like '%n8n%'
             or lower(coalesce(metadata_json::text, '')) like '%workflow%'
             or lower(coalesce(entity_type, '')) like '%workflow%'
-            or lower(coalesce(event_type, '')) like '%workflow%'
+            or lower(coalesce(event_type, '')) like '%workflow%')
          group by event_type, entity_type
          order by latest_at desc
-         limit 10`
+         limit 10`,
+        tenantValues
       )
     ]);
 

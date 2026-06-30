@@ -2,6 +2,7 @@ import { Router, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const inspectionsRouter = Router();
 
@@ -117,20 +118,21 @@ function gateSummary(gates: InspectionReadinessGate[]): Record<string, number> {
   };
 }
 
-async function loadInspectionEvent(client: PoolClient, inspectionEventId: string): Promise<DbRow | null> {
+async function loadInspectionEvent(client: PoolClient, inspectionEventId: string, tenantId: string): Promise<DbRow | null> {
   const result = await client.query<DbRow>(
     `select ie.*, a.asset_tag, a.asset_name
        from inspection_events ie
-       left join assets a on a.id = ie.asset_id
+       left join assets a on a.id = ie.asset_id and a.tenant_id = $2::uuid
       where ie.id = $1::uuid
+        and ie.tenant_id = $2::uuid
       limit 1`,
-    [inspectionEventId]
+    [inspectionEventId, tenantId]
   );
   return result.rows[0] ?? null;
 }
 
-async function buildInspectionPackageReadiness(client: PoolClient, inspectionEventId: string): Promise<Record<string, unknown> | null> {
-  const inspection = await loadInspectionEvent(client, inspectionEventId);
+async function buildInspectionPackageReadiness(client: PoolClient, inspectionEventId: string, tenantId: string): Promise<Record<string, unknown> | null> {
+  const inspection = await loadInspectionEvent(client, inspectionEventId, tenantId);
   if (!inspection) return null;
   const assetId = String(inspection.asset_id);
 
@@ -155,103 +157,116 @@ async function buildInspectionPackageReadiness(client: PoolClient, inspectionEve
          from evidence_files ef
          left join evidence_links el on el.evidence_file_id = ef.id
         where ef.asset_id = $2::uuid
+          and ef.tenant_id = $3::uuid
           and (
             ef.inspection_event_id = $1::uuid
             or (el.linked_entity_type = 'inspection_event' and el.linked_entity_id = $1::uuid)
           )
         order by created_at desc
         limit 50`,
-      [inspectionEventId, assetId]
+      [inspectionEventId, assetId, tenantId]
     ),
     client.query<DbRow>(
       `select id, measurement_code, component, method, reviewer_status, validation_status, reading_date, created_at, updated_at
          from ndt_measurements
-        where inspection_event_id = $1::uuid and asset_id = $2::uuid
+        where inspection_event_id = $1::uuid and asset_id = $2::uuid and tenant_id = $3::uuid
         order by created_at desc
         limit 50`,
-      [inspectionEventId, assetId]
+      [inspectionEventId, assetId, tenantId]
     ),
     client.query<DbRow>(
       `select id, finding_code, title, finding_type, severity, status, source_type, created_at, updated_at, reviewed_at, closed_at
          from findings
-        where inspection_event_id = $1::uuid and asset_id = $2::uuid
+        where inspection_event_id = $1::uuid and asset_id = $2::uuid and tenant_id = $3::uuid
         order by created_at desc
         limit 50`,
-      [inspectionEventId, assetId]
+      [inspectionEventId, assetId, tenantId]
     ),
     client.query<DbRow>(
       `select id, id as run_id, status, created_at, reviewed_at, approved_at, locked_at
          from calculation_runs
-        where inspection_event_id = $1::uuid and asset_id = $2::uuid
+        where inspection_event_id = $1::uuid and asset_id = $2::uuid and tenant_id = $3::uuid
         order by created_at desc
         limit 50`,
-      [inspectionEventId, assetId]
+      [inspectionEventId, assetId, tenantId]
     ),
     client.query<DbRow>(
       `select er.id, er.entity_type, er.entity_id, er.review_type, er.review_status, er.reviewed_at, er.reviewed_at as created_at
          from engineering_reviews er
-        where (er.entity_type = 'inspection_event' and er.entity_id = $1::uuid)
-           or (er.entity_type = 'ndt_measurement' and er.entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid))
-           or (er.entity_type = 'calculation_run' and er.entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid))
+        where er.tenant_id = $2::uuid
+          and (
+            (er.entity_type = 'inspection_event' and er.entity_id = $1::uuid)
+            or (er.entity_type = 'ndt_measurement' and er.entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid and tenant_id = $2::uuid))
+            or (er.entity_type = 'calculation_run' and er.entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid and tenant_id = $2::uuid))
+          )
         order by er.reviewed_at desc
         limit 50`,
-      [inspectionEventId]
+      [inspectionEventId, tenantId]
     ),
     client.query<DbRow>(
       `select ar.id, ar.entity_type, ar.entity_id, ar.approval_status, ar.approved_at, ar.approved_at as created_at
          from approval_records ar
-        where (ar.entity_type = 'inspection_event' and ar.entity_id = $1::uuid)
-           or (ar.entity_type = 'ndt_measurement' and ar.entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid))
-           or (ar.entity_type = 'calculation_run' and ar.entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid))
+        where ar.tenant_id = $2::uuid
+          and (
+            (ar.entity_type = 'inspection_event' and ar.entity_id = $1::uuid)
+            or (ar.entity_type = 'ndt_measurement' and ar.entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid and tenant_id = $2::uuid))
+            or (ar.entity_type = 'calculation_run' and ar.entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid and tenant_id = $2::uuid))
+          )
         order by ar.approved_at desc
         limit 50`,
-      [inspectionEventId]
+      [inspectionEventId, tenantId]
     ),
     client.query<DbRow>(
       `select id, decision_code, decision_status, integrity_status, decision_type, created_at, reviewed_at, approved_at
          from integrity_decisions
         where asset_id = $2::uuid
+          and tenant_id = $3::uuid
           and (
             inspection_event_id = $1::uuid
-            or calculation_run_id in (select id from calculation_runs where inspection_event_id = $1::uuid)
+            or calculation_run_id in (select id from calculation_runs where inspection_event_id = $1::uuid and tenant_id = $3::uuid)
           )
         order by created_at desc
         limit 50`,
-      [inspectionEventId, assetId]
+      [inspectionEventId, assetId, tenantId]
     ),
     client.query<DbRow>(
       `select r.id, r.report_code, r.report_title, r.report_status, r.created_at, r.reviewed_at, r.approved_at, r.issued_at
          from reports r
         where r.asset_id = $2::uuid
-          and r.calculation_run_id in (select id from calculation_runs where inspection_event_id = $1::uuid)
+          and r.tenant_id = $3::uuid
+          and r.calculation_run_id in (select id from calculation_runs where inspection_event_id = $1::uuid and tenant_id = $3::uuid)
         order by r.created_at desc
         limit 50`,
-      [inspectionEventId, assetId]
+      [inspectionEventId, assetId, tenantId]
     ),
     client.query<DbRow>(
       `select iwo.id, iwo.work_order_code, iwo.title, iwo.status, iwo.priority, iwo.source_entity_type, iwo.source_entity_id, iwo.created_at, iwo.closed_at
          from internal_work_orders iwo
         where iwo.asset_id = $2::uuid
+          and iwo.tenant_id = $3::uuid
           and (
             (iwo.source_entity_type = 'inspection_event' and iwo.source_entity_id = $1::uuid)
-            or (iwo.source_entity_type = 'ndt_measurement' and iwo.source_entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid))
-            or (iwo.source_entity_type = 'finding' and iwo.source_entity_id in (select id from findings where inspection_event_id = $1::uuid))
-            or (iwo.source_entity_type = 'calculation_run' and iwo.source_entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid))
-            or (iwo.source_entity_type = 'integrity_decision' and iwo.source_entity_id in (select id from integrity_decisions where inspection_event_id = $1::uuid))
+            or (iwo.source_entity_type = 'ndt_measurement' and iwo.source_entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid and tenant_id = $3::uuid))
+            or (iwo.source_entity_type = 'finding' and iwo.source_entity_id in (select id from findings where inspection_event_id = $1::uuid and tenant_id = $3::uuid))
+            or (iwo.source_entity_type = 'calculation_run' and iwo.source_entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid and tenant_id = $3::uuid))
+            or (iwo.source_entity_type = 'integrity_decision' and iwo.source_entity_id in (select id from integrity_decisions where inspection_event_id = $1::uuid and tenant_id = $3::uuid))
           )
         order by iwo.created_at desc
         limit 50`,
-      [inspectionEventId, assetId]
+      [inspectionEventId, assetId, tenantId]
     ),
     client.query<DbRow>(
       `select id as audit_log_id, event_type, actor_user_id, actor_role_codes, entity_type, entity_id, created_at, metadata_json
          from audit_logs
-        where entity_id = $1::uuid
-           or (entity_type = 'ndt_measurement' and entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid))
-           or (entity_type = 'calculation_run' and entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid))
+        where tenant_id = $2::uuid
+          and (
+            entity_id = $1::uuid
+            or (entity_type = 'ndt_measurement' and entity_id in (select id from ndt_measurements where inspection_event_id = $1::uuid and tenant_id = $2::uuid))
+            or (entity_type = 'calculation_run' and entity_id in (select id from calculation_runs where inspection_event_id = $1::uuid and tenant_id = $2::uuid))
+          )
         order by created_at desc
         limit 50`,
-      [inspectionEventId]
+      [inspectionEventId, tenantId]
     )
   ]);
 
@@ -329,8 +344,9 @@ inspectionsRouter.get('/inspections', requirePermission('inspection.read'), asyn
   }
 
   try {
-    const values: string[] = [];
-    const filters: string[] = [];
+    const tenant = requireTenantContextFromRequest(req);
+    const values: string[] = [tenant.tenantId];
+    const filters: string[] = ['ie.tenant_id = $1::uuid'];
     if (assetId) {
       values.push(assetId);
       filters.push(`ie.asset_id = $${values.length}::uuid`);
@@ -339,7 +355,7 @@ inspectionsRouter.get('/inspections', requirePermission('inspection.read'), asyn
     const result = await pool.query<DbRow>(
       `select ie.*, a.asset_tag, a.asset_name
          from inspection_events ie
-         left join assets a on a.id = ie.asset_id
+         left join assets a on a.id = ie.asset_id and a.tenant_id = $1::uuid
         ${where}
         order by ie.inspection_date desc, ie.created_at desc
         limit 100`,
@@ -359,9 +375,10 @@ inspectionsRouter.get('/inspections/:inspectionEventId/readiness', requirePermis
   }
 
   try {
+    const tenant = requireTenantContextFromRequest(req);
     const client = await pool.connect();
     try {
-      const readiness = await buildInspectionPackageReadiness(client, inspectionEventId);
+      const readiness = await buildInspectionPackageReadiness(client, inspectionEventId, tenant.tenantId);
       if (!readiness) {
         controlledError(res, 404, 'INSPECTION_EVENT_NOT_FOUND', 'Inspection event was not found.');
         return;

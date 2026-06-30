@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const integrityDecisionsRouter = Router();
 
@@ -79,8 +80,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -90,9 +93,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       req.user?.roles ?? [],
@@ -108,12 +112,13 @@ async function writeAudit(
   return result.rows[0]?.id;
 }
 
-async function countLinkedEvidence(client: PoolClient, entityType: string, entityId: string): Promise<number> {
+async function countLinkedEvidence(client: PoolClient, entityType: string, entityId: string, tenantId: string): Promise<number> {
   const result = await client.query<{ count: string }>(
     `select count(*)::text as count
      from evidence_links
-     where linked_entity_type = $1 and linked_entity_id = $2::uuid`,
-    [entityType, entityId]
+     join evidence_files ef on ef.id = evidence_links.evidence_file_id
+     where linked_entity_type = $1 and linked_entity_id = $2::uuid and ef.tenant_id = $3::uuid`,
+    [entityType, entityId, tenantId]
   );
   return Number(result.rows[0]?.count ?? '0');
 }
@@ -168,12 +173,12 @@ function mapAuditEvent(row: DbRow): Record<string, unknown> {
   };
 }
 
-async function loadIntegrityDecision(client: PoolClient, decisionId: string): Promise<DbRow | undefined> {
-  const result = await client.query<DbRow>('select * from integrity_decisions where id = $1', [decisionId]);
+async function loadIntegrityDecision(client: PoolClient, decisionId: string, tenantId: string): Promise<DbRow | undefined> {
+  const result = await client.query<DbRow>('select * from integrity_decisions where id = $1 and tenant_id = $2::uuid', [decisionId, tenantId]);
   return result.rows[0];
 }
 
-async function loadIntegrityDecisionEvidenceLinks(client: PoolClient, decisionId: string): Promise<DbRow[]> {
+async function loadIntegrityDecisionEvidenceLinks(client: PoolClient, decisionId: string, tenantId: string): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select
        el.id as evidence_link_id,
@@ -187,16 +192,16 @@ async function loadIntegrityDecisionEvidenceLinks(client: PoolClient, decisionId
        ef.status as evidence_status,
        coalesce(ef.upload_status, 'verified') as upload_status
      from evidence_links el
-     join evidence_files ef on ef.id = el.evidence_file_id
+     join evidence_files ef on ef.id = el.evidence_file_id and ef.tenant_id = $2::uuid
      where el.linked_entity_type = 'integrity_decision'
        and el.linked_entity_id = $1::uuid
      order by el.created_at desc`,
-    [decisionId]
+    [decisionId, tenantId]
   );
   return result.rows;
 }
 
-async function loadIntegrityDecisionAuditEvents(client: PoolClient, decisionId: string): Promise<DbRow[]> {
+async function loadIntegrityDecisionAuditEvents(client: PoolClient, decisionId: string, tenantId: string): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select
        id as audit_log_id,
@@ -206,86 +211,93 @@ async function loadIntegrityDecisionAuditEvents(client: PoolClient, decisionId: 
        created_at,
        metadata_json as metadata
      from audit_logs
-     where entity_type = 'integrity_decision'
+     where tenant_id = $2::uuid
+       and entity_type = 'integrity_decision'
        and entity_id = $1::uuid
      order by created_at desc
      limit 25`,
-    [decisionId]
+    [decisionId, tenantId]
   );
   return result.rows;
 }
 
-async function buildIntegrityDecisionReadiness(client: PoolClient, decision: DbRow): Promise<Record<string, unknown>> {
+async function buildIntegrityDecisionReadiness(client: PoolClient, decision: DbRow, tenantId: string): Promise<Record<string, unknown>> {
   const decisionId = String(decision.id);
   const calculationRunId = asString(decision.calculation_run_id);
-  const evidenceLinks = await loadIntegrityDecisionEvidenceLinks(client, decisionId);
-  const auditEvents = await loadIntegrityDecisionAuditEvents(client, decisionId);
+  const evidenceLinks = await loadIntegrityDecisionEvidenceLinks(client, decisionId, tenantId);
+  const auditEvents = await loadIntegrityDecisionAuditEvents(client, decisionId, tenantId);
 
   const [calculationResult, reviewResult, approvalResult, reportResult, workOrderResult, gateResult] = await Promise.all([
     calculationRunId
       ? client.query<DbRow>(
           `select id, run_id, asset_id, inspection_event_id, run_status, status, review_status, approval_status, approved_at, locked_flag, final_use_status, created_at
            from calculation_runs
-           where id = $1`,
-          [calculationRunId]
+           where id = $1 and tenant_id = $2::uuid`,
+          [calculationRunId, tenantId]
         )
       : Promise.resolve({ rows: [], rowCount: 0 }),
     calculationRunId
       ? client.query<DbRow>(
           `select id, review_code, entity_type, entity_id, calculation_run_id, review_status, review_comment, reviewer_id, reviewed_at, created_at
            from engineering_reviews
-           where (entity_type = 'integrity_decision' and entity_id = $1::uuid)
+           where tenant_id = $3::uuid
+             and ((entity_type = 'integrity_decision' and entity_id = $1::uuid)
               or (entity_type = 'calculation_run' and entity_id = $2::uuid)
               or calculation_run_id = $2::uuid
+             )
            order by reviewed_at desc nulls last, created_at desc
            limit 25`,
-          [decisionId, calculationRunId]
+          [decisionId, calculationRunId, tenantId]
         )
       : client.query<DbRow>(
           `select id, review_code, entity_type, entity_id, calculation_run_id, review_status, review_comment, reviewer_id, reviewed_at, created_at
            from engineering_reviews
-           where entity_type = 'integrity_decision' and entity_id = $1::uuid
+           where entity_type = 'integrity_decision' and entity_id = $1::uuid and tenant_id = $2::uuid
            order by reviewed_at desc nulls last, created_at desc
            limit 25`,
-          [decisionId]
+          [decisionId, tenantId]
         ),
     calculationRunId
       ? client.query<DbRow>(
           `select id, approval_code, review_id, entity_type, entity_id, calculation_run_id, approval_status, approver_id, approval_comment, approved_at, created_at
            from approval_records
-           where (entity_type = 'integrity_decision' and entity_id = $1::uuid)
+           where tenant_id = $3::uuid
+             and ((entity_type = 'integrity_decision' and entity_id = $1::uuid)
               or (entity_type = 'calculation_run' and entity_id = $2::uuid)
               or calculation_run_id = $2::uuid
+             )
            order by approved_at desc nulls last, created_at desc
            limit 25`,
-          [decisionId, calculationRunId]
+          [decisionId, calculationRunId, tenantId]
         )
       : client.query<DbRow>(
           `select id, approval_code, review_id, entity_type, entity_id, calculation_run_id, approval_status, approver_id, approval_comment, approved_at, created_at
            from approval_records
-           where entity_type = 'integrity_decision' and entity_id = $1::uuid
+           where entity_type = 'integrity_decision' and entity_id = $1::uuid and tenant_id = $2::uuid
            order by approved_at desc nulls last, created_at desc
            limit 25`,
-          [decisionId]
+          [decisionId, tenantId]
         ),
     calculationRunId
       ? client.query<DbRow>(
           `select id, report_code, report_title, report_status, issue_gate_status, asset_id, calculation_run_id, approved_at, issued_at, created_at
            from reports
-           where calculation_run_id = $1::uuid
+           where calculation_run_id = $1::uuid and tenant_id = $2::uuid
            order by created_at desc
            limit 25`,
-          [calculationRunId]
+          [calculationRunId, tenantId]
         )
       : Promise.resolve({ rows: [], rowCount: 0 }),
     client.query<DbRow>(
       `select id, work_order_code, title, status, priority, action_source, source_entity_type, source_entity_id, integrity_decision_id, report_id, gate_status, due_date, created_at
        from internal_work_orders
-       where integrity_decision_id = $1::uuid
+       where tenant_id = $2::uuid
+         and (integrity_decision_id = $1::uuid
           or (source_entity_type = 'integrity_decision' and source_entity_id = $1::uuid)
+         )
        order by created_at desc
        limit 25`,
-      [decisionId]
+      [decisionId, tenantId]
     ),
     client.query<DbRow>(
       `select gate_type, gate_status, blocking, evidence_link_required, checked_at, metadata_json
@@ -422,8 +434,9 @@ async function persistIntegrityDecisionApprovalGate(
 
 integrityDecisionsRouter.get('/integrity-decisions', requirePermission('integrity_decision.review'), async (req, res, next) => {
   try {
-    const values: unknown[] = [];
-    const filters = ['1 = 1'];
+    const tenant = requireTenantContextFromRequest(req);
+    const values: unknown[] = [tenant.tenantId];
+    const filters = ['id.tenant_id = $1::uuid'];
     const assetId = asString(req.query.asset_id);
     const calculationRunId = asString(req.query.calculation_run_id);
     const decisionStatus = asString(req.query.decision_status);
@@ -434,7 +447,7 @@ integrityDecisionsRouter.get('/integrity-decisions', requirePermission('integrit
         return;
       }
       values.push(assetId);
-      filters.push(`asset_id = $${values.length}`);
+      filters.push(`id.asset_id = $${values.length}`);
     }
 
     if (calculationRunId) {
@@ -443,12 +456,12 @@ integrityDecisionsRouter.get('/integrity-decisions', requirePermission('integrit
         return;
       }
       values.push(calculationRunId);
-      filters.push(`calculation_run_id = $${values.length}`);
+      filters.push(`id.calculation_run_id = $${values.length}`);
     }
 
     if (decisionStatus) {
       values.push(decisionStatus);
-      filters.push(`decision_status = $${values.length}`);
+      filters.push(`id.decision_status = $${values.length}`);
     }
 
     const result = await pool.query<DbRow>(
@@ -458,6 +471,7 @@ integrityDecisionsRouter.get('/integrity-decisions', requirePermission('integrit
        left join lateral (
          select count(*)::int as evidence_count
          from evidence_links el
+         join evidence_files ef on ef.id = el.evidence_file_id and ef.tenant_id = $1::uuid
          where el.linked_entity_type = 'integrity_decision'
            and el.linked_entity_id = id.id
        ) ev on true
@@ -482,13 +496,14 @@ integrityDecisionsRouter.get('/integrity-decisions/:decisionId/readiness', requi
 
   const client = await pool.connect();
   try {
-    const decision = await loadIntegrityDecision(client, decisionId);
+    const tenant = requireTenantContextFromRequest(req);
+    const decision = await loadIntegrityDecision(client, decisionId, tenant.tenantId);
     if (!decision) {
       res.status(404).json({ error: { code: 'INTEGRITY_DECISION_NOT_FOUND', message: 'Integrity decision not found.' } });
       return;
     }
 
-    const readiness = await buildIntegrityDecisionReadiness(client, decision);
+    const readiness = await buildIntegrityDecisionReadiness(client, decision, tenant.tenantId);
     res.json({ data: readiness });
   } catch (error) {
     next(error);
@@ -506,13 +521,14 @@ integrityDecisionsRouter.get('/integrity-decisions/:decisionId', requirePermissi
 
   const client = await pool.connect();
   try {
-    const decision = await loadIntegrityDecision(client, decisionId);
+    const tenant = requireTenantContextFromRequest(req);
+    const decision = await loadIntegrityDecision(client, decisionId, tenant.tenantId);
     if (!decision) {
       res.status(404).json({ error: { code: 'INTEGRITY_DECISION_NOT_FOUND', message: 'Integrity decision not found.' } });
       return;
     }
 
-    const readiness = await buildIntegrityDecisionReadiness(client, decision);
+    const readiness = await buildIntegrityDecisionReadiness(client, decision, tenant.tenantId);
     res.json({
       data: {
         ...mapDecision(decision),
@@ -578,8 +594,9 @@ integrityDecisionsRouter.post('/integrity-decisions', requirePermission('integri
 
   try {
     await client.query('begin');
+    const tenant = requireTenantContextFromRequest(req);
 
-    const calculationResult = await client.query<DbRow>('select * from calculation_runs where id = $1', [calculationRunId]);
+    const calculationResult = await client.query<DbRow>('select * from calculation_runs where id = $1 and tenant_id = $2::uuid', [calculationRunId, tenant.tenantId]);
     const calculation = calculationResult.rows[0];
 
     if (!calculation) {
@@ -594,6 +611,15 @@ integrityDecisionsRouter.post('/integrity-decisions', requirePermission('integri
       return;
     }
 
+    if (inspectionEventId) {
+      const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2 and tenant_id = $3::uuid', [inspectionEventId, assetId, tenant.tenantId]);
+      if (inspectionResult.rowCount === 0) {
+        await client.query('rollback');
+        res.status(404).json({ error: { code: 'INSPECTION_EVENT_NOT_FOUND', message: 'Inspection event not found for selected tenant asset.' } });
+        return;
+      }
+    }
+
     if (!['approved', 'locked'].includes(String(calculation.approval_status))) {
       await client.query('rollback');
       res.status(409).json({ error: { code: 'CALCULATION_NOT_APPROVED', message: 'Approved calculation is required before integrity decision.' } });
@@ -604,6 +630,7 @@ integrityDecisionsRouter.post('/integrity-decisions', requirePermission('integri
 
     const result = await client.query<DbRow>(
       `insert into integrity_decisions(
+        tenant_id,
         decision_code,
         asset_id,
         inspection_event_id,
@@ -618,9 +645,10 @@ integrityDecisionsRouter.post('/integrity-decisions', requirePermission('integri
         created_by,
         reviewed_by,
         reviewed_at
-      ) values ($1, $2, $3, $4, 'tank_integrity', $5, 'pending_review', $6, $7, $8, $9, $10, $10, now())
+      ) values ($1, $2, $3, $4, $5, 'tank_integrity', $6, 'pending_review', $7, $8, $9, $10, $11, $11, now())
       returning *`,
       [
+        tenant.tenantId,
         decisionCode,
         assetId,
         inspectionEventId ?? null,
@@ -683,8 +711,9 @@ integrityDecisionsRouter.post('/integrity-decisions/:decisionId/approve', requir
 
   try {
     await client.query('begin');
+    const tenant = requireTenantContextFromRequest(req);
 
-    const beforeResult = await client.query<DbRow>('select * from integrity_decisions where id = $1 for update', [decisionId]);
+    const beforeResult = await client.query<DbRow>('select * from integrity_decisions where id = $1 and tenant_id = $2::uuid for update', [decisionId, tenant.tenantId]);
     const before = beforeResult.rows[0];
 
     if (!before) {
@@ -699,7 +728,7 @@ integrityDecisionsRouter.post('/integrity-decisions/:decisionId/approve', requir
       return;
     }
 
-    const evidenceCount = await countLinkedEvidence(client, 'integrity_decision', decisionId);
+    const evidenceCount = await countLinkedEvidence(client, 'integrity_decision', decisionId, tenant.tenantId);
     await persistIntegrityDecisionApprovalGate(client, req, decisionId, evidenceCount > 0 ? 'pass' : 'fail', evidenceCount);
 
     if (evidenceCount === 0) {
@@ -736,9 +765,9 @@ integrityDecisionsRouter.post('/integrity-decisions/:decisionId/approve', requir
            approved_by = $2,
            approved_at = now(),
            updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $3::uuid
        returning *`,
-      [decisionId, actorUserId(req)]
+      [decisionId, actorUserId(req), tenant.tenantId]
     );
 
     const updated = result.rows[0];
