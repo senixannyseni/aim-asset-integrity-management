@@ -142,6 +142,20 @@ describe('enterprise multi-tenant runtime route hardening', () => {
     ]);
   });
 
+  it('records tenant_id on tenant-scoped asset and evidence audit writes', () => {
+    for (const relativePath of [
+      'apps/api/src/routes/assets.ts',
+      'apps/api/src/routes/evidence.ts'
+    ]) {
+      expectSnippets(relativePath, [
+        'const tenant = requireTenantContextFromRequest(req);',
+        'insert into audit_logs( tenant_id, event_type',
+        'values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)',
+        'tenant.tenantId'
+      ]);
+    }
+  });
+
   it('tenant-filters audit-log visibility, dashboard aggregates, workflow console reads, and AI evidence references', () => {
     expectSnippets('apps/api/src/routes/audit-logs.ts', [
       'al.tenant_id = $1::uuid',

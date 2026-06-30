@@ -75,8 +75,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -86,9 +88,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),

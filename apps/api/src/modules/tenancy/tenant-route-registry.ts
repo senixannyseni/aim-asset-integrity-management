@@ -69,7 +69,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Engineering',
-    runtimeBoundary: 'Sprint 3 registry-enforced tenant route expansion item; SQL tenant_id retrofit required before customer production certification',
+    runtimeBoundary: 'Sprint 3 registry-enforced tenant route expansion item; SQL tenant_id runtime filters are enforced',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
@@ -80,7 +80,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Engineering',
-    runtimeBoundary: 'Sprint 3 registry-enforced tenant route expansion item; measurement tenant_id predicates required for production tenant certification',
+    runtimeBoundary: 'Sprint 3 registry-enforced tenant route expansion item; measurement tenant_id predicates are enforced',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
@@ -91,7 +91,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Engineering',
-    runtimeBoundary: 'Sprint 3 registry-enforced tenant visualization route item; read queries must inherit tenant context',
+    runtimeBoundary: 'Sprint 3 registry-enforced tenant visualization route item; read queries enforce tenant context',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
@@ -102,7 +102,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Engineering',
-    runtimeBoundary: 'Sprint 3 registry-enforced finding tenant_id predicate requirement before customer production certification',
+    runtimeBoundary: 'Sprint 3 registry-enforced finding tenant_id predicates are enforced',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
@@ -113,7 +113,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Engineering',
-    runtimeBoundary: 'Sprint 3 registry-enforced calculation tenant_id predicate requirement before customer production certification',
+    runtimeBoundary: 'Sprint 3 registry-enforced calculation tenant_id predicates are enforced',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
@@ -124,7 +124,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Engineering',
-    runtimeBoundary: 'Sprint 3 registry-enforced engineering review tenant_id predicate requirement before customer production certification',
+    runtimeBoundary: 'Sprint 3 registry-enforced engineering review tenant_id predicates are enforced',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
@@ -135,7 +135,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Engineering',
-    runtimeBoundary: 'Sprint 3 registry-enforced integrity decision tenant_id predicate requirement before customer production certification',
+    runtimeBoundary: 'Sprint 3 registry-enforced integrity decision tenant_id predicates are enforced',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
@@ -146,7 +146,7 @@ export const TENANT_ROUTE_REGISTRY: TenantRouteRegistryEntry[] = [
     boundaryMode: 'runtime_filter',
     evidenceId: 'MT-S3-006',
     owner: 'Operations',
-    runtimeBoundary: 'Sprint 3 registry-enforced work order tenant_id predicate requirement before customer production certification',
+    runtimeBoundary: 'Sprint 3 registry-enforced work order tenant_id predicates are enforced',
     sprint3Disposition: 'closed_by_runtime_pattern'
   },
   {
