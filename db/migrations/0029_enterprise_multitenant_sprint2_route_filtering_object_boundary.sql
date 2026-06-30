@@ -5,12 +5,15 @@
 
 alter table if exists evidence_upload_sessions add column if not exists tenant_id uuid references tenants(id) on delete restrict;
 
+-- Use correlated subqueries here instead of referencing the UPDATE target alias from a FROM/JOIN clause.
+-- PostgreSQL does not allow the target alias to be referenced from that part of the query on a fresh migration run.
 update evidence_upload_sessions eus
-set tenant_id = coalesce(ef.tenant_id, a.tenant_id, '00000000-0000-0000-0000-000000000001'::uuid)
-from assets a
-left join evidence_files ef on ef.id = eus.evidence_id
-where eus.asset_id = a.id
-  and eus.tenant_id is null;
+set tenant_id = coalesce(
+  (select ef.tenant_id from evidence_files ef where ef.id = eus.evidence_id limit 1),
+  (select a.tenant_id from assets a where a.id = eus.asset_id limit 1),
+  '00000000-0000-0000-0000-000000000001'::uuid
+)
+where eus.tenant_id is null;
 
 update evidence_upload_sessions
 set tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
