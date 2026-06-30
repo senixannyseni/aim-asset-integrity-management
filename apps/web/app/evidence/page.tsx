@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../lib/api-client';
 
@@ -75,7 +75,7 @@ function uploadWithProgress(input: { url: string; file: File; headers: Record<st
   });
 }
 
-export default function EvidenceRepositoryPage() {
+function EvidenceRepositoryPageClient() {
   const searchParams = useSearchParams();
   const initialAssetId = searchParams.get('asset_id') ?? '';
   const initialInspectionId = searchParams.get('inspection_id') ?? searchParams.get('inspection_event_id') ?? '';
@@ -217,4 +217,13 @@ export default function EvidenceRepositoryPage() {
       <section className="panel wide-panel"><div className="panel-heading row-between"><div><h2>Legacy/manual evidence registration</h2><p>This fallback registers metadata only and does not upload a new object-storage file.</p></div><button className="secondary-button" type="button" onClick={() => setLegacyVisible((v) => !v)}>{legacyVisible ? 'Hide fallback' : 'Show fallback'}</button></div>{legacyVisible && <form className="form-grid" onSubmit={legacyRegister}><label><span>Asset</span><select name="legacy_asset_id" defaultValue={metadata.asset_id || assets[0]?.asset_id || ''} required>{assets.map((a) => <option key={a.asset_id} value={a.asset_id}>{a.tank_tag ?? a.asset_id} — {a.asset_name ?? 'asset'}</option>)}</select></label><label><span>File Name</span><input name="legacy_file_name" required /></label><label><span>File Type</span><select name="legacy_file_type" defaultValue="PDF" required>{['PDF', 'XLSX', 'CSV', 'JPG', 'JPEG', 'PNG', 'DWG', 'DXF', 'STL', 'ZIP'].map((t) => <option key={t} value={t}>{t}</option>)}</select></label><label><span>MIME Type</span><input name="legacy_mime_type" defaultValue="application/pdf" required /></label><label><span>File Size Bytes</span><input name="legacy_file_size_bytes" type="number" min="0" required /></label><label><span>Checksum SHA-256</span><input name="legacy_checksum" required /></label><label><span>Inspection Date</span><input name="legacy_inspection_date" type="date" required /></label><label><span>Method</span><input name="legacy_method" required /></label><label><span>Component</span><input name="legacy_component" required /></label><label><span>Location</span><input name="legacy_location" /></label><label><span>Page or Sheet Ref</span><input name="legacy_page_or_sheet_ref" /></label><button className="secondary-button wide-field" type="submit">Register Legacy/Manual Evidence Metadata</button></form>}</section>
     </>}
   </main>;
+}
+
+
+export default function EvidenceRepositoryPage() {
+  return (
+    <Suspense fallback={<main className="container"><section className="notice">Loading evidence repository…</section></main>}>
+      <EvidenceRepositoryPageClient />
+    </Suspense>
+  );
 }
