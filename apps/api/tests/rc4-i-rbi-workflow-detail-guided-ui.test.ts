@@ -55,7 +55,8 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(route).toContain('RBI_REVIEW_ENDPOINT_REQUIRED');
     expect(route).toContain('RBI_FINAL_STATE_LOCKED');
     expect(route).not.toContain('reviewed_at = coalesce(reviewed_at, now())');
-    expect(route).toContain('where id = $1::uuid or case_id = $2');
+    expect(route).toContain('where (rc.id = $1::uuid or rc.case_id = $2)');
+    expect(route).toContain('and a.tenant_id = $3::uuid');
     expect(route).toContain('asset_id must be a valid UUID');
     expect(route).toContain('lead_engineer');
     expect(route).toContain('AI agents may not approve, export, close, or finalize RBI cases');

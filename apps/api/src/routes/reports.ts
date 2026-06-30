@@ -80,8 +80,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -91,9 +93,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -222,7 +225,7 @@ function isReportableCalculation(run: DbRow): boolean {
   ) || Boolean(run.locked_flag);
 }
 
-async function loadReportContext(client: Queryable, calculationRunId: string): Promise<{
+async function loadReportContext(client: Queryable, calculationRunId: string, tenantId: string): Promise<{
   run: DbRow;
   asset: DbRow | undefined;
   geometry: DbRow | undefined;
@@ -238,7 +241,7 @@ async function loadReportContext(client: Queryable, calculationRunId: string): P
   approvals: DbRow[];
   auditTrail: DbRow[];
 }> {
-  const runResult = await client.query<DbRow>('select * from calculation_runs where id = $1', [calculationRunId]);
+  const runResult = await client.query<DbRow>('select * from calculation_runs where id = $1 and tenant_id = $2::uuid', [calculationRunId, tenantId]);
   const run = runResult.rows[0];
   if (!run) {
     const error = new Error('CALCULATION_RUN_NOT_FOUND');
@@ -248,7 +251,7 @@ async function loadReportContext(client: Queryable, calculationRunId: string): P
 
   const assetId = asString(run.asset_id);
   const [assetResult, geometryResult, shellResult, inputResult, outputResult, formulaResult, evidenceResult, ffsResult, rbiResult, reviewResult, approvalResult, auditResult] = await Promise.all([
-    assetId ? client.query<DbRow>('select * from assets where id = $1', [assetId]) : Promise.resolve({ rows: [], rowCount: 0 }),
+    assetId ? client.query<DbRow>('select * from assets where id = $1 and tenant_id = $2::uuid', [assetId, tenantId]) : Promise.resolve({ rows: [], rowCount: 0 }),
     assetId ? client.query<DbRow>('select * from tank_geometry where asset_id = $1 limit 1', [assetId]) : Promise.resolve({ rows: [], rowCount: 0 }),
     assetId ? client.query<DbRow>('select * from shell_courses where asset_id = $1 order by course_no', [assetId]) : Promise.resolve({ rows: [], rowCount: 0 }),
     client.query<DbRow>('select * from calculation_inputs where calculation_run_id = $1 order by input_name, id', [calculationRunId]),
@@ -265,6 +268,7 @@ async function loadReportContext(client: Queryable, calculationRunId: string): P
            left join evidence_links el on el.evidence_file_id = ef.id
            left join calculation_inputs ci on ci.evidence_file_id = ef.id and ci.calculation_run_id = $1
            where ef.asset_id = $2
+             and ef.tenant_id = $3::uuid
              and (
                ci.calculation_run_id = $1
                or (el.linked_entity_type = 'calculation_run' and el.linked_entity_id = $1)
@@ -272,21 +276,33 @@ async function loadReportContext(client: Queryable, calculationRunId: string): P
              )
            order by ef.id, ef.created_at desc
            limit 200`,
-          [calculationRunId, assetId]
+          [calculationRunId, assetId, tenantId]
         )
       : Promise.resolve({ rows: [], rowCount: 0 }),
-    client.query<DbRow>('select * from ffs_cases where calculation_run_id = $1 order by created_at desc', [calculationRunId]),
-    client.query<DbRow>('select * from rbi_cases where calculation_run_id = $1 order by created_at desc', [calculationRunId]),
-    client.query<DbRow>('select * from engineering_reviews where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc', [calculationRunId, 'calculation_run']),
-    client.query<DbRow>('select * from approval_records where calculation_run_id = $1 or (entity_type = $2 and entity_id = $1) order by updated_at desc', [calculationRunId, 'calculation_run']),
-    client.query<DbRow>('select * from audit_logs where entity_id = $1 order by created_at desc limit 100', [calculationRunId])
+    client.query<DbRow>(
+      `select f.* from ffs_cases f
+       join assets a on a.id = f.asset_id
+       where f.calculation_run_id = $1 and a.tenant_id = $2::uuid
+       order by f.created_at desc`,
+      [calculationRunId, tenantId]
+    ),
+    client.query<DbRow>(
+      `select r.* from rbi_cases r
+       join assets a on a.id = r.asset_id
+       where r.calculation_run_id = $1 and a.tenant_id = $2::uuid
+       order by r.created_at desc`,
+      [calculationRunId, tenantId]
+    ),
+    client.query<DbRow>('select * from engineering_reviews where tenant_id = $3::uuid and (calculation_run_id = $1 or (entity_type = $2 and entity_id = $1)) order by updated_at desc', [calculationRunId, 'calculation_run', tenantId]),
+    client.query<DbRow>('select * from approval_records where tenant_id = $3::uuid and (calculation_run_id = $1 or (entity_type = $2 and entity_id = $1)) order by updated_at desc', [calculationRunId, 'calculation_run', tenantId]),
+    client.query<DbRow>('select * from audit_logs where tenant_id = $2::uuid and entity_id = $1 order by created_at desc limit 100', [calculationRunId, tenantId])
   ]);
 
   const ndtIds = inputResult.rows
     .filter((row) => row.source_entity_type === 'ndt_measurement' && row.source_entity_id)
     .map((row) => String(row.source_entity_id));
   const ndtRows = ndtIds.length > 0
-    ? (await client.query<DbRow>(`select * from ndt_measurements where id = any($1::uuid[]) order by component, shell_course_no, reading_date`, [ndtIds])).rows
+    ? (await client.query<DbRow>(`select * from ndt_measurements where id = any($1::uuid[]) and tenant_id = $2::uuid order by component, shell_course_no, reading_date`, [ndtIds, tenantId])).rows
     : [];
 
   return {
@@ -483,25 +499,26 @@ function gate(gateType: string, pass: boolean, message: string, metadata: Record
   };
 }
 
-async function loadReportGateContext(client: PoolClient, report: DbRow): Promise<ReportGateContext> {
+async function loadReportGateContext(client: PoolClient, report: DbRow, tenantId: string): Promise<ReportGateContext> {
   const reportId = asString(report.id);
   const calculationRunId = asString(report.calculation_run_id);
   const assetId = asString(report.asset_id);
 
   const [calculationResult, integrityResult, approvedIntegrityResult, evidenceResult, criticalErrorResult, blockingGateResult] = await Promise.all([
     calculationRunId
-      ? client.query<DbRow>('select * from calculation_runs where id = $1', [calculationRunId])
+      ? client.query<DbRow>('select * from calculation_runs where id = $1 and tenant_id = $2::uuid', [calculationRunId, tenantId])
       : Promise.resolve({ rows: [], rowCount: 0 }),
     calculationRunId
-      ? client.query<DbRow>('select * from integrity_decisions where calculation_run_id = $1 order by created_at desc limit 1', [calculationRunId])
+      ? client.query<DbRow>('select * from integrity_decisions where calculation_run_id = $1 and tenant_id = $2::uuid order by created_at desc limit 1', [calculationRunId, tenantId])
       : Promise.resolve({ rows: [], rowCount: 0 }),
     calculationRunId
       ? client.query<DbRow>(
           `select * from integrity_decisions
            where calculation_run_id = $1 and decision_status = 'approved'
+             and tenant_id = $2::uuid
            order by approved_at desc nulls last, created_at desc
            limit 1`,
-          [calculationRunId]
+          [calculationRunId, tenantId]
         )
       : Promise.resolve({ rows: [], rowCount: 0 }),
     calculationRunId || reportId
@@ -519,13 +536,14 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
                count(*) filter (where linked_entity_type = 'calculation_input' and linked_entity_id in (
                  select id from calculation_inputs where calculation_run_id = $2::uuid
                ))::text as calculation_input_evidence_count,
-               count(*) filter (where linked_entity_type = 'integrity_decision' and linked_entity_id in (
-                 select id from integrity_decisions where calculation_run_id = $2::uuid and decision_status = 'approved'
+             count(*) filter (where linked_entity_type = 'integrity_decision' and linked_entity_id in (
+                 select id from integrity_decisions where calculation_run_id = $2::uuid and tenant_id = $3::uuid and decision_status = 'approved'
                ))::text as integrity_decision_evidence_count,
                count(*)::text as total_evidence_count
              from evidence_links el
            join evidence_files ef on ef.id = el.evidence_file_id
             and ef.upload_status = 'verified'
+            and ef.tenant_id = $3::uuid
             and coalesce(ef.object_key, ef.object_storage_path, ef.object_storage_uri) is not null
              where (linked_entity_type = 'report' and linked_entity_id = $1::uuid)
                 or (linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)
@@ -533,17 +551,18 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
                   select id from calculation_inputs where calculation_run_id = $2::uuid
                 ))
                 or (linked_entity_type = 'integrity_decision' and linked_entity_id in (
-                  select id from integrity_decisions where calculation_run_id = $2::uuid and decision_status = 'approved'
+                  select id from integrity_decisions where calculation_run_id = $2::uuid and tenant_id = $3::uuid and decision_status = 'approved'
                 ))
            )
            select * from evidence_counts`,
-          [reportId ?? null, calculationRunId ?? null]
+          [reportId ?? null, calculationRunId ?? null, tenantId]
         )
       : Promise.resolve({ rows: [{ report_evidence_count: '0', calculation_run_evidence_count: '0', calculation_input_evidence_count: '0', integrity_decision_evidence_count: '0', total_evidence_count: '0' }], rowCount: 1 }),
     client.query<{ count: string }>(
       `select count(*)::text as count
        from error_logs
-       where status not in ('resolved','closed')
+       where tenant_id = $4::uuid
+         and status not in ('resolved','closed')
          and severity in ('high','critical')
          and coalesce(error_code, '') <> 'REPORT_ISSUE_GATE_BLOCKED'
          and (
@@ -551,7 +570,7 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
            or (related_entity_type = 'calculation_run' and related_entity_id = $2::uuid)
            or (related_entity_type = 'asset' and related_entity_id = $3::uuid)
          )`,
-      [reportId ?? null, calculationRunId ?? null, assetId ?? null]
+      [reportId ?? null, calculationRunId ?? null, assetId ?? null, tenantId]
     ),
     client.query<{ count: string }>(
       `select count(*)::text as count
@@ -563,10 +582,10 @@ async function loadReportGateContext(client: PoolClient, report: DbRow): Promise
            (entity_type = 'report' and entity_id = $1::uuid)
            or (entity_type = 'calculation_run' and entity_id = $2::uuid)
            or (entity_type = 'integrity_decision' and entity_id in (
-             select id from integrity_decisions where calculation_run_id = $2::uuid
+             select id from integrity_decisions where calculation_run_id = $2::uuid and tenant_id = $3::uuid
            ))
          )`,
-      [reportId ?? null, calculationRunId ?? null]
+      [reportId ?? null, calculationRunId ?? null, tenantId]
     )
   ]);
 
@@ -660,8 +679,10 @@ async function persistReportGateChecklist(client: PoolClient, req: Request, repo
 }
 
 async function writeReportIssueBlockedError(client: PoolClient, req: Request, reportId: string, failedGates: ReportGate[]): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into error_logs(
+      tenant_id,
       error_code,
       error_message,
       severity,
@@ -673,9 +694,10 @@ async function writeReportIssueBlockedError(client: PoolClient, req: Request, re
       payload_json,
       status,
       created_by
-    ) values ($1, $2, $3, $4, $5, $6, $7::uuid, $8, $9::jsonb, $10, $11)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::uuid, $9, $10::jsonb, $11, $12)
     returning id`,
     [
+      tenant.tenantId,
       'REPORT_ISSUE_GATE_BLOCKED',
       'Report issue was blocked by required governance gates.',
       'high',
@@ -692,9 +714,10 @@ async function writeReportIssueBlockedError(client: PoolClient, req: Request, re
   return result.rows[0]?.id;
 }
 
-reportsRouter.get('/reports', requirePermission('report.read'), async (_req, res, next) => {
+reportsRouter.get('/reports', requirePermission('report.read'), async (req, res, next) => {
   try {
-    const result = await pool.query<DbRow>('select * from reports order by created_at desc limit 100');
+    const tenant = requireTenantContextFromRequest(req);
+    const result = await pool.query<DbRow>('select * from reports where tenant_id = $1::uuid order by created_at desc limit 100', [tenant.tenantId]);
     res.json({ data: result.rows.map(mapReport) });
   } catch (error) {
     next(error);
@@ -708,7 +731,8 @@ reportsRouter.get('/reports/:reportId', requirePermission('report.read'), async 
     return;
   }
   try {
-    const result = await pool.query<DbRow>('select * from reports where id = $1', [reportId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const result = await pool.query<DbRow>('select * from reports where id = $1 and tenant_id = $2::uuid', [reportId, tenant.tenantId]);
     const row = result.rows[0];
     if (!row) {
       res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
@@ -728,13 +752,14 @@ reportsRouter.get('/reports/:reportId/issue-readiness', requirePermission('repor
   }
   const client = await pool.connect();
   try {
-    const reportResult = await client.query<DbRow>('select * from reports where id = $1', [reportId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const reportResult = await client.query<DbRow>('select * from reports where id = $1 and tenant_id = $2::uuid', [reportId, tenant.tenantId]);
     const report = reportResult.rows[0];
     if (!report) {
       res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
       return;
     }
-    const context = await loadReportGateContext(client, report);
+    const context = await loadReportGateContext(client, report, tenant.tenantId);
     const gates = buildReportGateChecklist(context, false);
     const blockingGates = gates.filter((item) => item.blocking && item.gate_status !== 'pass');
     const blockingGatesExcludingIssueComment = blockingGates.filter((item) => item.gate_type !== 'approver_comment_present');
@@ -776,9 +801,15 @@ reportsRouter.get('/reports/:reportId/exports', requirePermission('report.read')
     return;
   }
   try {
+    const tenant = requireTenantContextFromRequest(req);
+    const reportResult = await pool.query<DbRow>('select id from reports where id = $1 and tenant_id = $2::uuid', [reportId, tenant.tenantId]);
+    if (!reportResult.rows[0]) {
+      res.status(404).json({ error: { code: 'REPORT_NOT_FOUND', message: 'Report not found.' } });
+      return;
+    }
     const result = await pool.query<DbRow>(
-      'select * from report_exports where report_id = $1 order by created_at desc',
-      [reportId]
+      'select * from report_exports where report_id = $1 and tenant_id = $2::uuid order by created_at desc',
+      [reportId, tenant.tenantId]
     );
     res.json({ data: result.rows.map(mapReportExport) });
   } catch (error) {
@@ -810,7 +841,7 @@ reportsRouter.post('/reports/:reportId/exports', requirePermission('report.expor
   try {
     await client.query('begin');
     const tenant = requireTenantContextFromRequest(req);
-    const reportResult = await client.query<DbRow>('select * from reports where id = $1 and tenant_id = $2 for update', [reportId, tenant.tenantId]);
+    const reportResult = await client.query<DbRow>('select * from reports where id = $1 and tenant_id = $2::uuid for update', [reportId, tenant.tenantId]);
     const report = reportResult.rows[0];
     if (!report) {
       await client.query('rollback');
@@ -819,7 +850,7 @@ reportsRouter.post('/reports/:reportId/exports', requirePermission('report.expor
     }
 
     if ((exportType === 'pdf' || exportType === 'docx') && report.report_status !== 'issued') {
-      const gateContext = await loadReportGateContext(client, report);
+      const gateContext = await loadReportGateContext(client, report, tenant.tenantId);
       const gates = buildReportGateChecklist(gateContext, hasRequiredReportComment(req));
       await persistReportGateChecklist(client, req, reportId, gates);
       await client.query('commit');
@@ -1027,7 +1058,8 @@ reportsRouter.post('/reports/generate', requirePermission('report.generate'), as
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const context = await loadReportContext(client, calculationRunId);
+    const tenant = requireTenantContextFromRequest(req);
+    const context = await loadReportContext(client, calculationRunId, tenant.tenantId);
     if (!isReportableCalculation(context.run)) {
       await client.query('rollback');
       res.status(409).json({
@@ -1051,8 +1083,8 @@ reportsRouter.post('/reports/generate', requirePermission('report.generate'), as
     }
 
     const reportVersionResult = await client.query<{ next_version: string }>(
-      `select (coalesce(max(report_version), 0) + 1)::text as next_version from reports where calculation_run_id = $1`,
-      [calculationRunId]
+      `select (coalesce(max(report_version), 0) + 1)::text as next_version from reports where calculation_run_id = $1 and tenant_id = $2::uuid`,
+      [calculationRunId, tenant.tenantId]
     );
     const reportVersion = Number(reportVersionResult.rows[0]?.next_version ?? '1');
     const title = asString(req.body.report_title ?? req.body.title) ?? `Tank Integrity Report - ${context.asset?.asset_tag ?? context.run.run_id ?? calculationRunId}`;
@@ -1079,6 +1111,7 @@ reportsRouter.post('/reports/generate', requirePermission('report.generate'), as
 
     const result = await client.query<DbRow>(
       `insert into reports(
+        tenant_id,
         report_code,
         report_title,
         report_type,
@@ -1104,10 +1137,11 @@ reportsRouter.post('/reports/generate', requirePermission('report.generate'), as
         generated_by,
         generated_at
       ) values (
-        $1, $2, 'tank_integrity', 'draft', $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13,
-        $14, $15, $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb, $21, now()
+        $1, $2, $3, 'tank_integrity', 'draft', $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $14,
+        $15, $16, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb, $22, now()
       ) returning *`,
       [
+        tenant.tenantId,
         reportCode,
         title,
         reportVersion,
@@ -1169,7 +1203,8 @@ reportsRouter.post('/reports/:reportId/approve', requirePermission('report.appro
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from reports where id = $1 for update', [reportId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const beforeResult = await client.query<DbRow>('select * from reports where id = $1 and tenant_id = $2::uuid for update', [reportId, tenant.tenantId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -1187,8 +1222,8 @@ reportsRouter.post('/reports/:reportId/approve', requirePermission('report.appro
       return;
     }
     const result = await client.query<DbRow>(
-      `update reports set report_status = 'approved', approved_by = $2, approved_at = now(), updated_at = now() where id = $1 returning *`,
-      [reportId, actorUserId(req)]
+      `update reports set report_status = 'approved', approved_by = $2, approved_at = now(), updated_at = now() where id = $1 and tenant_id = $3::uuid returning *`,
+      [reportId, actorUserId(req), tenant.tenantId]
     );
     const updated = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'REPORT_APPROVED', 'report', reportId, mapReport(before), mapReport(updated ?? {}), {
@@ -1222,7 +1257,8 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from reports where id = $1 for update', [reportId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const beforeResult = await client.query<DbRow>('select * from reports where id = $1 and tenant_id = $2::uuid for update', [reportId, tenant.tenantId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -1235,7 +1271,7 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
       return;
     }
 
-    const gateContext = await loadReportGateContext(client, before);
+    const gateContext = await loadReportGateContext(client, before, tenant.tenantId);
     const reportGates = buildReportGateChecklist(gateContext, hasRequiredReportComment(req));
     await persistReportGateChecklist(client, req, reportId, reportGates);
     const failedGates = reportGates.filter((item) => item.blocking && item.gate_status !== 'pass');
@@ -1263,8 +1299,8 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
       return;
     }
     const result = await client.query<DbRow>(
-      `update reports set report_status = 'issued', locked_flag = true, issued_by = $2, issued_at = now(), updated_at = now() where id = $1 returning *`,
-      [reportId, actorUserId(req)]
+      `update reports set report_status = 'issued', locked_flag = true, issued_by = $2, issued_at = now(), updated_at = now() where id = $1 and tenant_id = $3::uuid returning *`,
+      [reportId, actorUserId(req), tenant.tenantId]
     );
     const updated = result.rows[0];
     const resolvedGateErrors = await client.query<{ id: string }>(
@@ -1277,11 +1313,12 @@ reportsRouter.post('/reports/:reportId/issue', requirePermission('report.issue')
              'resolved_at', now()
            )
        where error_code = 'REPORT_ISSUE_GATE_BLOCKED'
+         and tenant_id = $2::uuid
          and related_entity_type = 'report'
          and related_entity_id = $1::uuid
          and status not in ('resolved','closed')
        returning id`,
-      [reportId]
+      [reportId, tenant.tenantId]
     );
     const auditLogId = await writeAudit(client, req, 'REPORT_ISSUED', 'report', reportId, mapReport(before), mapReport(updated ?? {}), {
       issue_comment: asString(req.body.issue_comment ?? req.body.comment),

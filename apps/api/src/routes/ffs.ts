@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 import type { Role } from '../rbac/roles.js';
 
 export const ffsRouter = Router();
@@ -104,10 +105,10 @@ function validationError(res: ApiResponse, field: string, message: string): void
 }
 
 
-async function loadCalculationRunByIdentifier(client: PoolClient, identifier: string): Promise<DbRow | undefined> {
+async function loadCalculationRunByIdentifier(client: PoolClient, identifier: string, tenantId: string): Promise<DbRow | undefined> {
   const result = isUuid(identifier)
-    ? await client.query<DbRow>('select * from calculation_runs where id = $1::uuid limit 1', [identifier])
-    : await client.query<DbRow>('select * from calculation_runs where run_id = $1 limit 1', [identifier]);
+    ? await client.query<DbRow>('select * from calculation_runs where id = $1::uuid and tenant_id = $2::uuid limit 1', [identifier, tenantId])
+    : await client.query<DbRow>('select * from calculation_runs where run_id = $1 and tenant_id = $2::uuid limit 1', [identifier, tenantId]);
   return result.rows[0];
 }
 
@@ -130,8 +131,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -141,9 +144,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -185,8 +189,16 @@ function mapFfsCase(row: DbRow | undefined): Record<string, unknown> | null {
   };
 }
 
-async function getFfsCase(client: Queryable, caseId: string): Promise<DbRow | undefined> {
-  const result = await client.query<DbRow>('select * from ffs_cases where id = $1 or case_id = $1 limit 1', [caseId]);
+async function getFfsCase(client: Queryable, caseId: string, tenantId: string): Promise<DbRow | undefined> {
+  const result = await client.query<DbRow>(
+    `select fc.*
+     from ffs_cases fc
+     join assets a on a.id = fc.asset_id
+     where (fc.id::text = $1 or fc.case_id = $1)
+       and a.tenant_id = $2::uuid
+     limit 1`,
+    [caseId, tenantId]
+  );
   return result.rows[0];
 }
 
@@ -274,19 +286,19 @@ function mapFfsAuditEvent(row: DbRow): Record<string, unknown> {
   };
 }
 
-async function buildFfsDispositionReadiness(client: Queryable, ffsCase: DbRow): Promise<Record<string, unknown>> {
+async function buildFfsDispositionReadiness(client: Queryable, ffsCase: DbRow, tenantId: string): Promise<Record<string, unknown>> {
   const caseId = String(ffsCase.id);
   const assetId = String(ffsCase.asset_id);
   const calculationRunId = ffsCase.calculation_run_id ? String(ffsCase.calculation_run_id) : null;
   const inspectionEventId = ffsCase.inspection_event_id ? String(ffsCase.inspection_event_id) : null;
 
   const [assetResult, inspectionResult, calculationResult, evidenceResult, reviewResult, approvalResult, findingResult, reportResult, workOrderResult, auditResult] = await Promise.all([
-    client.query<DbRow>('select * from assets where id = $1 limit 1', [assetId]),
+    client.query<DbRow>('select * from assets where id = $1 and tenant_id = $2::uuid limit 1', [assetId, tenantId]),
     inspectionEventId
-      ? client.query<DbRow>('select * from inspection_events where id = $1 limit 1', [inspectionEventId])
+      ? client.query<DbRow>('select * from inspection_events where id = $1 and tenant_id = $2::uuid limit 1', [inspectionEventId, tenantId])
       : Promise.resolve({ rows: [], rowCount: 0 }),
     calculationRunId
-      ? client.query<DbRow>('select * from calculation_runs where id = $1 limit 1', [calculationRunId])
+      ? client.query<DbRow>('select * from calculation_runs where id = $1 and tenant_id = $2::uuid limit 1', [calculationRunId, tenantId])
       : Promise.resolve({ rows: [], rowCount: 0 }),
     client.query<DbRow>(
       `select el.evidence_file_id, el.link_reason, el.linked_entity_type, el.linked_entity_id, el.created_at,
@@ -296,57 +308,65 @@ async function buildFfsDispositionReadiness(client: Queryable, ffsCase: DbRow): 
        left join evidence_files ef on ef.id = el.evidence_file_id
        where el.linked_entity_type = 'ffs_case'
          and el.linked_entity_id = $1
+         and ef.tenant_id = $2::uuid
        order by el.created_at desc
        limit 50`,
-      [caseId]
+      [caseId, tenantId]
     ),
     client.query<DbRow>(
       `select * from engineering_reviews
        where entity_type = 'ffs_case'
          and entity_id = $1
+         and tenant_id = $2::uuid
        order by reviewed_at desc nulls last, created_at desc nulls last
        limit 25`,
-      [caseId]
+      [caseId, tenantId]
     ),
     client.query<DbRow>(
       `select * from approval_records
-       where (entity_type = 'ffs_case' and entity_id = $1)
-          or id = $2
+       where tenant_id = $3::uuid
+         and ((entity_type = 'ffs_case' and entity_id = $1)
+          or id = $2)
        order by approved_at desc nulls last, created_at desc nulls last
        limit 25`,
-      [caseId, ffsCase.approval_record_id ?? null]
+      [caseId, ffsCase.approval_record_id ?? null, tenantId]
     ),
     client.query<DbRow>(
       `select * from findings
        where asset_id = $1
+         and tenant_id = $4::uuid
          and (source_entity_id = $2 or status = 'linked_to_ffs_candidate' or calculation_run_id = $3)
        order by created_at desc
        limit 25`,
-      [assetId, caseId, calculationRunId]
+      [assetId, caseId, calculationRunId, tenantId]
     ),
     client.query<DbRow>(
       `select * from reports
        where asset_id = $1
+         and tenant_id = $3::uuid
          and ($2::uuid is null or calculation_run_id = $2)
        order by created_at desc
        limit 25`,
-      [assetId, calculationRunId]
+      [assetId, calculationRunId, tenantId]
     ),
     client.query<DbRow>(
       `select * from internal_work_orders
        where asset_id = $1
+         and tenant_id = $3::uuid
          and (source_entity_type = 'ffs_case' and source_entity_id = $2)
        order by created_at desc
        limit 25`,
-      [assetId, caseId]
+      [assetId, caseId, tenantId]
     ),
     client.query<DbRow>(
       `select * from audit_logs
-       where (entity_type = 'ffs_case' and entity_id = $1)
+       where tenant_id = $3::uuid
+         and ((entity_type = 'ffs_case' and entity_id = $1)
           or (entity_type = 'calculation_run' and entity_id = $2)
+         )
        order by created_at desc
        limit 50`,
-      [caseId, calculationRunId]
+      [caseId, calculationRunId, tenantId]
     )
   ]);
 
@@ -455,8 +475,9 @@ async function buildFfsDispositionReadiness(client: Queryable, ffsCase: DbRow): 
   };
 }
 
-async function assetExists(client: Queryable, assetId: string): Promise<boolean> {
-  const result = await client.query('select id from assets where id = $1 and deleted_at is null limit 1', [assetId]);
+async function assetExists(client: Queryable, assetId: string, tenantId: string): Promise<boolean> {
+  if (!isUuid(assetId)) return false;
+  const result = await client.query('select id from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null limit 1', [assetId, tenantId]);
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -464,7 +485,8 @@ async function assetExists(client: Queryable, assetId: string): Promise<boolean>
 async function validateEvidenceFilesForAsset(
   client: Queryable,
   assetId: string,
-  evidenceFileIds: string[]
+  evidenceFileIds: string[],
+  tenantId: string
 ): Promise<{ ok: true } | { ok: false; invalidIds: string[] }> {
   if (evidenceFileIds.length === 0) return { ok: true };
   const uniqueIds = [...new Set(evidenceFileIds)];
@@ -473,8 +495,9 @@ async function validateEvidenceFilesForAsset(
      from evidence_files
      where id = any($1::uuid[])
        and asset_id = $2
+       and tenant_id = $3::uuid
        and status not in ('deleted','rejected')`,
-    [uniqueIds, assetId]
+    [uniqueIds, assetId, tenantId]
   );
   const valid = new Set(result.rows.map((row) => row.id));
   const invalidIds = uniqueIds.filter((id) => !valid.has(id));
@@ -654,22 +677,26 @@ async function insertFfsCase(
 
 ffsRouter.get('/ffs/cases', requirePermission('ffs.read'), async (req, res, next) => {
   try {
-    const values: unknown[] = [];
+    const tenant = requireTenantContextFromRequest(req);
+    const values: unknown[] = [tenant.tenantId];
     const where: string[] = [];
     const assetId = asString(req.query.asset_id);
     const status = asString(req.query.status);
     if (assetId) {
       values.push(assetId);
-      where.push(`asset_id = $${values.length}`);
+      where.push(`fc.asset_id = $${values.length}`);
     }
     if (status) {
       values.push(status);
-      where.push(`status = $${values.length}`);
+      where.push(`fc.status = $${values.length}`);
     }
     const result = await pool.query<DbRow>(
-      `select * from ffs_cases
-       ${where.length > 0 ? `where ${where.join(' and ')}` : ''}
-       order by created_at desc
+      `select fc.*
+       from ffs_cases fc
+       join assets a on a.id = fc.asset_id
+       where a.tenant_id = $1::uuid
+       ${where.length > 0 ? `and ${where.join(' and ')}` : ''}
+       order by fc.created_at desc
        limit 100`,
       values
     );
@@ -686,13 +713,16 @@ ffsRouter.get('/ffs/cases/:caseId', requirePermission('ffs.read'), async (req, r
       validationError(res, 'caseId', 'caseId is required.');
       return;
     }
+    const tenant = requireTenantContextFromRequest(req);
     const result = await pool.query<DbRow>(
       `select fc.*, ar.approval_status, ar.approval_comment
        from ffs_cases fc
-       left join approval_records ar on ar.id = fc.approval_record_id
-       where fc.id = $1 or fc.case_id = $1
+       join assets a on a.id = fc.asset_id
+       left join approval_records ar on ar.id = fc.approval_record_id and ar.tenant_id = $2::uuid
+       where (fc.id::text = $1 or fc.case_id = $1)
+         and a.tenant_id = $2::uuid
        limit 1`,
-      [caseId]
+      [caseId, tenant.tenantId]
     );
     const row = result.rows[0];
     if (!row) {
@@ -713,12 +743,13 @@ ffsRouter.get('/ffs/cases/:caseId/readiness', requirePermission('ffs.read'), asy
       validationError(res, 'caseId', 'caseId is required.');
       return;
     }
-    const ffsCase = await getFfsCase(pool, caseId);
+    const tenant = requireTenantContextFromRequest(req);
+    const ffsCase = await getFfsCase(pool, caseId, tenant.tenantId);
     if (!ffsCase) {
       res.status(404).json({ error: { code: 'FFS_CASE_NOT_FOUND', message: 'FFS case not found.' } });
       return;
     }
-    const readiness = await buildFfsDispositionReadiness(pool, ffsCase);
+    const readiness = await buildFfsDispositionReadiness(pool, ffsCase, tenant.tenantId);
     res.json({ data: readiness });
   } catch (error) {
     next(error);
@@ -747,13 +778,14 @@ ffsRouter.post('/ffs/cases', requirePermission('ffs.create'), async (req, res, n
   const client = await pool.connect();
   try {
     await client.query('begin');
-    if (!(await assetExists(client, normalized.assetId))) {
+    const tenant = requireTenantContextFromRequest(req);
+    if (!(await assetExists(client, normalized.assetId, tenant.tenantId))) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'ASSET_NOT_FOUND', message: 'Asset not found.' } });
       return;
     }
     const manualEvidenceIds = evidenceIdsFromLinks(normalized.evidenceLinks);
-    const evidenceValidation = await validateEvidenceFilesForAsset(client, normalized.assetId, manualEvidenceIds);
+    const evidenceValidation = await validateEvidenceFilesForAsset(client, normalized.assetId, manualEvidenceIds, tenant.tenantId);
     if (!evidenceValidation.ok) {
       await client.query('rollback');
       crossAssetEvidenceError(res, evidenceValidation.invalidIds);
@@ -804,7 +836,8 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const run = await loadCalculationRunByIdentifier(client, calculationRunId);
+    const tenant = requireTenantContextFromRequest(req);
+    const run = await loadCalculationRunByIdentifier(client, calculationRunId, tenant.tenantId);
     if (!run) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'CALCULATION_RUN_NOT_FOUND', message: 'Calculation run not found.' } });
@@ -849,7 +882,7 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
       }))
       .filter((item) => item.evidence_file_id);
     const calculationEvidenceIds = evidenceIdsFromLinks(evidenceLinks);
-    const calculationEvidenceValidation = await validateEvidenceFilesForAsset(client, String(run.asset_id), calculationEvidenceIds);
+    const calculationEvidenceValidation = await validateEvidenceFilesForAsset(client, String(run.asset_id), calculationEvidenceIds, tenant.tenantId);
     if (!calculationEvidenceValidation.ok) {
       await client.query('rollback');
       crossAssetEvidenceError(res, calculationEvidenceValidation.invalidIds);
@@ -869,8 +902,9 @@ ffsRouter.post('/ffs/cases/from-calculation', requirePermission('ffs.trigger'), 
          where calculation_run_id = $1
            and trigger_rule_id = $2
            and trigger_reason = $3
+           and asset_id = $4
          limit 1`,
-        [run.id, rule.rule_id, reason]
+        [run.id, rule.rule_id, reason, run.asset_id]
       );
       if ((already.rowCount ?? 0) > 0) continue;
       const created = await insertFfsCase(client, req, {
@@ -929,7 +963,8 @@ ffsRouter.patch('/ffs/cases/:caseId/status', requirePermission('ffs.update'), as
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await getFfsCase(client, caseId);
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await getFfsCase(client, caseId, tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'FFS_CASE_NOT_FOUND', message: 'FFS case not found.' } });
@@ -945,8 +980,13 @@ ffsRouter.patch('/ffs/cases/:caseId/status', requirePermission('ffs.update'), as
            updated_by = $5,
            updated_at = now()
        where id = $1
+         and exists (
+           select 1 from assets a
+           where a.id = ffs_cases.asset_id
+             and a.tenant_id = $6::uuid
+         )
        returning *`,
-      [before.id, status, uuidOrNull(req.body.assigned_engineer), asString(req.body.due_date) ?? null, actor]
+      [before.id, status, uuidOrNull(req.body.assigned_engineer), asString(req.body.due_date) ?? null, actor, tenant.tenantId]
     );
     const after = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'FFS_CASE_STATUS_UPDATED', 'ffs_case', String(before.id), mapFfsCase(before), mapFfsCase(after), {
@@ -986,7 +1026,8 @@ ffsRouter.post('/ffs/cases/:caseId/close', requirePermission('ffs.approve'), asy
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await getFfsCase(client, caseId);
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await getFfsCase(client, caseId, tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'FFS_CASE_NOT_FOUND', message: 'FFS case not found.' } });
@@ -1004,10 +1045,10 @@ ffsRouter.post('/ffs/cases/:caseId/close', requirePermission('ffs.approve'), asy
       return;
     }
     const approval = await client.query<{ id: string }>(
-      `insert into approval_records(entity_type, entity_id, approval_status, approver_id, approval_comment)
-       values ('ffs_case', $1, 'approved', $2, $3)
+      `insert into approval_records(tenant_id, entity_type, entity_id, approval_status, approver_id, approval_comment)
+       values ($1, 'ffs_case', $2, 'approved', $3, $4)
        returning id`,
-      [before.id, approverId, asString(req.body.approval_comment) ?? 'Senior engineer final FFS disposition approval.']
+      [tenant.tenantId, before.id, approverId, asString(req.body.approval_comment) ?? 'Senior engineer final FFS disposition approval.']
     );
     const result = await client.query<DbRow>(
       `update ffs_cases
@@ -1017,8 +1058,13 @@ ffsRouter.post('/ffs/cases/:caseId/close', requirePermission('ffs.approve'), asy
            updated_by = $4,
            updated_at = now()
        where id = $1
+         and exists (
+           select 1 from assets a
+           where a.id = ffs_cases.asset_id
+             and a.tenant_id = $5::uuid
+         )
        returning *`,
-      [before.id, finalDisposition, approval.rows[0]?.id, approverId]
+      [before.id, finalDisposition, approval.rows[0]?.id, approverId, tenant.tenantId]
     );
     const after = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'FFS_CASE_FINAL_DISPOSITION_APPROVED', 'ffs_case', String(before.id), mapFfsCase(before), mapFfsCase(after), {

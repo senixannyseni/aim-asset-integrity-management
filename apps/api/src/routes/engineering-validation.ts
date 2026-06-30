@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { asString, validateEngineeringContext, type ValidationContext } from '../modules/engineering-validation/validation-engine.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const engineeringValidationRouter = Router();
 
@@ -43,8 +44,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -54,9 +57,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -162,8 +166,13 @@ function mapAsset(row: DbRow | undefined): Record<string, unknown> | null {
   };
 }
 
-async function loadValidationContextFromAsset(client: PoolClient, assetId: string, base: ValidationContext): Promise<ValidationContext> {
-  const assetResult = await client.query<DbRow>('select * from assets where id = $1 and deleted_at is null', [assetId]);
+async function loadValidationContextFromAsset(client: PoolClient, assetId: string, tenantId: string, base: ValidationContext): Promise<ValidationContext> {
+  const assetResult = await client.query<DbRow>('select * from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null', [assetId, tenantId]);
+  if (!assetResult.rows[0]) {
+    const error = new Error('ASSET_NOT_FOUND');
+    (error as Error & { statusCode?: number }).statusCode = 404;
+    throw error;
+  }
   const geometryResult = await client.query<DbRow>('select * from tank_geometry where asset_id = $1', [assetId]);
   const shellResult = await client.query<DbRow>(
     `select sc.*, m.material_code, m.material_name, m.material_specification, m.material_allowable_stress_mpa, m.allowable_stress_basis
@@ -173,12 +182,12 @@ async function loadValidationContextFromAsset(client: PoolClient, assetId: strin
      order by sc.course_no`,
     [assetId]
   );
-  const ndtResult = await client.query<DbRow>('select * from ndt_measurements where asset_id = $1 order by reading_date desc, created_at desc', [assetId]);
+  const ndtResult = await client.query<DbRow>('select * from ndt_measurements where asset_id = $1 and tenant_id = $2::uuid order by reading_date desc, created_at desc', [assetId, tenantId]);
   const evidenceLinkResult = await client.query<DbRow>(
     `select el.* from evidence_links el
      join evidence_files ef on ef.id = el.evidence_file_id
-     where ef.asset_id = $1`,
-    [assetId]
+     where ef.asset_id = $1 and ef.tenant_id = $2::uuid`,
+    [assetId, tenantId]
   );
 
   return {
@@ -208,18 +217,20 @@ engineeringValidationRouter.get('/engineering/data-dictionary', requirePermissio
 engineeringValidationRouter.get('/engineering/validation-history', requirePermission('validation.read'), async (req, res, next) => {
   try {
     const assetId = asUuid(req.query.asset_id);
+    const tenant = requireTenantContextFromRequest(req);
     const limit = asPositiveInteger(req.query.limit, 50, 200);
-    const values: unknown[] = [];
-    let where = '';
+    const values: unknown[] = [tenant.tenantId];
+    let where = 'where a.tenant_id = $1::uuid';
     if (assetId) {
       values.push(assetId);
-      where = `where asset_id = $${values.length}`;
+      where += ` and vr.asset_id = $${values.length}`;
     }
     values.push(limit);
     const result = await pool.query<DbRow>(
-      `select * from validation_runs
+      `select vr.* from validation_runs vr
+       join assets a on a.id = vr.asset_id
        ${where}
-       order by created_at desc
+       order by vr.created_at desc
        limit $${values.length}`,
       values
     );
@@ -245,7 +256,13 @@ engineeringValidationRouter.get('/engineering/validation-history/:validationRunI
       validationError(res, 'validationRunId', 'validationRunId must be a UUID.');
       return;
     }
-    const result = await pool.query<DbRow>('select * from validation_runs where id = $1', [validationRunId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const result = await pool.query<DbRow>(
+      `select vr.* from validation_runs vr
+       join assets a on a.id = vr.asset_id
+       where vr.id = $1 and a.tenant_id = $2::uuid`,
+      [validationRunId, tenant.tenantId]
+    );
     const row = result.rows[0];
     if (!row) {
       res.status(404).json({ error: { code: 'VALIDATION_RUN_NOT_FOUND', message: 'Validation run was not found.' } });
@@ -264,7 +281,8 @@ engineeringValidationRouter.get('/assets/:assetId/validation', requirePermission
       validationError(res, 'assetId', 'assetId must be a UUID.');
       return;
     }
-    const assetResult = await pool.query<DbRow>('select * from assets where id = $1 and deleted_at is null', [assetId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const assetResult = await pool.query<DbRow>('select * from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null', [assetId, tenant.tenantId]);
     const asset = assetResult.rows[0];
     if (!asset) {
       res.status(404).json({ error: { code: 'ASSET_NOT_FOUND', message: 'Asset was not found.' } });
@@ -297,6 +315,10 @@ engineeringValidationRouter.post('/engineering/validate-input', requirePermissio
   }
 
   const assetId = asString(req.body.asset_id);
+  if (!assetId) {
+    validationError(res, 'asset_id', 'asset_id is required for persisted tenant-scoped validation runs.');
+    return;
+  }
   const runCode = asString(req.body.run_code) ?? `VAL-${Date.now()}`;
   let context: ValidationContext = {
     validation_scope: asString(req.body.validation_scope) as ValidationContext['validation_scope'],
@@ -315,9 +337,8 @@ engineeringValidationRouter.post('/engineering/validate-input', requirePermissio
   const client = await pool.connect();
   try {
     await client.query('begin');
-    if (assetId) {
-      context = await loadValidationContextFromAsset(client, assetId, context);
-    }
+    const tenant = requireTenantContextFromRequest(req);
+    context = await loadValidationContextFromAsset(client, assetId, tenant.tenantId, context);
 
     const validationResult = validateEngineeringContext(context);
     const insertResult = await client.query<{ id: string }>(

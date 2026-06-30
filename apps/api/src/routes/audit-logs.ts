@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { redactAuditMetadata } from '../modules/audit-log/redaction.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const auditLogsRouter = Router();
 
@@ -116,9 +117,9 @@ function mapAuditLog(row: DbRow): Record<string, unknown> {
   };
 }
 
-function buildAuditLogFilters(req: Request, res: ApiResponse): QueryBuild | undefined {
-  const values: unknown[] = [];
-  const where: string[] = [];
+function buildAuditLogFilters(req: Request, res: ApiResponse, tenantId: string): QueryBuild | undefined {
+  const values: unknown[] = [tenantId];
+  const where: string[] = ['al.tenant_id = $1::uuid'];
 
   const eventType = asString(req.query.event_type);
   if (eventType) {
@@ -189,8 +190,9 @@ function buildAuditLogFilters(req: Request, res: ApiResponse): QueryBuild | unde
 auditLogsRouter.get('/audit-logs', requirePermission('audit_logs.view'), async (req, res, next) => {
   try {
     if (!enforceHumanAuditViewer(req, res)) return;
+    const tenant = requireTenantContextFromRequest(req);
 
-    const filters = buildAuditLogFilters(req, res);
+    const filters = buildAuditLogFilters(req, res, tenant.tenantId);
     if (!filters) return;
 
     const limit = asPositiveInt(req.query.limit, DEFAULT_LIMIT, MAX_LIMIT);
@@ -239,6 +241,7 @@ auditLogsRouter.get('/audit-logs', requirePermission('audit_logs.view'), async (
 auditLogsRouter.get('/audit-logs/:auditLogId', requirePermission('audit_logs.view'), async (req, res, next) => {
   try {
     if (!enforceHumanAuditViewer(req, res)) return;
+    const tenant = requireTenantContextFromRequest(req);
 
     const auditLogId = asUuid(req.params.auditLogId);
     if (!auditLogId) {
@@ -250,8 +253,8 @@ auditLogsRouter.get('/audit-logs/:auditLogId', requirePermission('audit_logs.vie
       `select al.*, u.email as actor_email, u.full_name as actor_full_name
        from audit_logs al
        left join users u on u.id = al.actor_user_id
-       where al.id = $1`,
-      [auditLogId]
+       where al.id = $1 and al.tenant_id = $2::uuid`,
+      [auditLogId, tenant.tenantId]
     );
 
     const row = result.rows[0];

@@ -7,6 +7,7 @@ import {
 import type { PoolClient } from "pg";
 import { pool } from "../db/client.js";
 import { requirePermission } from "../middleware/rbac.js";
+import { requireTenantContextFromRequest } from "../modules/tenancy/tenant-scope.js";
 import type { Role } from "../rbac/roles.js";
 
 export const rbiRouter = Router();
@@ -183,15 +184,16 @@ function normalizeEvidenceLinks(raw: unknown): RbiEvidenceLinkInput[] {
 async function loadCalculationRunByIdentifier(
   client: PoolClient,
   identifier: string,
+  tenantId: string,
 ): Promise<DbRow | undefined> {
   const result = isUuid(identifier)
     ? await client.query<DbRow>(
-        "select * from calculation_runs where id = $1::uuid limit 1",
-        [identifier],
+        "select * from calculation_runs where id = $1::uuid and tenant_id = $2::uuid limit 1",
+        [identifier, tenantId],
       )
     : await client.query<DbRow>(
-        "select * from calculation_runs where run_id = $1 limit 1",
-        [identifier],
+        "select * from calculation_runs where run_id = $1 and tenant_id = $2::uuid limit 1",
+        [identifier, tenantId],
       );
   return result.rows[0];
 }
@@ -221,8 +223,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {},
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -232,9 +236,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -285,11 +290,12 @@ function mapRbiCase(row: DbRow | undefined): Record<string, unknown> | null {
 async function assetExists(
   client: Queryable,
   assetId: string,
+  tenantId: string,
 ): Promise<boolean> {
   if (!isUuid(assetId)) return false;
   const result = await client.query(
-    "select id from assets where id = $1::uuid and deleted_at is null limit 1",
-    [assetId],
+    "select id from assets where id = $1::uuid and tenant_id = $2::uuid and deleted_at is null limit 1",
+    [assetId, tenantId],
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -311,6 +317,7 @@ async function validateEvidenceFilesForAsset(
   client: Queryable,
   assetId: string,
   evidenceFileIds: string[],
+  tenantId: string,
 ): Promise<{ ok: true } | { ok: false; invalidIds: string[] }> {
   if (evidenceFileIds.length === 0) return { ok: true };
   const uniqueIds = [...new Set(evidenceFileIds)];
@@ -319,8 +326,9 @@ async function validateEvidenceFilesForAsset(
      from evidence_files
      where id = any($1::uuid[])
        and asset_id = $2
+       and tenant_id = $3::uuid
        and status not in ('deleted','rejected')`,
-    [uniqueIds, assetId],
+    [uniqueIds, assetId, tenantId],
   );
   const valid = new Set(result.rows.map((row) => row.id));
   const invalidIds = uniqueIds.filter((id) => !valid.has(id));
@@ -572,7 +580,8 @@ rbiRouter.get(
   requirePermission("rbi.interface.read"),
   async (req, res, next) => {
     try {
-      const values: unknown[] = [];
+      const tenant = requireTenantContextFromRequest(req);
+      const values: unknown[] = [tenant.tenantId];
       const where: string[] = [];
       const assetId = asString(req.query.asset_id);
       const status = asString(req.query.status);
@@ -582,16 +591,19 @@ rbiRouter.get(
           return;
         }
         values.push(assetId);
-        where.push(`asset_id = $${values.length}::uuid`);
+        where.push(`rc.asset_id = $${values.length}::uuid`);
       }
       if (status) {
         values.push(status);
-        where.push(`status = $${values.length}`);
+        where.push(`rc.status = $${values.length}`);
       }
       const result = await pool.query<DbRow>(
-        `select * from rbi_cases
-       ${where.length > 0 ? `where ${where.join(" and ")}` : ""}
-       order by created_at desc
+        `select rc.*
+       from rbi_cases rc
+       join assets a on a.id = rc.asset_id
+       where a.tenant_id = $1::uuid
+       ${where.length > 0 ? `and ${where.join(" and ")}` : ""}
+       order by rc.created_at desc
        limit 100`,
         values,
       );
@@ -612,7 +624,8 @@ rbiRouter.get(
         validationError(res, "caseId", "caseId is required.");
         return;
       }
-      const row = await loadRbiCase(pool, caseId);
+      const tenant = requireTenantContextFromRequest(req);
+      const row = await loadRbiCase(pool, caseId, tenant.tenantId);
       if (!row) {
         res
           .status(404)
@@ -666,7 +679,8 @@ rbiRouter.post('/rbi/cases', requirePermission('rbi.interface.create'), async (r
     const client = await pool.connect();
     try {
       await client.query("begin");
-      if (!(await assetExists(client, normalized.assetId))) {
+      const tenant = requireTenantContextFromRequest(req);
+      if (!(await assetExists(client, normalized.assetId, tenant.tenantId))) {
         await client.query("rollback");
         res
           .status(404)
@@ -680,6 +694,7 @@ rbiRouter.post('/rbi/cases', requirePermission('rbi.interface.create'), async (r
         client,
         normalized.assetId,
         evidenceIds,
+        tenant.tenantId,
       );
       if (!evidenceValidation.ok) {
         await client.query("rollback");
@@ -752,15 +767,26 @@ function findingSignature(findings: DbRow[]): string {
 async function loadRbiCase(
   client: Queryable,
   caseId: string,
+  tenantId: string,
 ): Promise<DbRow | undefined> {
   const result = isUuid(caseId)
     ? await client.query<DbRow>(
-        "select * from rbi_cases where id = $1::uuid or case_id = $2 limit 1",
-        [caseId, caseId],
+        `select rc.*
+         from rbi_cases rc
+         join assets a on a.id = rc.asset_id
+         where (rc.id = $1::uuid or rc.case_id = $2)
+           and a.tenant_id = $3::uuid
+         limit 1`,
+        [caseId, caseId, tenantId],
       )
     : await client.query<DbRow>(
-        "select * from rbi_cases where case_id = $1 limit 1",
-        [caseId],
+        `select rc.*
+         from rbi_cases rc
+         join assets a on a.id = rc.asset_id
+         where rc.case_id = $1
+           and a.tenant_id = $2::uuid
+         limit 1`,
+        [caseId, tenantId],
       );
   return result.rows[0];
 }
@@ -802,30 +828,38 @@ async function duplicateRbiTrigger(
     triggerRuleId: string;
     signatureKey: string;
     signature: string;
+    tenantId: string;
   },
 ): Promise<DbRow | undefined> {
   const values: unknown[] = [
+    options.tenantId,
     options.triggerSource,
     options.triggerRuleId,
     options.signature,
     options.signatureKey,
   ];
   const where = [
-    "trigger_source = $1",
-    "trigger_rule_id = $2",
-    `coalesce(input_placeholders ->> $4, '') = $3`,
-    "status <> 'closed'",
+    "a.tenant_id = $1::uuid",
+    "rc.trigger_source = $2",
+    "rc.trigger_rule_id = $3",
+    `coalesce(rc.input_placeholders ->> $5, '') = $4`,
+    "rc.status <> 'closed'",
   ];
   if (options.calculationRunId) {
     values.push(options.calculationRunId);
-    where.push(`calculation_run_id = $${values.length}::uuid`);
+    where.push(`rc.calculation_run_id = $${values.length}::uuid`);
   }
   if (options.assetId) {
     values.push(options.assetId);
-    where.push(`asset_id = $${values.length}::uuid`);
+    where.push(`rc.asset_id = $${values.length}::uuid`);
   }
   const result = await client.query<DbRow>(
-    `select * from rbi_cases where ${where.join(" and ")} order by created_at desc limit 1`,
+    `select rc.*
+     from rbi_cases rc
+     join assets a on a.id = rc.asset_id
+     where ${where.join(" and ")}
+     order by rc.created_at desc
+     limit 1`,
     values,
   );
   return result.rows[0];
@@ -886,7 +920,8 @@ async function finalizeRbiCase(
   const client = await pool.connect();
   try {
     await client.query("begin");
-    const before = await loadRbiCase(client, caseId);
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadRbiCase(client, caseId, tenant.tenantId);
     if (!before) {
       await client.query("rollback");
       res
@@ -941,8 +976,13 @@ async function finalizeRbiCase(
                updated_by = $2,
                updated_at = now()
            where id = $1
+             and exists (
+               select 1 from assets a
+               where a.id = rbi_cases.asset_id
+                 and a.tenant_id = $3::uuid
+             )
            returning *`,
-          [before.id, actor],
+          [before.id, actor, tenant.tenantId],
         )
       : await client.query<DbRow>(
           `update rbi_cases
@@ -950,8 +990,13 @@ async function finalizeRbiCase(
                updated_by = $3,
                updated_at = now()
            where id = $1
+             and exists (
+               select 1 from assets a
+               where a.id = rbi_cases.asset_id
+                 and a.tenant_id = $4::uuid
+             )
            returning *`,
-          [before.id, finalStatus, actor],
+          [before.id, finalStatus, actor, tenant.tenantId],
         );
     const updated = result.rows[0];
     const auditLogId = await writeAudit(
@@ -998,9 +1043,11 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
     const client = await pool.connect();
     try {
       await client.query("begin");
+      const tenant = requireTenantContextFromRequest(req);
       const run = await loadCalculationRunByIdentifier(
         client,
         calculationRunId,
+        tenant.tenantId,
       );
       if (!run) {
         await client.query("rollback");
@@ -1070,6 +1117,7 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
         triggerRuleId,
         signatureKey: "source_warning_signature",
         signature: sourceWarningSignature,
+        tenantId: tenant.tenantId,
       });
       if (duplicate) {
         await client.query("rollback");
@@ -1111,6 +1159,7 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
         client,
         runAssetId,
         evidenceIdsFromLinks(evidenceLinks),
+        tenant.tenantId,
       );
       if (!evidenceValidation.ok) {
         await client.query("rollback");
@@ -1197,6 +1246,7 @@ rbiRouter.post(
     const client = await pool.connect();
     try {
       await client.query("begin");
+      const tenant = requireTenantContextFromRequest(req);
       const findingId = asString(req.body.finding_id);
       const requestedAssetId = asString(req.body.asset_id);
       let assetId = requestedAssetId;
@@ -1205,12 +1255,12 @@ rbiRouter.post(
       if (findingId) {
         const findingResult = isUuid(findingId)
           ? await client.query<DbRow>(
-              "select * from findings where id = $1 limit 1",
-              [findingId],
+              "select * from findings where id = $1 and tenant_id = $2::uuid limit 1",
+              [findingId, tenant.tenantId],
             )
           : await client.query<DbRow>(
-              "select * from findings where finding_code = $1 limit 1",
-              [findingId],
+              "select * from findings where finding_code = $1 and tenant_id = $2::uuid limit 1",
+              [findingId, tenant.tenantId],
             );
         const finding = findingResult.rows[0];
         if (!finding) {
@@ -1243,7 +1293,7 @@ rbiRouter.post(
         invalidUuidError(res, "asset_id");
         return;
       }
-      if (!(await assetExists(client, assetId))) {
+      if (!(await assetExists(client, assetId, tenant.tenantId))) {
         await client.query("rollback");
         res
           .status(404)
@@ -1261,6 +1311,7 @@ rbiRouter.post(
         `select id, finding_code, title, finding_type, component, severity, status, evidence_file_id, calculation_run_id, created_at
        from findings
        where asset_id = $1
+         and tenant_id = $3::uuid
          and status not in ('closed','rejected_duplicate')
          and ($2::text is null or component = $2)
          and (
@@ -1270,7 +1321,7 @@ rbiRouter.post(
          )
        order by created_at desc
        limit 25`,
-        [assetId, component],
+        [assetId, component, tenant.tenantId],
       );
       if (findingsResult.rows.length < minimumOccurrences) {
         await client.query("rollback");
@@ -1290,6 +1341,7 @@ rbiRouter.post(
         triggerRuleId: "RBI-TRIG-REPEATED-ANOMALY",
         signatureKey: "source_finding_signature",
         signature: sourceFindingSignature,
+        tenantId: tenant.tenantId,
       });
       if (duplicate) {
         await client.query("rollback");
@@ -1319,6 +1371,7 @@ rbiRouter.post(
         client,
         assetId,
         evidenceIdsFromLinks(evidenceLinks),
+        tenant.tenantId,
       );
       if (!evidenceValidation.ok) {
         await client.query("rollback");
@@ -1420,7 +1473,8 @@ rbiRouter.post(
     const client = await pool.connect();
     try {
       await client.query("begin");
-      const before = await loadRbiCase(client, caseId);
+      const tenant = requireTenantContextFromRequest(req);
+      const before = await loadRbiCase(client, caseId, tenant.tenantId);
       if (!before) {
         await client.query("rollback");
         res
@@ -1454,8 +1508,13 @@ rbiRouter.post(
            updated_by = $3,
            updated_at = now()
        where id = $1
+         and exists (
+           select 1 from assets a
+           where a.id = rbi_cases.asset_id
+             and a.tenant_id = $4::uuid
+         )
        returning *`,
-        [before.id, requestedStatus, reviewer],
+        [before.id, requestedStatus, reviewer, tenant.tenantId],
       );
       const updated = result.rows[0];
       const auditLogId = await writeAudit(
@@ -1524,7 +1583,8 @@ rbiRouter.patch(
     const client = await pool.connect();
     try {
       await client.query("begin");
-      const before = await loadRbiCase(client, caseId);
+      const tenant = requireTenantContextFromRequest(req);
+      const before = await loadRbiCase(client, caseId, tenant.tenantId);
       if (!before) {
         await client.query("rollback");
         res
@@ -1556,8 +1616,13 @@ rbiRouter.patch(
            updated_by = $3,
            updated_at = now()
        where id = $1
+         and exists (
+           select 1 from assets a
+           where a.id = rbi_cases.asset_id
+             and a.tenant_id = $4::uuid
+         )
        returning *`,
-        [before.id, nextStatus, actor],
+        [before.id, nextStatus, actor, tenant.tenantId],
       );
       const updated = result.rows[0];
       const auditLogId = await writeAudit(

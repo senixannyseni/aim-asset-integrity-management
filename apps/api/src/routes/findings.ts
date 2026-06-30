@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 import { hasPermission } from '../rbac/roles.js';
 
 function canCloseFinding(req: Request): boolean {
@@ -103,8 +104,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -114,9 +117,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -180,8 +184,8 @@ function mapFinding(row: DbRow): Record<string, unknown> {
   };
 }
 
-async function nextFindingCode(client: PoolClient): Promise<string> {
-  const result = await client.query<{ count: string }>('select count(*)::text as count from findings');
+async function nextFindingCode(client: PoolClient, tenantId: string): Promise<string> {
+  const result = await client.query<{ count: string }>('select count(*)::text as count from findings where tenant_id = $1::uuid', [tenantId]);
   const next = Number(result.rows[0]?.count ?? '0') + 1;
   return `FND-${String(next).padStart(6, '0')}`;
 }
@@ -219,25 +223,25 @@ function validateFindingInput(body: Record<string, unknown>, partial = false): V
   return issues;
 }
 
-async function loadFinding(client: Queryable, findingId: string): Promise<DbRow | undefined> {
+async function loadFinding(client: Queryable, findingId: string, tenantId: string): Promise<DbRow | undefined> {
   const result = await client.query<DbRow>(
     `select f.*, a.asset_tag, a.asset_name,
             ef.evidence_code, ef.file_name as evidence_file_name,
             nm.measurement_code,
             cr.run_id
      from findings f
-     left join assets a on a.id = f.asset_id
-     left join evidence_files ef on ef.id = f.evidence_file_id
-     left join ndt_measurements nm on nm.id = f.ndt_measurement_id
-     left join calculation_runs cr on cr.id = f.calculation_run_id
-     where f.id = $1`,
-    [findingId]
+     left join assets a on a.id = f.asset_id and a.tenant_id = $2::uuid
+     left join evidence_files ef on ef.id = f.evidence_file_id and ef.tenant_id = $2::uuid
+     left join ndt_measurements nm on nm.id = f.ndt_measurement_id and nm.tenant_id = $2::uuid
+     left join calculation_runs cr on cr.id = f.calculation_run_id and cr.tenant_id = $2::uuid
+     where f.id = $1 and f.tenant_id = $2::uuid`,
+    [findingId, tenantId]
   );
   return result.rows[0];
 }
 
-async function assertAssetExists(client: PoolClient, assetId: string): Promise<void> {
-  const result = await client.query('select id from assets where id = $1 and deleted_at is null', [assetId]);
+async function assertAssetExists(client: PoolClient, assetId: string, tenantId: string): Promise<void> {
+  const result = await client.query('select id from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null', [assetId, tenantId]);
   if (result.rowCount === 0) {
     const error = new Error('ASSET_NOT_FOUND');
     (error as Error & { statusCode?: number }).statusCode = 404;
@@ -245,13 +249,22 @@ async function assertAssetExists(client: PoolClient, assetId: string): Promise<v
   }
 }
 
-async function assertSameAssetLink(client: PoolClient, assetId: string, entityType: 'evidence' | 'ndt' | 'calculation', entityId: string): Promise<void> {
+async function assertInspectionEventLink(client: PoolClient, assetId: string, inspectionEventId: string, tenantId: string): Promise<void> {
+  const result = await client.query('select id from inspection_events where id = $1 and asset_id = $2 and tenant_id = $3::uuid', [inspectionEventId, assetId, tenantId]);
+  if (result.rowCount === 0) {
+    const error = new Error('INSPECTION_LINK_TARGET_NOT_FOUND');
+    (error as Error & { statusCode?: number }).statusCode = 404;
+    throw error;
+  }
+}
+
+async function assertSameAssetLink(client: PoolClient, assetId: string, entityType: 'evidence' | 'ndt' | 'calculation', entityId: string, tenantId: string): Promise<void> {
   const queryByType: Record<'evidence' | 'ndt' | 'calculation', string> = {
-    evidence: 'select asset_id from evidence_files where id = $1',
-    ndt: 'select asset_id from ndt_measurements where id = $1',
-    calculation: 'select asset_id from calculation_runs where id = $1'
+    evidence: 'select asset_id from evidence_files where id = $1 and tenant_id = $2::uuid',
+    ndt: 'select asset_id from ndt_measurements where id = $1 and tenant_id = $2::uuid',
+    calculation: 'select asset_id from calculation_runs where id = $1 and tenant_id = $2::uuid'
   };
-  const result = await client.query<{ asset_id: string | null }>(queryByType[entityType], [entityId]);
+  const result = await client.query<{ asset_id: string | null }>(queryByType[entityType], [entityId, tenantId]);
   const linkedAssetId = result.rows[0]?.asset_id;
   if (!linkedAssetId) {
     const error = new Error(`${entityType.toUpperCase()}_LINK_TARGET_NOT_FOUND`);
@@ -296,8 +309,9 @@ async function handleCrossAssetBlocked(client: PoolClient, req: Request, res: Ap
 
 findingsRouter.get('/findings', requirePermission('finding.read'), async (req, res, next) => {
   try {
-    const clauses: string[] = [];
-    const values: unknown[] = [];
+    const tenant = requireTenantContextFromRequest(req);
+    const clauses: string[] = ['f.tenant_id = $1::uuid'];
+    const values: unknown[] = [tenant.tenantId];
     const addFilter = (column: string, queryKey: string) => {
       const value = asString(req.query[queryKey]);
       if (!value) return;
@@ -334,10 +348,10 @@ findingsRouter.get('/findings', requirePermission('finding.read'), async (req, r
               nm.measurement_code,
               cr.run_id
        from findings f
-       left join assets a on a.id = f.asset_id
-       left join evidence_files ef on ef.id = f.evidence_file_id
-       left join ndt_measurements nm on nm.id = f.ndt_measurement_id
-       left join calculation_runs cr on cr.id = f.calculation_run_id
+       left join assets a on a.id = f.asset_id and a.tenant_id = $1::uuid
+       left join evidence_files ef on ef.id = f.evidence_file_id and ef.tenant_id = $1::uuid
+       left join ndt_measurements nm on nm.id = f.ndt_measurement_id and nm.tenant_id = $1::uuid
+       left join calculation_runs cr on cr.id = f.calculation_run_id and cr.tenant_id = $1::uuid
        ${where}
        order by f.updated_at desc, f.created_at desc
        limit 250`,
@@ -352,19 +366,20 @@ findingsRouter.get('/findings', requirePermission('finding.read'), async (req, r
 
 findingsRouter.get('/assets/:assetId/findings', requirePermission('finding.read'), async (req, res, next) => {
   try {
+    const tenant = requireTenantContextFromRequest(req);
     const result = await pool.query<DbRow>(
       `select f.*, a.asset_tag, a.asset_name,
               ef.evidence_code, ef.file_name as evidence_file_name,
               nm.measurement_code,
               cr.run_id
        from findings f
-       left join assets a on a.id = f.asset_id
-       left join evidence_files ef on ef.id = f.evidence_file_id
-       left join ndt_measurements nm on nm.id = f.ndt_measurement_id
-       left join calculation_runs cr on cr.id = f.calculation_run_id
-       where f.asset_id = $1
+       left join assets a on a.id = f.asset_id and a.tenant_id = $2::uuid
+       left join evidence_files ef on ef.id = f.evidence_file_id and ef.tenant_id = $2::uuid
+       left join ndt_measurements nm on nm.id = f.ndt_measurement_id and nm.tenant_id = $2::uuid
+       left join calculation_runs cr on cr.id = f.calculation_run_id and cr.tenant_id = $2::uuid
+       where f.asset_id = $1 and f.tenant_id = $2::uuid
        order by f.updated_at desc, f.created_at desc`,
-      [req.params.assetId]
+      [req.params.assetId, tenant.tenantId]
     );
     res.json({ data: result.rows.map(mapFinding) });
   } catch (error) {
@@ -374,7 +389,8 @@ findingsRouter.get('/assets/:assetId/findings', requirePermission('finding.read'
 
 findingsRouter.get('/findings/:findingId', requirePermission('finding.read'), async (req, res, next) => {
   try {
-    const finding = await loadFinding(pool, String(req.params.findingId));
+    const tenant = requireTenantContextFromRequest(req);
+    const finding = await loadFinding(pool, String(req.params.findingId), tenant.tenantId);
     if (!finding) {
       res.status(404).json({ error: { code: 'FINDING_NOT_FOUND', message: 'Finding not found.' } });
       return;
@@ -384,9 +400,9 @@ findingsRouter.get('/findings/:findingId', requirePermission('finding.read'), as
       `select ef.id as evidence_id, ef.evidence_code, ef.file_name, ef.file_type, ef.status, ef.asset_id
        from evidence_links el
        join evidence_files ef on ef.id = el.evidence_file_id
-       where el.linked_entity_type = 'finding' and el.linked_entity_id = $1
+       where el.linked_entity_type = 'finding' and el.linked_entity_id = $1 and ef.tenant_id = $2::uuid
        order by el.created_at desc`,
-      [String(req.params.findingId)]
+      [String(req.params.findingId), tenant.tenantId]
     );
 
     res.json({
@@ -428,37 +444,41 @@ findingsRouter.post('/findings', requirePermission('finding.create'), async (req
   const client = await pool.connect();
   try {
     await client.query('begin');
+    const tenant = requireTenantContextFromRequest(req);
     const assetId = asString(body.asset_id);
     const title = asString(body.title);
     const findingType = asString(body.finding_type);
     const severity = asString(body.severity);
     if (!assetId || !title || !findingType || !severity) throw new Error('Validated finding payload is missing required fields.');
-    await assertAssetExists(client, assetId);
+    await assertAssetExists(client, assetId, tenant.tenantId);
 
     const evidenceFileId = asString(body.evidence_file_id);
     const ndtMeasurementId = asString(body.ndt_measurement_id);
     const calculationRunId = asString(body.calculation_run_id);
-    if (evidenceFileId) await assertSameAssetLink(client, assetId, 'evidence', evidenceFileId);
-    if (ndtMeasurementId) await assertSameAssetLink(client, assetId, 'ndt', ndtMeasurementId);
-    if (calculationRunId) await assertSameAssetLink(client, assetId, 'calculation', calculationRunId);
+    const inspectionEventId = nullIfEmpty(body.inspection_event_id);
+    if (inspectionEventId) await assertInspectionEventLink(client, assetId, inspectionEventId, tenant.tenantId);
+    if (evidenceFileId) await assertSameAssetLink(client, assetId, 'evidence', evidenceFileId, tenant.tenantId);
+    if (ndtMeasurementId) await assertSameAssetLink(client, assetId, 'ndt', ndtMeasurementId, tenant.tenantId);
+    if (calculationRunId) await assertSameAssetLink(client, assetId, 'calculation', calculationRunId, tenant.tenantId);
 
-    const findingCode = await nextFindingCode(client);
+    const findingCode = await nextFindingCode(client, tenant.tenantId);
     const result = await client.query<DbRow>(
       `insert into findings(
-        finding_code, asset_id, inspection_event_id, title, description, finding_type, component,
+        finding_code, tenant_id, asset_id, inspection_event_id, title, description, finding_type, component,
         shell_course_no, cml_tml_id, grid_ref, elevation, orientation, severity, status, source_type,
         source_entity_id, evidence_file_id, ndt_measurement_id, calculation_run_id, validation_run_id,
         identified_by, identified_at, created_by
       ) values (
-        $1,$2,$3,$4,$5,$6,$7,
-        $8,$9,$10,$11,$12,$13,$14,$15,
-        $16,$17,$18,$19,$20,
-        $21,coalesce($22::timestamptz, now()),$23
+        $1,$2,$3,$4,$5,$6,$7,$8,
+        $9,$10,$11,$12,$13,$14,$15,$16,
+        $17,$18,$19,$20,$21,
+        $22,coalesce($23::timestamptz, now()),$24
       ) returning *`,
       [
         findingCode,
+        tenant.tenantId,
         assetId,
-        nullIfEmpty(body.inspection_event_id),
+        inspectionEventId,
         title,
         nullIfEmpty(body.description),
         findingType,
@@ -508,7 +528,8 @@ findingsRouter.patch('/findings/:findingId', requirePermission('finding.update')
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await loadFinding(client, String(req.params.findingId));
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadFinding(client, String(req.params.findingId), tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'FINDING_NOT_FOUND', message: 'Finding not found.' } });
@@ -519,10 +540,12 @@ findingsRouter.patch('/findings/:findingId', requirePermission('finding.update')
     const evidenceFileId = body.evidence_file_id === undefined ? (before.evidence_file_id as string | null) : nullIfEmpty(body.evidence_file_id);
     const ndtMeasurementId = body.ndt_measurement_id === undefined ? (before.ndt_measurement_id as string | null) : nullIfEmpty(body.ndt_measurement_id);
     const calculationRunId = body.calculation_run_id === undefined ? (before.calculation_run_id as string | null) : nullIfEmpty(body.calculation_run_id);
-    if (assetId !== before.asset_id) await assertAssetExists(client, assetId);
-    if (evidenceFileId) await assertSameAssetLink(client, assetId, 'evidence', evidenceFileId);
-    if (ndtMeasurementId) await assertSameAssetLink(client, assetId, 'ndt', ndtMeasurementId);
-    if (calculationRunId) await assertSameAssetLink(client, assetId, 'calculation', calculationRunId);
+    const inspectionEventId = body.inspection_event_id === undefined ? (before.inspection_event_id as string | null) : nullIfEmpty(body.inspection_event_id);
+    if (assetId !== before.asset_id) await assertAssetExists(client, assetId, tenant.tenantId);
+    if (inspectionEventId) await assertInspectionEventLink(client, assetId, inspectionEventId, tenant.tenantId);
+    if (evidenceFileId) await assertSameAssetLink(client, assetId, 'evidence', evidenceFileId, tenant.tenantId);
+    if (ndtMeasurementId) await assertSameAssetLink(client, assetId, 'ndt', ndtMeasurementId, tenant.tenantId);
+    if (calculationRunId) await assertSameAssetLink(client, assetId, 'calculation', calculationRunId, tenant.tenantId);
 
     const status = asString(body.status) ?? String(before.status);
     const closing = (status === 'closed' || status === 'resolved') && before.status !== status;
@@ -586,11 +609,11 @@ findingsRouter.patch('/findings/:findingId', requirePermission('finding.update')
         closed_at = case when $20::boolean then now() else closed_at end,
         closure_reason = coalesce($22, closure_reason),
         updated_at = now()
-       where id = $23
+       where id = $23 and tenant_id = $24::uuid
        returning *`,
       [
         assetId,
-        body.inspection_event_id === undefined ? before.inspection_event_id : nullIfEmpty(body.inspection_event_id),
+        inspectionEventId,
         asString(body.title) ?? before.title,
         body.description === undefined ? before.description : nullIfEmpty(body.description),
         asString(body.finding_type) ?? before.finding_type,
@@ -611,7 +634,8 @@ findingsRouter.patch('/findings/:findingId', requirePermission('finding.update')
         closing,
         actorUserId(req),
         closureReason,
-        String(req.params.findingId)
+        String(req.params.findingId),
+        tenant.tenantId
       ]
     );
     const after = result.rows[0];
@@ -642,15 +666,16 @@ findingsRouter.post('/findings/:findingId/links/evidence', requirePermission('fi
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await loadFinding(client, String(req.params.findingId));
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadFinding(client, String(req.params.findingId), tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'FINDING_NOT_FOUND', message: 'Finding not found.' } });
       return;
     }
-    await assertSameAssetLink(client, String(before.asset_id), 'evidence', evidenceFileId);
+    await assertSameAssetLink(client, String(before.asset_id), 'evidence', evidenceFileId, tenant.tenantId);
     await insertEvidenceLink(client, req, String(req.params.findingId), evidenceFileId, asString(body.link_reason) ?? 'RC4-H finding evidence linkage');
-    const update = await client.query<DbRow>('update findings set evidence_file_id = $1, updated_at = now() where id = $2 returning *', [evidenceFileId, String(req.params.findingId)]);
+    const update = await client.query<DbRow>('update findings set evidence_file_id = $1, updated_at = now() where id = $2 and tenant_id = $3::uuid returning *', [evidenceFileId, String(req.params.findingId), tenant.tenantId]);
     const after = update.rows[0];
     if (!after) throw new Error('FINDING_EVIDENCE_LINK_FAILED');
     const auditLogId = await writeAudit(client, req, 'finding.evidence_linked', 'finding', String(req.params.findingId), before, after, { evidence_file_id: evidenceFileId });
@@ -669,7 +694,8 @@ findingsRouter.delete('/findings/:findingId/links/evidence/:evidenceFileId', req
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await loadFinding(client, String(req.params.findingId));
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadFinding(client, String(req.params.findingId), tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'FINDING_NOT_FOUND', message: 'Finding not found.' } });
@@ -677,15 +703,22 @@ findingsRouter.delete('/findings/:findingId/links/evidence/:evidenceFileId', req
     }
     await client.query(
       `delete from evidence_links
-       where linked_entity_type = 'finding' and linked_entity_id = $1 and evidence_file_id = $2`,
-      [String(req.params.findingId), String(req.params.evidenceFileId)]
+       where linked_entity_type = 'finding'
+         and linked_entity_id = $1
+         and evidence_file_id = $2
+         and exists (
+           select 1 from evidence_files ef
+           where ef.id = evidence_links.evidence_file_id
+             and ef.tenant_id = $3::uuid
+         )`,
+      [String(req.params.findingId), String(req.params.evidenceFileId), tenant.tenantId]
     );
     const update = await client.query<DbRow>(
       `update findings
        set evidence_file_id = case when evidence_file_id = $1 then null else evidence_file_id end,
            updated_at = now()
-       where id = $2 returning *`,
-      [String(req.params.evidenceFileId), String(req.params.findingId)]
+       where id = $2 and tenant_id = $3::uuid returning *`,
+      [String(req.params.evidenceFileId), String(req.params.findingId), tenant.tenantId]
     );
     const after = update.rows[0];
     if (!after) throw new Error('FINDING_EVIDENCE_UNLINK_FAILED');

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const integrityWorkspaceRouter = Router();
 
@@ -141,14 +142,14 @@ async function countSql(client: Queryable, sql: string, values: unknown[] = []):
   return asCount(result.rows[0]);
 }
 
-async function assetExists(client: Queryable, assetId: string): Promise<boolean> {
+async function assetExists(client: Queryable, assetId: string, tenantId: string): Promise<boolean> {
   if (!isUuid(assetId)) return false;
-  const result = await client.query('select id from assets where id = $1::uuid and deleted_at is null limit 1', [assetId]);
+  const result = await client.query('select id from assets where id = $1::uuid and tenant_id = $2::uuid and deleted_at is null limit 1', [assetId, tenantId]);
   return (result.rowCount ?? 0) > 0;
 }
 
-async function buildIntegrityWorkspaceReadiness(client: Queryable, assetId: string): Promise<Record<string, unknown> | null> {
-  const assetResult = await client.query<DbRow>('select * from assets where id = $1::uuid and deleted_at is null limit 1', [assetId]);
+async function buildIntegrityWorkspaceReadiness(client: Queryable, assetId: string, tenantId: string): Promise<Record<string, unknown> | null> {
+  const assetResult = await client.query<DbRow>('select * from assets where id = $1::uuid and tenant_id = $2::uuid and deleted_at is null limit 1', [assetId, tenantId]);
   const asset = assetResult.rows[0];
   if (!asset) return null;
 
@@ -171,25 +172,27 @@ async function buildIntegrityWorkspaceReadiness(client: Queryable, assetId: stri
   ] = await Promise.all([
     client.query<DbRow>('select * from tank_geometry where asset_id = $1::uuid order by updated_at desc limit 1', [assetId]),
     client.query<DbRow>('select * from shell_courses where asset_id = $1::uuid order by course_no asc limit 20', [assetId]),
-    client.query<DbRow>('select * from inspection_events where asset_id = $1::uuid order by inspection_date desc, created_at desc limit 20', [assetId]),
-    client.query<DbRow>("select * from evidence_files where asset_id = $1::uuid and status <> 'deleted' order by created_at desc limit 20", [assetId]),
-    client.query<DbRow>('select * from ndt_measurements where asset_id = $1::uuid order by reading_date desc, created_at desc limit 20', [assetId]),
-    client.query<DbRow>('select * from findings where asset_id = $1::uuid order by created_at desc limit 20', [assetId]),
-    client.query<DbRow>('select * from calculation_runs where asset_id = $1::uuid order by created_at desc limit 20', [assetId]),
-    client.query<DbRow>('select * from integrity_decisions where asset_id = $1::uuid order by created_at desc limit 20', [assetId]),
+    client.query<DbRow>('select * from inspection_events where asset_id = $1::uuid and tenant_id = $2::uuid order by inspection_date desc, created_at desc limit 20', [assetId, tenantId]),
+    client.query<DbRow>("select * from evidence_files where asset_id = $1::uuid and tenant_id = $2::uuid and status <> 'deleted' order by created_at desc limit 20", [assetId, tenantId]),
+    client.query<DbRow>('select * from ndt_measurements where asset_id = $1::uuid and tenant_id = $2::uuid order by reading_date desc, created_at desc limit 20', [assetId, tenantId]),
+    client.query<DbRow>('select * from findings where asset_id = $1::uuid and tenant_id = $2::uuid order by created_at desc limit 20', [assetId, tenantId]),
+    client.query<DbRow>('select * from calculation_runs where asset_id = $1::uuid and tenant_id = $2::uuid order by created_at desc limit 20', [assetId, tenantId]),
+    client.query<DbRow>('select * from integrity_decisions where asset_id = $1::uuid and tenant_id = $2::uuid order by created_at desc limit 20', [assetId, tenantId]),
     client.query<DbRow>('select * from ffs_cases where asset_id = $1::uuid order by created_at desc limit 20', [assetId]),
     client.query<DbRow>('select * from rbi_cases where asset_id = $1::uuid order by created_at desc limit 20', [assetId]),
-    client.query<DbRow>('select * from reports where asset_id = $1::uuid order by created_at desc limit 20', [assetId]),
-    client.query<DbRow>('select * from internal_work_orders where asset_id = $1::uuid order by created_at desc limit 20', [assetId]),
-    client.query<DbRow>('select * from engineering_reviews where asset_id = $1::uuid or (entity_type = $2 and entity_id = $1::uuid) order by created_at desc limit 20', [assetId, 'asset']),
-    client.query<DbRow>('select * from approval_records where asset_id = $1::uuid or (entity_type = $2 and entity_id = $1::uuid) order by created_at desc limit 20', [assetId, 'asset']),
+    client.query<DbRow>('select * from reports where asset_id = $1::uuid and tenant_id = $2::uuid order by created_at desc limit 20', [assetId, tenantId]),
+    client.query<DbRow>('select * from internal_work_orders where asset_id = $1::uuid and tenant_id = $2::uuid order by created_at desc limit 20', [assetId, tenantId]),
+    client.query<DbRow>('select * from engineering_reviews where tenant_id = $3::uuid and (asset_id = $1::uuid or (entity_type = $2 and entity_id = $1::uuid)) order by created_at desc limit 20', [assetId, 'asset', tenantId]),
+    client.query<DbRow>('select * from approval_records where tenant_id = $3::uuid and (asset_id = $1::uuid or (entity_type = $2 and entity_id = $1::uuid)) order by created_at desc limit 20', [assetId, 'asset', tenantId]),
     client.query<DbRow>(
       `select * from audit_logs
-       where entity_id = $1::uuid
+       where tenant_id = $2::uuid
+         and (entity_id = $1::uuid
           or (entity_type = 'asset' and entity_id = $1::uuid)
+         )
        order by created_at desc
        limit 25`,
-      [assetId]
+      [assetId, tenantId]
     )
   ]);
 
@@ -283,6 +286,7 @@ async function buildIntegrityWorkspaceReadiness(client: Queryable, assetId: stri
 integrityWorkspaceRouter.get('/integrity-workspace', requirePermission('asset.read'), async (req, res, next) => {
   try {
     if (!enforceHumanWorkspaceViewer(req, res)) return;
+    const tenant = requireTenantContextFromRequest(req);
 
     const assetsResult = await pool.query<DbRow>(
       `select a.id, a.asset_tag, a.asset_name, a.facility, coalesce(a.location, a.area) as location, a.service_fluid, a.operating_status, a.inspection_due_date, a.status, a.created_at, a.updated_at,
@@ -295,26 +299,28 @@ integrityWorkspaceRouter.get('/integrity-workspace', requirePermission('asset.re
               count(distinct rp.id)::text as report_count,
               count(distinct iwo.id)::text as work_order_count
        from assets a
-       left join inspection_events ie on ie.asset_id = a.id
-       left join evidence_files ef on ef.asset_id = a.id and ef.status <> 'deleted'
-       left join ndt_measurements nm on nm.asset_id = a.id
-       left join findings f on f.asset_id = a.id
-       left join calculation_runs cr on cr.asset_id = a.id
-       left join integrity_decisions idc on idc.asset_id = a.id
-       left join reports rp on rp.asset_id = a.id
-       left join internal_work_orders iwo on iwo.asset_id = a.id
-       where a.deleted_at is null
+       left join inspection_events ie on ie.asset_id = a.id and ie.tenant_id = $1::uuid
+       left join evidence_files ef on ef.asset_id = a.id and ef.tenant_id = $1::uuid and ef.status <> 'deleted'
+       left join ndt_measurements nm on nm.asset_id = a.id and nm.tenant_id = $1::uuid
+       left join findings f on f.asset_id = a.id and f.tenant_id = $1::uuid
+       left join calculation_runs cr on cr.asset_id = a.id and cr.tenant_id = $1::uuid
+       left join integrity_decisions idc on idc.asset_id = a.id and idc.tenant_id = $1::uuid
+       left join reports rp on rp.asset_id = a.id and rp.tenant_id = $1::uuid
+       left join internal_work_orders iwo on iwo.asset_id = a.id and iwo.tenant_id = $1::uuid
+       where a.tenant_id = $1::uuid and a.deleted_at is null
        group by a.id
        order by a.updated_at desc, a.created_at desc
-       limit 50`
+       limit 50`,
+      [tenant.tenantId]
     );
 
-    const totalAssets = await countSql(pool, 'select count(*)::text as total_count from assets where deleted_at is null');
-    const assetsWithInspection = await countSql(pool, 'select count(distinct asset_id)::text as total_count from inspection_events');
-    const assetsWithEvidence = await countSql(pool, "select count(distinct asset_id)::text as total_count from evidence_files where asset_id is not null and status <> 'deleted'");
-    const assetsWithCalculations = await countSql(pool, 'select count(distinct asset_id)::text as total_count from calculation_runs');
-    const assetsWithDecisions = await countSql(pool, 'select count(distinct asset_id)::text as total_count from integrity_decisions');
-    const assetsWithReports = await countSql(pool, 'select count(distinct asset_id)::text as total_count from reports');
+    const tenantValues = [tenant.tenantId];
+    const totalAssets = await countSql(pool, 'select count(*)::text as total_count from assets where tenant_id = $1::uuid and deleted_at is null', tenantValues);
+    const assetsWithInspection = await countSql(pool, 'select count(distinct asset_id)::text as total_count from inspection_events where tenant_id = $1::uuid', tenantValues);
+    const assetsWithEvidence = await countSql(pool, "select count(distinct asset_id)::text as total_count from evidence_files where tenant_id = $1::uuid and asset_id is not null and status <> 'deleted'", tenantValues);
+    const assetsWithCalculations = await countSql(pool, 'select count(distinct asset_id)::text as total_count from calculation_runs where tenant_id = $1::uuid', tenantValues);
+    const assetsWithDecisions = await countSql(pool, 'select count(distinct asset_id)::text as total_count from integrity_decisions where tenant_id = $1::uuid', tenantValues);
+    const assetsWithReports = await countSql(pool, 'select count(distinct asset_id)::text as total_count from reports where tenant_id = $1::uuid', tenantValues);
 
     res.json({
       data: {
@@ -362,16 +368,17 @@ integrityWorkspaceRouter.get('/integrity-workspace', requirePermission('asset.re
 integrityWorkspaceRouter.get('/integrity-workspace/assets/:assetId/readiness', requirePermission('asset.read'), async (req, res, next) => {
   try {
     if (!enforceHumanWorkspaceViewer(req, res)) return;
+    const tenant = requireTenantContextFromRequest(req);
     const assetId = req.params.assetId;
     if (!isUuid(assetId)) {
       controlledError(res, 400, 'VALIDATION_FAILED', 'assetId must be a UUID.');
       return;
     }
-    if (!(await assetExists(pool, assetId))) {
+    if (!(await assetExists(pool, assetId, tenant.tenantId))) {
       controlledError(res, 404, 'ASSET_NOT_FOUND', 'Asset was not found.');
       return;
     }
-    const readiness = await buildIntegrityWorkspaceReadiness(pool, assetId);
+    const readiness = await buildIntegrityWorkspaceReadiness(pool, assetId, tenant.tenantId);
     if (!readiness) {
       controlledError(res, 404, 'ASSET_NOT_FOUND', 'Asset was not found.');
       return;

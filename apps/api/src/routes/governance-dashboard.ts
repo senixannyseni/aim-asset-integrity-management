@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const governanceDashboardRouter = Router();
 
@@ -75,6 +76,8 @@ function notAvailable(reason: string): Record<string, unknown> {
 governanceDashboardRouter.get('/governance-dashboard/overview', requirePermission('dashboard.view'), async (req, res, next) => {
   try {
     if (!enforceHumanDashboardViewer(req, res)) return;
+    const tenant = requireTenantContextFromRequest(req);
+    const tenantValues = [tenant.tenantId];
 
     const [
       assetsTotal,
@@ -97,28 +100,29 @@ governanceDashboardRouter.get('/governance-dashboard/overview', requirePermissio
       unresolvedErrorLogs,
       recentAuditResult
     ] = await Promise.all([
-      countSql('select count(*)::text as total_count from assets'),
-      countSql('select count(*)::text as total_count from inspection_events'),
-      groupCounts("select coalesce(upload_status, 'metadata_only') as status, count(*)::text as total_count from evidence_files group by coalesce(upload_status, 'metadata_only') order by status"),
-      countSql("select count(*)::text as total_count from evidence_files where upload_status = 'verified' and object_key is not null"),
-      countSql("select count(*)::text as total_count from evidence_files where upload_status is distinct from 'verified' or object_key is null"),
-      groupCounts('select status, count(*)::text as total_count from extraction_jobs group by status order by status'),
-      countSql("select count(*)::text as total_count from extraction_fields where review_required = true and field_status in ('ai_extracted','needs_review','invalid','rejected_by_validation')"),
-      countSql("select count(*)::text as total_count from staging_records where promotion_status = 'blocked'"),
-      countSql("select count(*)::text as total_count from staging_records where review_status in ('approved_for_promotion','corrected') and promotion_status = 'not_promoted'"),
-      countSql('select count(*)::text as total_count from manual_overrides'),
-      groupCounts('select status, count(*)::text as total_count from calculation_runs group by status order by status'),
-      groupCounts('select version_status as status, count(*)::text as total_count from report_versions group by version_status order by version_status'),
-      groupCounts('select issue_gate_status as status, count(*)::text as total_count from reports group by issue_gate_status order by issue_gate_status'),
-      countSql("select count(*)::text as total_count from reports where issue_gate_status = 'blocked'"),
-      groupCounts('select export_status as status, count(*)::text as total_count from report_exports group by export_status order by export_status'),
-      groupCounts('select status, count(*)::text as total_count from internal_work_orders group by status order by status'),
-      countSql("select count(*)::text as total_count from workflow_tasks where status in ('queued','open','in_progress','escalated','failed')"),
-      countSql("select count(*)::text as total_count from error_logs where status in ('open','triaged')"),
+      countSql('select count(*)::text as total_count from assets where tenant_id = $1::uuid', tenantValues),
+      countSql('select count(*)::text as total_count from inspection_events where tenant_id = $1::uuid', tenantValues),
+      groupCounts("select coalesce(upload_status, 'metadata_only') as status, count(*)::text as total_count from evidence_files where tenant_id = $1::uuid group by coalesce(upload_status, 'metadata_only') order by status", tenantValues),
+      countSql("select count(*)::text as total_count from evidence_files where tenant_id = $1::uuid and upload_status = 'verified' and object_key is not null", tenantValues),
+      countSql("select count(*)::text as total_count from evidence_files where tenant_id = $1::uuid and (upload_status is distinct from 'verified' or object_key is null)", tenantValues),
+      groupCounts('select ej.status, count(*)::text as total_count from extraction_jobs ej join assets a on a.id = ej.asset_id where a.tenant_id = $1::uuid group by ej.status order by ej.status', tenantValues),
+      countSql("select count(*)::text as total_count from extraction_fields ef join extraction_jobs ej on ej.id = ef.extraction_job_id join assets a on a.id = ej.asset_id where a.tenant_id = $1::uuid and ef.review_required = true and ef.field_status in ('ai_extracted','needs_review','invalid','rejected_by_validation')", tenantValues),
+      countSql("select count(*)::text as total_count from staging_records sr join extraction_jobs ej on ej.id = sr.extraction_job_id join assets a on a.id = ej.asset_id where a.tenant_id = $1::uuid and sr.promotion_status = 'blocked'", tenantValues),
+      countSql("select count(*)::text as total_count from staging_records sr join extraction_jobs ej on ej.id = sr.extraction_job_id join assets a on a.id = ej.asset_id where a.tenant_id = $1::uuid and sr.review_status in ('approved_for_promotion','corrected') and sr.promotion_status = 'not_promoted'", tenantValues),
+      countSql('select count(*)::text as total_count from manual_overrides mo left join staging_records sr on sr.id = mo.staging_record_id left join extraction_fields ef on ef.id = mo.extraction_field_id join extraction_jobs ej on ej.id = coalesce(sr.extraction_job_id, ef.extraction_job_id) join assets a on a.id = ej.asset_id where a.tenant_id = $1::uuid', tenantValues),
+      groupCounts('select status, count(*)::text as total_count from calculation_runs where tenant_id = $1::uuid group by status order by status', tenantValues),
+      groupCounts('select rv.version_status as status, count(*)::text as total_count from report_versions rv join reports r on r.id = rv.report_id where r.tenant_id = $1::uuid group by rv.version_status order by rv.version_status', tenantValues),
+      groupCounts('select issue_gate_status as status, count(*)::text as total_count from reports where tenant_id = $1::uuid group by issue_gate_status order by issue_gate_status', tenantValues),
+      countSql("select count(*)::text as total_count from reports where tenant_id = $1::uuid and issue_gate_status = 'blocked'", tenantValues),
+      groupCounts('select export_status as status, count(*)::text as total_count from report_exports where tenant_id = $1::uuid group by export_status order by export_status', tenantValues),
+      groupCounts('select status, count(*)::text as total_count from internal_work_orders where tenant_id = $1::uuid group by status order by status', tenantValues),
+      countSql("select count(*)::text as total_count from workflow_tasks wt join workflow_events we on we.id = wt.workflow_event_id where we.tenant_id = $1::uuid and wt.status in ('queued','open','in_progress','escalated','failed')", tenantValues),
+      countSql("select count(*)::text as total_count from error_logs where tenant_id = $1::uuid and status in ('open','triaged')", tenantValues),
       pool.query<DbRow>(
         `select event_type, entity_type, count(*)::text as total_count, max(created_at) as latest_at
          from audit_logs
-         where event_type in (
+         where tenant_id = $1::uuid
+           and event_type in (
            'EVIDENCE_UPLOAD_URL_CREATED',
            'EVIDENCE_UPLOAD_COMPLETED',
            'EVIDENCE_ACCESS_BLOCKED',
@@ -135,7 +139,8 @@ governanceDashboardRouter.get('/governance-dashboard/overview', requirePermissio
          )
          group by event_type, entity_type
          order by latest_at desc
-         limit 10`
+         limit 10`,
+        tenantValues
       )
     ]);
 

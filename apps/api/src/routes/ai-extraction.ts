@@ -2,11 +2,15 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 
 export const aiExtractionRouter = Router();
 
 type ApiResponse = Response<Record<string, unknown>>;
 type DbRow = Record<string, unknown>;
+type Queryable = {
+  query: <T extends DbRow = DbRow>(text: string, values?: unknown[]) => Promise<{ rows: T[]; rowCount: number | null }>;
+};
 
 type FieldDecision = 'approve' | 'correct' | 'reject';
 
@@ -127,8 +131,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -138,9 +144,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -155,10 +162,80 @@ async function writeAudit(
   return result.rows[0]?.id;
 }
 
-async function nextExtractionJobCode(client: PoolClient): Promise<string> {
-  const result = await client.query<{ count: string }>('select count(*)::text as count from extraction_jobs');
+async function nextExtractionJobCode(client: PoolClient, tenantId: string): Promise<string> {
+  const result = await client.query<{ count: string }>(
+    `select count(*)::text as count
+     from extraction_jobs ej
+     join assets a on a.id = ej.asset_id
+     where a.tenant_id = $1::uuid`,
+    [tenantId]
+  );
   const next = Number(result.rows[0]?.count ?? '0') + 1;
   return `EXJ-${new Date().getUTCFullYear()}-${String(next).padStart(6, '0')}`;
+}
+
+async function loadExtractionJob(client: Queryable, jobId: string | undefined, tenantId: string, forUpdate = false): Promise<DbRow | undefined> {
+  const id = asUuid(jobId);
+  if (!id) return undefined;
+  const result = await client.query<DbRow>(
+    `select ej.*
+     from extraction_jobs ej
+     join assets a on a.id = ej.asset_id
+     where ej.id = $1::uuid
+       and a.tenant_id = $2::uuid
+     limit 1${forUpdate ? ' for update of ej' : ''}`,
+    [id, tenantId]
+  );
+  return result.rows[0];
+}
+
+async function loadExtractionField(client: Queryable, fieldId: string | undefined, tenantId: string, forUpdate = false): Promise<DbRow | undefined> {
+  const id = asUuid(fieldId);
+  if (!id) return undefined;
+  const result = await client.query<DbRow>(
+    `select ef.*
+     from extraction_fields ef
+     join extraction_jobs ej on ej.id = ef.extraction_job_id
+     join assets a on a.id = ej.asset_id
+     where ef.id = $1::uuid
+       and a.tenant_id = $2::uuid
+     limit 1${forUpdate ? ' for update of ef' : ''}`,
+    [id, tenantId]
+  );
+  return result.rows[0];
+}
+
+async function loadLatestStagingForField(client: Queryable, fieldId: string | undefined, tenantId: string, forUpdate = false): Promise<DbRow | undefined> {
+  const id = asUuid(fieldId);
+  if (!id) return undefined;
+  const result = await client.query<DbRow>(
+    `select sr.*
+     from staging_records sr
+     join extraction_jobs ej on ej.id = sr.extraction_job_id
+     join assets a on a.id = ej.asset_id
+     where sr.extraction_field_id = $1::uuid
+       and a.tenant_id = $2::uuid
+     order by sr.created_at desc
+     limit 1${forUpdate ? ' for update of sr' : ''}`,
+    [id, tenantId]
+  );
+  return result.rows[0];
+}
+
+async function loadStagingRecord(client: Queryable, stagingRecordId: string | undefined, tenantId: string, forUpdate = false): Promise<DbRow | undefined> {
+  const id = asUuid(stagingRecordId);
+  if (!id) return undefined;
+  const result = await client.query<DbRow>(
+    `select sr.*
+     from staging_records sr
+     join extraction_jobs ej on ej.id = sr.extraction_job_id
+     join assets a on a.id = ej.asset_id
+     where sr.id = $1::uuid
+       and a.tenant_id = $2::uuid
+     limit 1${forUpdate ? ' for update of sr' : ''}`,
+    [id, tenantId]
+  );
+  return result.rows[0];
 }
 
 function hasEvidenceReference(sourceReference: Record<string, unknown>, sourceEvidenceFileId?: string | null): boolean {
@@ -386,23 +463,40 @@ async function insertPreparedField(client: PoolClient, jobId: string, prepared: 
   return { field: field ?? {}, staging: staging ?? {} };
 }
 
-async function hasEvidenceLink(client: PoolClient, entityType: string, entityId: string): Promise<boolean> {
-  const result = await client.query('select 1 from evidence_links where linked_entity_type = $1 and linked_entity_id = $2 limit 1', [entityType, entityId]);
+async function hasEvidenceLink(client: PoolClient, entityType: string, entityId: string, tenantId: string): Promise<boolean> {
+  const result = await client.query(
+    `select 1
+     from evidence_links el
+     join evidence_files ef on ef.id = el.evidence_file_id
+     where el.linked_entity_type = $1
+       and el.linked_entity_id = $2
+       and ef.tenant_id = $3::uuid
+     limit 1`,
+    [entityType, entityId, tenantId]
+  );
   return (result.rowCount ?? 0) > 0;
 }
 
-async function hasBlockingDataQualityChecks(client: PoolClient, stagingRecordId: string): Promise<boolean> {
+async function hasBlockingDataQualityChecks(client: PoolClient, stagingRecordId: string, tenantId: string): Promise<boolean> {
   const result = await client.query(
-    `select 1 from data_quality_checks
-     where staging_record_id = $1 and is_blocking = true and check_status not in ('resolved','passed') limit 1`,
-    [stagingRecordId]
+    `select 1
+     from data_quality_checks dqc
+     join staging_records sr on sr.id = dqc.staging_record_id
+     join extraction_jobs ej on ej.id = sr.extraction_job_id
+     join assets a on a.id = ej.asset_id
+     where dqc.staging_record_id = $1
+       and a.tenant_id = $2::uuid
+       and dqc.is_blocking = true
+       and dqc.check_status not in ('resolved','passed')
+     limit 1`,
+    [stagingRecordId, tenantId]
   );
   return (result.rowCount ?? 0) > 0;
 }
 
 async function findVerifiedEvidenceReference(
   client: PoolClient,
-  params: { extractionJobId?: string | null; extractionFieldId?: string | null; stagingRecordId?: string | null; sourceReference?: unknown; evidenceFileId?: string | null }
+  params: { tenantId: string; extractionJobId?: string | null; extractionFieldId?: string | null; stagingRecordId?: string | null; sourceReference?: unknown; evidenceFileId?: string | null }
 ): Promise<{ evidence_file_id: string; evidence_code: string | null } | null> {
   const sourceEvidenceId = asUuid(isPlainObject(params.sourceReference) ? params.sourceReference.evidence_file_id : null);
   const explicitEvidenceId = asUuid(params.evidenceFileId) ?? sourceEvidenceId;
@@ -410,12 +504,13 @@ async function findVerifiedEvidenceReference(
     `with candidates as (
        select ef.id as evidence_file_id, ef.evidence_code
        from evidence_files ef
-       where $1::uuid is not null and ef.id = $1::uuid and ef.upload_status = 'verified'
+       where $1::uuid is not null and ef.id = $1::uuid and ef.tenant_id = $5::uuid and ef.upload_status = 'verified'
        union
        select ef.id as evidence_file_id, ef.evidence_code
        from evidence_links el
        join evidence_files ef on ef.id = el.evidence_file_id
        where ef.upload_status = 'verified'
+         and ef.tenant_id = $5::uuid
          and (
            ($2::uuid is not null and el.linked_entity_type = 'extraction_job' and el.linked_entity_id = $2::uuid)
            or ($3::uuid is not null and el.linked_entity_type = 'extraction_field' and el.linked_entity_id = $3::uuid)
@@ -425,12 +520,14 @@ async function findVerifiedEvidenceReference(
        select ef.id as evidence_file_id, ef.evidence_code
        from extraction_jobs ej
        join evidence_files ef on ef.id = ej.source_evidence_file_id
-       where $2::uuid is not null and ej.id = $2::uuid and ef.upload_status = 'verified'
+       join assets a on a.id = ej.asset_id
+       where $2::uuid is not null and ej.id = $2::uuid and a.tenant_id = $5::uuid and ef.tenant_id = $5::uuid and ef.upload_status = 'verified'
        union
        select ef.id as evidence_file_id, ef.evidence_code
        from manual_overrides mo
        join evidence_files ef on ef.id = mo.evidence_file_id
        where ef.upload_status = 'verified'
+         and ef.tenant_id = $5::uuid
          and (
            ($3::uuid is not null and mo.extraction_field_id = $3::uuid)
            or ($4::uuid is not null and mo.staging_record_id = $4::uuid)
@@ -441,22 +538,24 @@ async function findVerifiedEvidenceReference(
       explicitEvidenceId,
       params.extractionJobId ?? null,
       params.extractionFieldId ?? null,
-      params.stagingRecordId ?? null
+      params.stagingRecordId ?? null,
+      params.tenantId
     ]
   );
   return result.rows[0] ?? null;
 }
 
-async function hasVerifiedEvidenceLink(client: PoolClient, entityType: string, entityId: string): Promise<boolean> {
+async function hasVerifiedEvidenceLink(client: PoolClient, entityType: string, entityId: string, tenantId: string): Promise<boolean> {
   const result = await client.query(
     `select 1
      from evidence_links el
      join evidence_files ef on ef.id = el.evidence_file_id
      where el.linked_entity_type = $1
        and el.linked_entity_id = $2
+       and ef.tenant_id = $3::uuid
        and ef.upload_status = 'verified'
      limit 1`,
-    [entityType, entityId]
+    [entityType, entityId, tenantId]
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -479,6 +578,7 @@ async function buildPromotionGateResults(
     comment?: string | null;
   }
 ): Promise<{ canPromote: boolean; gates: PromotionGateResult[]; verifiedEvidence: { evidence_file_id: string; evidence_code: string | null } | null }> {
+  const tenant = requireTenantContextFromRequest(params.req);
   const gates: PromotionGateResult[] = [];
   const actorId = actorUserId(params.req);
   const reviewStatus = String(params.staging.review_status ?? '');
@@ -523,7 +623,7 @@ async function buildPromotionGateResults(
     pass('field_validation_status', 'Field validation status allows promotion.', { field_status: fieldStatus });
   }
 
-  if (await hasBlockingDataQualityChecks(client, String(params.staging.id))) {
+  if (await hasBlockingDataQualityChecks(client, String(params.staging.id), tenant.tenantId)) {
     block('data_quality_checks', 'BLOCKING_DATA_QUALITY_CHECKS', 'Unresolved blocking data quality checks prevent promotion.');
   } else {
     pass('data_quality_checks', 'No unresolved blocking data quality checks were found.');
@@ -578,12 +678,17 @@ async function buildPromotionGateResults(
   let manualOverrideReasonOk = true;
   if (reviewStatus === 'corrected') {
     const overrideResult = await client.query<{ correction_reason: string | null }>(
-      `select correction_reason
-       from manual_overrides
-       where staging_record_id = $1 or extraction_field_id = $2
-       order by created_at desc
+      `select mo.correction_reason
+       from manual_overrides mo
+       left join staging_records sr on sr.id = mo.staging_record_id
+       left join extraction_fields ef on ef.id = mo.extraction_field_id
+       join extraction_jobs ej on ej.id = coalesce(sr.extraction_job_id, ef.extraction_job_id)
+       join assets a on a.id = ej.asset_id
+       where a.tenant_id = $3::uuid
+         and (mo.staging_record_id = $1 or mo.extraction_field_id = $2)
+       order by mo.created_at desc
        limit 1`,
-      [params.staging.id, params.staging.extraction_field_id]
+      [params.staging.id, params.staging.extraction_field_id, tenant.tenantId]
     );
     const overrideReason = overrideResult.rows[0]?.correction_reason ?? null;
     manualOverrideReasonOk = isMeaningfulReason(overrideReason);
@@ -596,6 +701,7 @@ async function buildPromotionGateResults(
 
   const verifiedEvidence = evidenceRequired
     ? await findVerifiedEvidenceReference(client, {
+      tenantId: tenant.tenantId,
       extractionJobId: asString(params.staging.extraction_job_id),
       extractionFieldId: asString(params.staging.extraction_field_id),
       stagingRecordId: asString(params.staging.id),
@@ -671,19 +777,28 @@ async function persistPromotionGates(
 
 aiExtractionRouter.get('/extraction-jobs', requirePermission('ai_extraction.read'), async (req, res, next) => {
   try {
-    const values: unknown[] = [];
-    const filters = ['1 = 1'];
+    const tenant = requireTenantContextFromRequest(req);
+    const values: unknown[] = [tenant.tenantId];
+    const filters = ['a.tenant_id = $1::uuid'];
     const assetId = asUuid(req.query.asset_id);
     const status = asString(req.query.status);
     if (assetId) {
       values.push(assetId);
-      filters.push(`asset_id = $${values.length}`);
+      filters.push(`ej.asset_id = $${values.length}`);
     }
     if (status) {
       values.push(status);
-      filters.push(`status = $${values.length}`);
+      filters.push(`ej.status = $${values.length}`);
     }
-    const result = await pool.query<DbRow>(`select * from extraction_jobs where ${filters.join(' and ')} order by created_at desc limit 100`, values);
+    const result = await pool.query<DbRow>(
+      `select ej.*
+       from extraction_jobs ej
+       join assets a on a.id = ej.asset_id
+       where ${filters.join(' and ')}
+       order by ej.created_at desc
+       limit 100`,
+      values
+    );
     res.json({ data: result.rows.map(mapExtractionJob) });
   } catch (error) {
     next(error);
@@ -709,14 +824,15 @@ aiExtractionRouter.post('/extraction-jobs', requirePermission('ai_extraction.cre
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const asset = await client.query('select id from assets where id = $1 and deleted_at is null', [assetId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const asset = await client.query('select id from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null', [assetId, tenant.tenantId]);
     if (asset.rowCount === 0) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'ASSET_NOT_FOUND', message: 'Asset not found.' } });
       return;
     }
     if (inspectionEventId) {
-      const inspection = await client.query('select id from inspection_events where id = $1 and asset_id = $2', [inspectionEventId, assetId]);
+      const inspection = await client.query('select id from inspection_events where id = $1 and asset_id = $2 and tenant_id = $3::uuid', [inspectionEventId, assetId, tenant.tenantId]);
       if (inspection.rowCount === 0) {
         await client.query('rollback');
         res.status(404).json({ error: { code: 'INSPECTION_NOT_FOUND', message: 'Inspection event not found for asset.' } });
@@ -724,7 +840,7 @@ aiExtractionRouter.post('/extraction-jobs', requirePermission('ai_extraction.cre
       }
     }
     if (sourceEvidenceFileId) {
-      const evidence = await client.query('select id from evidence_files where id = $1 and asset_id = $2', [sourceEvidenceFileId, assetId]);
+      const evidence = await client.query('select id from evidence_files where id = $1 and asset_id = $2 and tenant_id = $3::uuid', [sourceEvidenceFileId, assetId, tenant.tenantId]);
       if (evidence.rowCount === 0) {
         await client.query('rollback');
         res.status(404).json({ error: { code: 'EVIDENCE_NOT_FOUND', message: 'Source evidence not found for asset.' } });
@@ -732,7 +848,7 @@ aiExtractionRouter.post('/extraction-jobs', requirePermission('ai_extraction.cre
       }
     }
 
-    const jobCode = asString(req.body.extraction_job_code) ?? await nextExtractionJobCode(client);
+    const jobCode = asString(req.body.extraction_job_code) ?? await nextExtractionJobCode(client, tenant.tenantId);
     const jobResult = await client.query<DbRow>(
       `insert into extraction_jobs(
         extraction_job_code, asset_id, inspection_event_id, source_evidence_file_id,
@@ -782,16 +898,43 @@ aiExtractionRouter.post('/extraction-jobs', requirePermission('ai_extraction.cre
 aiExtractionRouter.get('/extraction-jobs/:jobId', requirePermission('ai_extraction.read'), async (req, res, next) => {
   const jobId = req.params.jobId;
   try {
-    const jobResult = await pool.query<DbRow>('select * from extraction_jobs where id = $1', [jobId]);
-    const job = jobResult.rows[0];
+    const tenant = requireTenantContextFromRequest(req);
+    const job = await loadExtractionJob(pool, jobId, tenant.tenantId);
     if (!job) {
       res.status(404).json({ error: { code: 'EXTRACTION_JOB_NOT_FOUND', message: 'Extraction job not found.' } });
       return;
     }
     const [fields, staging, quality] = await Promise.all([
-      pool.query<DbRow>('select * from extraction_fields where extraction_job_id = $1 order by created_at', [jobId]),
-      pool.query<DbRow>('select * from staging_records where extraction_job_id = $1 order by created_at', [jobId]),
-      pool.query<DbRow>('select * from data_quality_checks where extraction_job_id = $1 order by created_at', [jobId])
+      pool.query<DbRow>(
+        `select ef.*
+         from extraction_fields ef
+         join extraction_jobs ej on ej.id = ef.extraction_job_id
+         join assets a on a.id = ej.asset_id
+         where ef.extraction_job_id = $1
+           and a.tenant_id = $2::uuid
+         order by ef.created_at`,
+        [jobId, tenant.tenantId]
+      ),
+      pool.query<DbRow>(
+        `select sr.*
+         from staging_records sr
+         join extraction_jobs ej on ej.id = sr.extraction_job_id
+         join assets a on a.id = ej.asset_id
+         where sr.extraction_job_id = $1
+           and a.tenant_id = $2::uuid
+         order by sr.created_at`,
+        [jobId, tenant.tenantId]
+      ),
+      pool.query<DbRow>(
+        `select dqc.*
+         from data_quality_checks dqc
+         join extraction_jobs ej on ej.id = dqc.extraction_job_id
+         join assets a on a.id = ej.asset_id
+         where dqc.extraction_job_id = $1
+           and a.tenant_id = $2::uuid
+         order by dqc.created_at`,
+        [jobId, tenant.tenantId]
+      )
     ]);
     res.json({
       data: {
@@ -815,8 +958,8 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/fields', requirePermission('ai_
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const jobResult = await client.query<DbRow>('select * from extraction_jobs where id = $1 for update', [req.params.jobId]);
-    const job = jobResult.rows[0];
+    const tenant = requireTenantContextFromRequest(req);
+    const job = await loadExtractionJob(client, req.params.jobId, tenant.tenantId, true);
     if (!job) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'EXTRACTION_JOB_NOT_FOUND', message: 'Extraction job not found.' } });
@@ -831,7 +974,17 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/fields', requirePermission('ai_
       createdFields.push(mapExtractionField(created.field));
       createdStaging.push(mapStagingRecord(created.staging));
     }
-    await client.query(`update extraction_jobs set status = 'completed', completed_at = coalesce(completed_at, now()), updated_at = now() where id = $1`, [req.params.jobId]);
+    await client.query(
+      `update extraction_jobs
+       set status = 'completed', completed_at = coalesce(completed_at, now()), updated_at = now()
+       where id = $1
+         and exists (
+           select 1 from assets a
+           where a.id = extraction_jobs.asset_id
+             and a.tenant_id = $2::uuid
+         )`,
+      [req.params.jobId, tenant.tenantId]
+    );
     const auditLogId = await writeAudit(client, req, 'extraction_field.created', 'extraction_job', String(job.id), null, { fields: createdFields }, { staging_only: true });
     await client.query('commit');
     res.status(201).json({ data: { fields: createdFields, staging_records: createdStaging }, auditLogId });
@@ -868,23 +1021,19 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from extraction_fields where id = $1 for update', [req.params.fieldId]);
-    const before = beforeResult.rows[0];
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadExtractionField(client, req.params.fieldId, tenant.tenantId, true);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'EXTRACTION_FIELD_NOT_FOUND', message: 'Extraction field not found.' } });
       return;
     }
-    const stagingResult = await client.query<DbRow>('select * from staging_records where extraction_field_id = $1 order by created_at desc limit 1 for update', [req.params.fieldId]);
-    const staging = stagingResult.rows[0];
+    const staging = await loadLatestStagingForField(client, req.params.fieldId, tenant.tenantId, true);
     if (!staging) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'STAGING_RECORD_NOT_FOUND', message: 'Staging record not found for field.' } });
       return;
     }
-    const jobResult = await client.query<DbRow>('select * from extraction_jobs where id = $1 for update', [before.extraction_job_id]);
-    const job = jobResult.rows[0] ?? null;
-
     if (['rejected_by_engineer', 'rejected_by_validation'].includes(String(before.field_status))) {
       await writeAudit(client, req, 'AI_FIELD_REJECTED', 'extraction_field', req.params.fieldId ?? null, mapExtractionField(before), mapExtractionField(before), {
         blocked_reason: 'Field already rejected.',
@@ -924,8 +1073,9 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
     const evidenceRequiredForDecision =
       decision !== 'reject' && sourceRequiresEvidence;
 
-    const verifiedEvidence = sourceRequiresEvidence
+    const verifiedEvidence = sourceRequiresEvidence || explicitEvidenceFileId
       ? await findVerifiedEvidenceReference(client, {
+          tenantId: tenant.tenantId,
           extractionJobId: asString(before.extraction_job_id),
           extractionFieldId: req.params.fieldId,
           stagingRecordId: asString(staging.id),
@@ -933,6 +1083,12 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
           evidenceFileId: explicitEvidenceFileId
         })
       : null;
+
+    if (explicitEvidenceFileId && !verifiedEvidence) {
+      await client.query('rollback');
+      res.status(404).json({ error: { code: 'EVIDENCE_NOT_FOUND', message: 'Evidence file was not found in the current tenant or is not verified.' } });
+      return;
+    }
 
     if (evidenceRequiredForDecision && !verifiedEvidence) {
       await writeAudit(
@@ -977,8 +1133,15 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
            reviewer_id = $5,
            reviewed_at = now(),
            updated_at = now()
-       where id = $1 returning *`,
-      [req.params.fieldId, newFieldStatus, decision === 'correct' ? correctedValue : null, asString(req.body.corrected_unit), actorUserId(req)]
+       where id = $1
+         and exists (
+           select 1 from extraction_jobs ej
+           join assets a on a.id = ej.asset_id
+           where ej.id = extraction_fields.extraction_job_id
+             and a.tenant_id = $6::uuid
+         )
+       returning *`,
+      [req.params.fieldId, newFieldStatus, decision === 'correct' ? correctedValue : null, asString(req.body.corrected_unit), actorUserId(req), tenant.tenantId]
     );
     const updatedStagingResult = await client.query<DbRow>(
       `update staging_records
@@ -989,14 +1152,22 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
           reviewed_at = now(),
           metadata_json = coalesce(metadata_json, '{}'::jsonb) || $6::jsonb,
           updated_at = now()
-      where id = $1 returning *`,
+      where id = $1
+        and exists (
+          select 1 from extraction_jobs ej
+          join assets a on a.id = ej.asset_id
+          where ej.id = staging_records.extraction_job_id
+            and a.tenant_id = $7::uuid
+        )
+      returning *`,
       [
         staging.id,
         newReviewStatus,
         newValue,
         asString(req.body.corrected_unit),
         actorUserId(req),
-        JSON.stringify(reviewMetadata)
+        JSON.stringify(reviewMetadata),
+        tenant.tenantId
       ]
     );
 
@@ -1016,8 +1187,8 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
           asString(req.body.corrected_unit) ?? asString(before.unit) ?? null,
           reason,
           actorUserId(req),
-          explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null,
-          JSON.stringify({ ...evidenceReference, evidence_file_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null })
+          verifiedEvidence?.evidence_file_id ?? null,
+          JSON.stringify({ ...evidenceReference, evidence_file_id: verifiedEvidence?.evidence_file_id ?? null })
         ]
       );
       manualOverride = manualResult.rows[0] ?? null;
@@ -1028,7 +1199,7 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
         field_name: before.field_name,
         original_value: asString(before.extracted_value) ?? null,
         corrected_value: correctedValue,
-        evidence_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null,
+        evidence_id: verifiedEvidence?.evidence_file_id ?? null,
         reason
       });
     }
@@ -1053,7 +1224,7 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
       field_name: before.field_name,
       validation_status: before.field_status,
       confidence_score: confidenceScore,
-      evidence_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null
+      evidence_id: verifiedEvidence?.evidence_file_id ?? null
     });
     await client.query('commit');
     res.json({
@@ -1064,7 +1235,7 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
         review_governance: {
           human_review_required: true,
           verified_evidence_required: sourceReferenceRequiresEvidence(before.source_reference_json),
-          verified_evidence_id: explicitEvidenceFileId ?? verifiedEvidence?.evidence_file_id ?? null
+          verified_evidence_id: verifiedEvidence?.evidence_file_id ?? null
         }
       },
       auditLogId
@@ -1080,8 +1251,8 @@ aiExtractionRouter.post('/extraction-fields/:fieldId/review', requirePermission(
 aiExtractionRouter.get('/extraction-jobs/:jobId/promotion-readiness', requirePermission('ai_extraction.read'), async (req, res, next) => {
   const jobId = req.params.jobId;
   try {
-    const jobResult = await pool.query<DbRow>('select * from extraction_jobs where id = $1', [jobId]);
-    const job = jobResult.rows[0];
+    const tenant = requireTenantContextFromRequest(req);
+    const job = await loadExtractionJob(pool, jobId, tenant.tenantId);
     if (!job) {
       res.status(404).json({ error: { code: 'EXTRACTION_JOB_NOT_FOUND', message: 'Extraction job not found.' } });
       return;
@@ -1089,10 +1260,13 @@ aiExtractionRouter.get('/extraction-jobs/:jobId/promotion-readiness', requirePer
     const stagingResult = await pool.query<DbRow>(
       `select sr.*, ef.field_status, ef.field_name, ef.confidence_score, ef.validation_flags, ef.source_reference_json, ef.reviewer_id as field_reviewer_id
        from staging_records sr
+       join extraction_jobs ej on ej.id = sr.extraction_job_id
+       join assets a on a.id = ej.asset_id
        left join extraction_fields ef on ef.id = sr.extraction_field_id
        where sr.extraction_job_id = $1
+         and a.tenant_id = $2::uuid
        order by sr.created_at`,
-      [jobId]
+      [jobId, tenant.tenantId]
     );
     const client = await pool.connect();
     try {
@@ -1154,8 +1328,8 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const jobResult = await client.query<DbRow>('select * from extraction_jobs where id = $1 for update', [jobId]);
-    const job = jobResult.rows[0];
+    const tenant = requireTenantContextFromRequest(req);
+    const job = await loadExtractionJob(client, jobId, tenant.tenantId, true);
     if (!job) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'EXTRACTION_JOB_NOT_FOUND', message: 'Extraction job not found.' } });
@@ -1164,10 +1338,13 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
     const stagingResult = await client.query<DbRow>(
       `select sr.*
        from staging_records sr
+       join extraction_jobs ej on ej.id = sr.extraction_job_id
+       join assets a on a.id = ej.asset_id
        where sr.extraction_job_id = $1
+         and a.tenant_id = $2::uuid
        order by sr.created_at
        for update`,
-      [jobId]
+      [jobId, tenant.tenantId]
     );
     if (stagingResult.rowCount === 0) {
       await writeAudit(client, req, 'AI_STAGING_PROMOTION_BLOCKED', 'extraction_job', jobId, mapExtractionJob(job), mapExtractionJob(job), {
@@ -1181,8 +1358,7 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
 
     const readiness = [];
     for (const staging of stagingResult.rows) {
-      const fieldResult = await client.query<DbRow>('select * from extraction_fields where id = $1 for update', [staging.extraction_field_id]);
-      const field = fieldResult.rows[0] ?? null;
+      const field = await loadExtractionField(client, asString(staging.extraction_field_id), tenant.tenantId, true) ?? null;
       const gateResult = await buildPromotionGateResults(client, { req, staging, field, job, comment });
       readiness.push({ staging, field, ...gateResult });
       await persistPromotionGates(client, req, String(staging.id), gateResult.gates);
@@ -1200,8 +1376,14 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
       await client.query(
         `update staging_records
          set promotion_status = 'blocked', updated_at = now()
-         where extraction_job_id = $1 and id = any($2::uuid[])`,
-        [jobId, blocked.map((item) => item.staging.id)]
+         where extraction_job_id = $1 and id = any($2::uuid[])
+           and exists (
+             select 1 from extraction_jobs ej
+             join assets a on a.id = ej.asset_id
+             where ej.id = staging_records.extraction_job_id
+               and a.tenant_id = $3::uuid
+           )`,
+        [jobId, blocked.map((item) => item.staging.id), tenant.tenantId]
       );
       await writeAudit(client, req, 'AI_STAGING_PROMOTION_BLOCKED', 'extraction_job', jobId, mapExtractionJob(job), mapExtractionJob(job), {
         blocked_reason: 'One or more staging promotion gates failed.',
@@ -1224,7 +1406,14 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
              promoted_at = now(),
              updated_at = now(),
              metadata_json = metadata_json || $3::jsonb
-         where id = $1 returning *`,
+         where id = $1
+           and exists (
+             select 1 from extraction_jobs ej
+             join assets a on a.id = ej.asset_id
+             where ej.id = staging_records.extraction_job_id
+               and a.tenant_id = $4::uuid
+           )
+         returning *`,
         [
           item.staging.id,
           actorUserId(req),
@@ -1234,7 +1423,8 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
             final_table_mutation: false,
             promotion_comment: comment,
             verified_evidence_file_id: item.verifiedEvidence?.evidence_file_id ?? null
-          })
+          }),
+          tenant.tenantId
         ]
       );
       const updated = result.rows[0] ?? {};
@@ -1257,14 +1447,20 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
        set status = 'completed',
            metadata_json = metadata_json || $2::jsonb,
            updated_at = now()
-       where id = $1`,
+       where id = $1
+         and exists (
+           select 1 from assets a
+           where a.id = extraction_jobs.asset_id
+             and a.tenant_id = $3::uuid
+         )`,
       [
         jobId,
         JSON.stringify({
           rc3c_promotion_governance: 'passed',
           promoted_staging_record_count: promoted.length,
           final_table_mutation: false
-        })
+        }),
+        tenant.tenantId
       ]
     );
 
@@ -1311,17 +1507,15 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from staging_records where id = $1 for update', [req.params.stagingRecordId]);
-    const before = beforeResult.rows[0];
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadStagingRecord(client, req.params.stagingRecordId, tenant.tenantId, true);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'STAGING_RECORD_NOT_FOUND', message: 'Staging record not found.' } });
       return;
     }
-    const fieldResult = await client.query<DbRow>('select * from extraction_fields where id = $1 for update', [before.extraction_field_id]);
-    const field = fieldResult.rows[0] ?? null;
-    const jobResult = await client.query<DbRow>('select * from extraction_jobs where id = $1 for update', [before.extraction_job_id]);
-    const job = jobResult.rows[0] ?? null;
+    const field = await loadExtractionField(client, asString(before.extraction_field_id), tenant.tenantId, true) ?? null;
+    const job = await loadExtractionJob(client, asString(before.extraction_job_id), tenant.tenantId, true) ?? null;
 
     const gateResult = await buildPromotionGateResults(client, { req, staging: before, field, job, comment });
     await persistPromotionGates(client, req, String(before.id), gateResult.gates);
@@ -1330,8 +1524,14 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
       await client.query(
         `update staging_records
          set promotion_status = 'blocked', updated_at = now()
-         where id = $1`,
-        [req.params.stagingRecordId]
+         where id = $1
+           and exists (
+             select 1 from extraction_jobs ej
+             join assets a on a.id = ej.asset_id
+             where ej.id = staging_records.extraction_job_id
+               and a.tenant_id = $2::uuid
+           )`,
+        [req.params.stagingRecordId, tenant.tenantId]
       );
       await writeAudit(client, req, 'AI_STAGING_PROMOTION_BLOCKED', 'staging_record', String(before.id), mapStagingRecord(before), mapStagingRecord(before), {
         blocked_reason: 'Staging promotion gate failed.',
@@ -1353,7 +1553,14 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
            promoted_at = now(),
            updated_at = now(),
            metadata_json = metadata_json || $3::jsonb
-       where id = $1 returning *`,
+       where id = $1
+         and exists (
+           select 1 from extraction_jobs ej
+           join assets a on a.id = ej.asset_id
+           where ej.id = staging_records.extraction_job_id
+             and a.tenant_id = $4::uuid
+         )
+       returning *`,
       [
         req.params.stagingRecordId,
         actorUserId(req),
@@ -1363,7 +1570,8 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
           final_table_mutation: false,
           promotion_comment: comment,
           verified_evidence_file_id: gateResult.verifiedEvidence?.evidence_file_id ?? null
-        })
+        }),
+        tenant.tenantId
       ]
     );
     const updated = result.rows[0];

@@ -16,7 +16,7 @@ describe('Release hardening after UAT Cycle 1', () => {
     const route = readRepoFile('apps/api/src/routes/integrity-decisions.ts');
 
     expect(route).toContain('INTEGRITY_DECISION_EVIDENCE_REQUIRED');
-    expect(route).toContain("countLinkedEvidence(client, 'integrity_decision', decisionId)");
+    expect(route).toContain("countLinkedEvidence(client, 'integrity_decision', decisionId, tenant.tenantId)");
     expect(route).toContain('persistIntegrityDecisionApprovalGate');
     expect(route).toContain('INTEGRITY_DECISION_APPROVAL_BLOCKED');
     expect(route).toContain('AI_INTEGRITY_APPROVAL_BLOCKED');

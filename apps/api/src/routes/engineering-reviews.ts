@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 import { hasPermission } from '../rbac/roles.js';
 
 export const engineeringReviewsRouter = Router();
@@ -118,8 +119,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -129,9 +132,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -203,32 +207,47 @@ function mapApproval(row: DbRow): Record<string, unknown> {
   };
 }
 
-async function loadCalculationRun(client: Queryable, calculationRunId: string): Promise<DbRow | undefined> {
-  const result = await client.query<DbRow>('select * from calculation_runs where id = $1', [calculationRunId]);
+async function loadCalculationRun(client: Queryable, calculationRunId: string, tenantId: string): Promise<DbRow | undefined> {
+  const result = await client.query<DbRow>('select * from calculation_runs where id = $1 and tenant_id = $2::uuid', [calculationRunId, tenantId]);
   return result.rows[0];
 }
 
-async function resolveEntityContext(client: Queryable, entityType: string, entityId: string): Promise<{ assetId: string | null; calculationRunId: string | null }> {
-  if (entityType === 'asset') return { assetId: entityId, calculationRunId: null };
+async function resolveEntityContext(client: Queryable, entityType: string, entityId: string, tenantId: string): Promise<{ assetId: string | null; calculationRunId: string | null }> {
+  if (entityType === 'asset') {
+    const result = await client.query<DbRow>('select id from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null', [entityId, tenantId]);
+    return result.rows[0] ? { assetId: entityId, calculationRunId: null } : { assetId: null, calculationRunId: null };
+  }
   if (entityType === 'calculation_run') {
-    const run = await loadCalculationRun(client, entityId);
+    const run = await loadCalculationRun(client, entityId, tenantId);
     if (!run) return { assetId: null, calculationRunId: null };
     return { assetId: asString(run.asset_id) ?? null, calculationRunId: asString(run.id) ?? entityId };
   }
   if (entityType === 'ndt_measurement') {
-    const result = await client.query<DbRow>('select asset_id from ndt_measurements where id = $1', [entityId]);
+    const result = await client.query<DbRow>('select asset_id from ndt_measurements where id = $1 and tenant_id = $2::uuid', [entityId, tenantId]);
     return { assetId: asString(result.rows[0]?.asset_id) ?? null, calculationRunId: null };
   }
   if (entityType === 'ffs_case') {
-    const result = await client.query<DbRow>('select asset_id, calculation_run_id from ffs_cases where id = $1', [entityId]);
+    const result = await client.query<DbRow>(
+      `select f.asset_id, f.calculation_run_id
+       from ffs_cases f
+       join assets a on a.id = f.asset_id
+       where f.id = $1 and a.tenant_id = $2::uuid`,
+      [entityId, tenantId]
+    );
     return { assetId: asString(result.rows[0]?.asset_id) ?? null, calculationRunId: asString(result.rows[0]?.calculation_run_id) ?? null };
   }
   if (entityType === 'rbi_case') {
-    const result = await client.query<DbRow>('select asset_id, calculation_run_id from rbi_cases where id = $1', [entityId]);
+    const result = await client.query<DbRow>(
+      `select r.asset_id, r.calculation_run_id
+       from rbi_cases r
+       join assets a on a.id = r.asset_id
+       where r.id = $1 and a.tenant_id = $2::uuid`,
+      [entityId, tenantId]
+    );
     return { assetId: asString(result.rows[0]?.asset_id) ?? null, calculationRunId: asString(result.rows[0]?.calculation_run_id) ?? null };
   }
   if (entityType === 'finding') {
-    const result = await client.query<DbRow>('select asset_id, calculation_run_id from findings where id = $1', [entityId]);
+    const result = await client.query<DbRow>('select asset_id, calculation_run_id from findings where id = $1 and tenant_id = $2::uuid', [entityId, tenantId]);
     return { assetId: asString(result.rows[0]?.asset_id) ?? null, calculationRunId: asString(result.rows[0]?.calculation_run_id) ?? null };
   }
   return { assetId: null, calculationRunId: null };
@@ -295,8 +314,9 @@ function normalizeOverridePayload(body: Record<string, unknown>): Record<string,
 
 engineeringReviewsRouter.get('/engineering/reviews', requirePermission('engineering_review.read'), async (req, res, next) => {
   try {
-    const values: unknown[] = [];
-    const clauses: string[] = [];
+    const tenant = requireTenantContextFromRequest(req);
+    const values: unknown[] = [tenant.tenantId];
+    const clauses: string[] = ['tenant_id = $1::uuid'];
     const entityType = asString(req.query.entity_type);
     const entityId = asString(req.query.entity_id);
     const calculationRunId = asString(req.query.calculation_run_id);
@@ -314,7 +334,7 @@ engineeringReviewsRouter.get('/engineering/reviews', requirePermission('engineer
     }
     const result = await pool.query<DbRow>(
       `select * from engineering_reviews
-       ${clauses.length > 0 ? `where ${clauses.join(' and ')}` : ''}
+       where ${clauses.join(' and ')}
        order by created_at desc
        limit 100`,
       values
@@ -353,7 +373,8 @@ engineeringReviewsRouter.post('/engineering/reviews', requirePermission('enginee
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const context = await resolveEntityContext(client, entityType, entityId);
+    const tenant = requireTenantContextFromRequest(req);
+    const context = await resolveEntityContext(client, entityType, entityId, tenant.tenantId);
     if (!context.assetId) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'REVIEW_ENTITY_NOT_FOUND', message: 'Review target was not found or does not expose an asset context.' } });
@@ -374,21 +395,22 @@ engineeringReviewsRouter.post('/engineering/reviews', requirePermission('enginee
     const revisionResult = await client.query<{ next_revision: string }>(
       `select coalesce(max(revision_no), 0) + 1 as next_revision
        from engineering_reviews
-       where entity_type = $1 and entity_id = $2`,
-      [entityType, entityId]
+       where entity_type = $1 and entity_id = $2 and tenant_id = $3::uuid`,
+      [entityType, entityId, tenant.tenantId]
     );
     const reviewCode = `REV-${Date.now()}-${revisionResult.rows[0]?.next_revision ?? '1'}`;
     const result = await client.query<DbRow>(
       `insert into engineering_reviews(
-        review_code, entity_type, entity_id, asset_id, calculation_run_id, review_type,
+        tenant_id, review_code, entity_type, entity_id, asset_id, calculation_run_id, review_type,
         reviewer_id, assigned_engineer, review_status, review_comment, checklist_json,
         comments_json, revision_no, supersedes_review_id, submitted_at, updated_at
       ) values (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10, $11::jsonb,
-        $12::jsonb, $13, $14, $15, now()
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11, $12::jsonb,
+        $13::jsonb, $14, $15, $16, now()
       ) returning *`,
       [
+        tenant.tenantId,
         reviewCode,
         entityType,
         entityId,
@@ -425,19 +447,23 @@ engineeringReviewsRouter.get('/engineering/reviews/:reviewId', requirePermission
   try {
     const reviewId = routeUuidParam(res, 'reviewId', req.params.reviewId);
     if (!reviewId) return;
-    const reviewResult = await pool.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const reviewResult = await pool.query<DbRow>('select * from engineering_reviews where id = $1 and tenant_id = $2::uuid', [reviewId, tenant.tenantId]);
     const review = reviewResult.rows[0];
     if (!review) {
       res.status(404).json({ error: { code: 'REVIEW_NOT_FOUND', message: 'Engineering review not found.' } });
       return;
     }
-    const approvals = await pool.query<DbRow>('select * from approval_records where review_id = $1 order by created_at desc', [reviewId]);
+    const approvals = await pool.query<DbRow>('select * from approval_records where review_id = $1 and tenant_id = $2::uuid order by created_at desc', [reviewId, tenant.tenantId]);
     const audits = await pool.query<DbRow>(
       `select * from audit_logs
-       where (entity_type = 'engineering_review' and entity_id = $1)
-          or (entity_type = 'approval_record' and entity_id in (select id from approval_records where review_id = $1))
+       where tenant_id = $2::uuid
+         and (
+          (entity_type = 'engineering_review' and entity_id = $1)
+          or (entity_type = 'approval_record' and entity_id in (select id from approval_records where review_id = $1 and tenant_id = $2::uuid))
+         )
        order by created_at desc`,
-      [reviewId]
+      [reviewId, tenant.tenantId]
     );
     res.json({ data: { ...mapReview(review), approvals: approvals.rows.map(mapApproval), audit_trail: audits.rows } });
   } catch (error) {
@@ -466,7 +492,8 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1 and tenant_id = $2::uuid', [reviewId, tenant.tenantId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -502,13 +529,13 @@ engineeringReviewsRouter.patch('/engineering/reviews/:reviewId/status', requireP
            returned_at = case when $2 = 'returned_for_revision' then now() else returned_at end,
            reviewed_at = case when $2 = 'reviewed' then now() else reviewed_at end,
            updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $5::uuid
        returning *`,
-      [reviewId, status, asString(req.body.review_comment ?? req.body.comment) ?? null, isPlainObject(req.body.checklist) ? JSON.stringify(req.body.checklist) : null]
+      [reviewId, status, asString(req.body.review_comment ?? req.body.comment) ?? null, isPlainObject(req.body.checklist) ? JSON.stringify(req.body.checklist) : null, tenant.tenantId]
     );
     const updated = result.rows[0];
     if (updated?.calculation_run_id && status === 'reviewed') {
-      await client.query(`update calculation_runs set review_status = 'reviewed', status = 'reviewed', reviewer_id = coalesce($2, reviewer_id), reviewed_at = now() where id = $1`, [updated.calculation_run_id, actorUserId(req)]);
+      await client.query(`update calculation_runs set review_status = 'reviewed', status = 'reviewed', reviewer_id = coalesce($2, reviewer_id), reviewed_at = now() where id = $1 and tenant_id = $3::uuid`, [updated.calculation_run_id, actorUserId(req), tenant.tenantId]);
     }
     const auditLogId = await writeAudit(client, req, 'ENGINEERING_REVIEW_STATUS_UPDATED', 'engineering_review', String(updated?.id), mapReview(before), mapReview(updated ?? {}), { status });
     if (updated?.calculation_run_id && status === 'reviewed') {
@@ -553,7 +580,8 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1 and tenant_id = $2::uuid', [reviewId, tenant.tenantId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -569,9 +597,9 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/comments', require
       `update engineering_reviews
        set comments_json = comments_json || $2::jsonb,
            updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $3::uuid
        returning *`,
-      [reviewId, JSON.stringify([commentRecord])]
+      [reviewId, JSON.stringify([commentRecord]), tenant.tenantId]
     );
     const updated = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'ENGINEERING_REVIEW_COMMENT_ADDED', 'engineering_review', String(updated?.id), mapReview(before), mapReview(updated ?? {}), { comment_added: true });
@@ -596,7 +624,8 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', require
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1', [reviewId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const beforeResult = await client.query<DbRow>('select * from engineering_reviews where id = $1 and tenant_id = $2::uuid', [reviewId, tenant.tenantId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -606,8 +635,8 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', require
     const revisionResult = await client.query<{ next_revision: string }>(
       `select coalesce(max(revision_no), 0) + 1 as next_revision
        from engineering_reviews
-       where entity_type = $1 and entity_id = $2`,
-      [before.entity_type, before.entity_id]
+       where entity_type = $1 and entity_id = $2 and tenant_id = $3::uuid`,
+      [before.entity_type, before.entity_id, tenant.tenantId]
     );
     const nextRevision = Number(revisionResult.rows[0]?.next_revision ?? '1');
     const status = asString(req.body.review_status ?? req.body.status) ?? 'draft';
@@ -618,15 +647,16 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', require
     }
     const result = await client.query<DbRow>(
       `insert into engineering_reviews(
-        review_code, entity_type, entity_id, asset_id, calculation_run_id, review_type,
+        tenant_id, review_code, entity_type, entity_id, asset_id, calculation_run_id, review_type,
         reviewer_id, assigned_engineer, review_status, review_comment, checklist_json, comments_json,
         revision_no, supersedes_review_id, submitted_at, updated_at
       ) values (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10, $11::jsonb, $12::jsonb,
-        $13, $14, $15, now()
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11, $12::jsonb, $13::jsonb,
+        $14, $15, $16, now()
       ) returning *`,
       [
+        tenant.tenantId,
         `REV-${Date.now()}-${nextRevision}`,
         before.entity_type,
         before.entity_id,
@@ -661,8 +691,9 @@ engineeringReviewsRouter.post('/engineering/reviews/:reviewId/revision', require
 
 engineeringReviewsRouter.get('/approval-records', requirePermission('approval_record.read'), async (req, res, next) => {
   try {
-    const values: unknown[] = [];
-    const clauses: string[] = [];
+    const tenant = requireTenantContextFromRequest(req);
+    const values: unknown[] = [tenant.tenantId];
+    const clauses: string[] = ['tenant_id = $1::uuid'];
     const calculationRunId = asString(req.query.calculation_run_id);
     if (calculationRunId) {
       values.push(calculationRunId);
@@ -670,7 +701,7 @@ engineeringReviewsRouter.get('/approval-records', requirePermission('approval_re
     }
     const result = await pool.query<DbRow>(
       `select * from approval_records
-       ${clauses.length > 0 ? `where ${clauses.join(' and ')}` : ''}
+       where ${clauses.join(' and ')}
        order by created_at desc
        limit 100`,
       values
@@ -695,7 +726,8 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const reviewResult = await client.query<DbRow>('select * from engineering_reviews where id = $1 for update', [reviewId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const reviewResult = await client.query<DbRow>('select * from engineering_reviews where id = $1 and tenant_id = $2::uuid for update', [reviewId, tenant.tenantId]);
     const review = reviewResult.rows[0];
     if (!review) {
       await client.query('rollback');
@@ -735,7 +767,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
       return;
     }
 
-    const context = await resolveEntityContext(client, entityType, entityId);
+    const context = await resolveEntityContext(client, entityType, entityId, tenant.tenantId);
     if (!context.assetId && entityType !== 'finding') {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'APPROVAL_ENTITY_NOT_FOUND', message: 'Approval target was not found.' } });
@@ -761,15 +793,16 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
     const approvalCode = `APR-${Date.now()}`;
     const result = await client.query<DbRow>(
       `insert into approval_records(
-        approval_code, review_id, entity_type, entity_id, asset_id, calculation_run_id,
+        tenant_id, approval_code, review_id, entity_type, entity_id, asset_id, calculation_run_id,
         approval_type, approval_status, reviewer_user_id, approval_comment, checklist_json,
         submitted_at, created_at, updated_at
       ) values (
-        $1, $2, $3, $4, $5, $6,
-        $7, 'submitted_for_approval', $8, $9, $10::jsonb,
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, 'submitted_for_approval', $9, $10, $11::jsonb,
         now(), now(), now()
       ) returning *`,
       [
+        tenant.tenantId,
         approvalCode,
         reviewId,
         entityType,
@@ -784,7 +817,7 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
     );
     const created = result.rows[0];
     if (reviewId) {
-      await client.query(`update engineering_reviews set review_status = 'submitted_for_approval', updated_at = now() where id = $1 and locked_flag = false`, [reviewId]);
+      await client.query(`update engineering_reviews set review_status = 'submitted_for_approval', updated_at = now() where id = $1 and tenant_id = $2::uuid and locked_flag = false`, [reviewId, tenant.tenantId]);
     }
     const auditLogId = await writeAudit(client, req, 'APPROVAL_RECORD_CREATED', 'approval_record', String(created?.id), null, mapApproval(created ?? {}), { approval_workflow: true });
     await client.query('commit');
@@ -797,8 +830,8 @@ engineeringReviewsRouter.post('/approval-records', requirePermission('approval_r
   }
 });
 
-async function loadApprovalForUpdate(client: Queryable, approvalId: string): Promise<DbRow | undefined> {
-  const result = await client.query<DbRow>('select * from approval_records where id = $1 for update', [approvalId]);
+async function loadApprovalForUpdate(client: Queryable, approvalId: string, tenantId: string): Promise<DbRow | undefined> {
+  const result = await client.query<DbRow>('select * from approval_records where id = $1 and tenant_id = $2::uuid for update', [approvalId, tenantId]);
   return result.rows[0];
 }
 
@@ -809,11 +842,11 @@ type CalculationApprovalGate = {
   run?: DbRow;
 };
 
-async function validateCalculationApprovalGate(client: Queryable, calculationRunId: unknown): Promise<CalculationApprovalGate> {
+async function validateCalculationApprovalGate(client: Queryable, calculationRunId: unknown, tenantId: string): Promise<CalculationApprovalGate> {
   const id = asString(calculationRunId);
   if (!id) return { pass: true, blockers: [] };
 
-  const run = await loadCalculationRun(client, id);
+  const run = await loadCalculationRun(client, id, tenantId);
   if (!run) return { pass: false, blockers: ['CALCULATION_RUN_NOT_FOUND'] };
 
   const blockers: string[] = [];
@@ -891,7 +924,8 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await loadApprovalForUpdate(client, approvalId);
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadApprovalForUpdate(client, approvalId, tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'APPROVAL_RECORD_NOT_FOUND', message: 'Approval record not found.' } });
@@ -913,7 +947,7 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
       return;
     }
     if (before.calculation_run_id) {
-      const gate = await validateCalculationApprovalGate(client, before.calculation_run_id);
+      const gate = await validateCalculationApprovalGate(client, before.calculation_run_id, tenant.tenantId);
       if (!gate.pass) {
         await client.query('rollback');
         await writeAudit(client, req, 'calculation.final_use_blocked', 'calculation_run', String(before.calculation_run_id), null, gate, {
@@ -946,7 +980,7 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
            locked_flag = true,
            approved_at = now(),
            updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $10::uuid
        returning *`,
       [
         approvalId,
@@ -957,13 +991,14 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
         override ? JSON.stringify(override.original_value ?? null) : null,
         override ? JSON.stringify(override.override_value ?? null) : null,
         override ? asString(override.reason) ?? null : null,
-        override ? JSON.stringify(override.evidence_links ?? []) : null
+        override ? JSON.stringify(override.evidence_links ?? []) : null,
+        tenant.tenantId
       ]
     );
     const updated = result.rows[0];
 
     if (updated?.review_id) {
-      await client.query(`update engineering_reviews set review_status = 'approved', locked_flag = true, updated_at = now() where id = $1 and locked_flag = false`, [updated.review_id]);
+      await client.query(`update engineering_reviews set review_status = 'approved', locked_flag = true, updated_at = now() where id = $1 and tenant_id = $2::uuid and locked_flag = false`, [updated.review_id, tenant.tenantId]);
     }
     if (updated?.calculation_run_id) {
       await client.query(
@@ -977,8 +1012,8 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/approve', requirePe
              approved_at = now(),
              locked_at = now(),
              locked_flag = true
-         where id = $1`,
-        [updated.calculation_run_id, actorUserId(req)]
+         where id = $1 and tenant_id = $3::uuid`,
+        [updated.calculation_run_id, actorUserId(req), tenant.tenantId]
       );
     }
     const auditLogId = await writeAudit(client, req, override ? 'ENGINEERING_OVERRIDE_APPROVED' : 'APPROVAL_RECORD_APPROVED', 'approval_record', String(updated?.id), mapApproval(before), mapApproval(updated ?? {}), {
@@ -1022,7 +1057,8 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await loadApprovalForUpdate(client, approvalId);
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadApprovalForUpdate(client, approvalId, tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'APPROVAL_RECORD_NOT_FOUND', message: 'Approval record not found.' } });
@@ -1051,16 +1087,16 @@ engineeringReviewsRouter.post('/approval-records/:approvalId/reject', requirePer
            locked_flag = true,
            rejected_at = now(),
            updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $4::uuid
        returning *`,
-      [approvalId, actorUserId(req), isPlainObject(req.body) ? asString(req.body.rejection_reason ?? req.body.reason ?? req.body.comment) ?? null : null]
+      [approvalId, actorUserId(req), isPlainObject(req.body) ? asString(req.body.rejection_reason ?? req.body.reason ?? req.body.comment) ?? null : null, tenant.tenantId]
     );
     const updated = result.rows[0];
     if (updated?.review_id) {
-      await client.query(`update engineering_reviews set review_status = 'rejected', locked_flag = true, updated_at = now() where id = $1 and locked_flag = false`, [updated.review_id]);
+      await client.query(`update engineering_reviews set review_status = 'rejected', locked_flag = true, updated_at = now() where id = $1 and tenant_id = $2::uuid and locked_flag = false`, [updated.review_id, tenant.tenantId]);
     }
     if (updated?.calculation_run_id) {
-      await client.query(`update calculation_runs set approval_status = 'rejected', status = 'rejected', approver_id = $2 where id = $1 and locked_flag = false`, [updated.calculation_run_id, actorUserId(req)]);
+      await client.query(`update calculation_runs set approval_status = 'rejected', status = 'rejected', approver_id = $2 where id = $1 and tenant_id = $3::uuid and locked_flag = false`, [updated.calculation_run_id, actorUserId(req), tenant.tenantId]);
     }
     const auditLogId = await writeAudit(client, req, 'APPROVAL_RECORD_REJECTED', 'approval_record', String(updated?.id), mapApproval(before), mapApproval(updated ?? {}), { ai_agent_blocked: true });
     if (updated?.calculation_run_id) {

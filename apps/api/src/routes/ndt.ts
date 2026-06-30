@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest } from '../modules/tenancy/tenant-scope.js';
 import { evaluateNdtEvidenceGate } from '../modules/ndt/governance.js';
 import {
   asBoolean,
@@ -61,8 +62,10 @@ async function writeAudit(
   after: unknown,
   metadata: Record<string, unknown> = {}
 ): Promise<string | undefined> {
+  const tenant = requireTenantContextFromRequest(req);
   const result = await client.query<{ id: string }>(
     `insert into audit_logs(
+      tenant_id,
       event_type,
       actor_user_id,
       actor_role_codes,
@@ -72,9 +75,10 @@ async function writeAudit(
       before_json,
       after_json,
       metadata_json
-    ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
     returning id`,
     [
+      tenant.tenantId,
       eventType,
       actorUserId(req),
       actorRoles(req),
@@ -202,7 +206,7 @@ function mapNdtEvidenceLink(row: DbRow): Record<string, unknown> {
   };
 }
 
-async function loadNdtEvidenceLinks(client: PoolClient, measurementId: string): Promise<DbRow[]> {
+async function loadNdtEvidenceLinks(client: PoolClient, measurementId: string, tenantId: string): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select
        el.id as evidence_link_id,
@@ -219,16 +223,16 @@ async function loadNdtEvidenceLinks(client: PoolClient, measurementId: string): 
        ef.evidence_status,
        ef.status
      from evidence_links el
-     join evidence_files ef on ef.id = el.evidence_file_id
+     join evidence_files ef on ef.id = el.evidence_file_id and ef.tenant_id = $2::uuid
      where el.linked_entity_type = 'ndt_measurement'
        and el.linked_entity_id = $1::uuid
      order by el.created_at desc`,
-    [measurementId]
+    [measurementId, tenantId]
   );
   return result.rows;
 }
 
-async function loadNdtAuditEvents(client: PoolClient, measurementId: string): Promise<DbRow[]> {
+async function loadNdtAuditEvents(client: PoolClient, measurementId: string, tenantId: string): Promise<DbRow[]> {
   const result = await client.query<DbRow>(
     `select
        id as audit_log_id,
@@ -240,30 +244,36 @@ async function loadNdtAuditEvents(client: PoolClient, measurementId: string): Pr
        created_at,
        metadata_json as metadata
      from audit_logs
-     where (entity_type = 'ndt_measurement' and entity_id = $1::uuid)
-        or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where entity_type = 'ndt_measurement' and entity_id = $1::uuid))
-        or (entity_type = 'approval_record' and entity_id in (select id from approval_records where entity_type = 'ndt_measurement' and entity_id = $1::uuid))
+     where tenant_id = $2::uuid
+       and (
+        (entity_type = 'ndt_measurement' and entity_id = $1::uuid)
+        or (entity_type = 'engineering_review' and entity_id in (select id from engineering_reviews where entity_type = 'ndt_measurement' and entity_id = $1::uuid and tenant_id = $2::uuid))
+        or (entity_type = 'approval_record' and entity_id in (select id from approval_records where entity_type = 'ndt_measurement' and entity_id = $1::uuid and tenant_id = $2::uuid))
+       )
      order by created_at desc
      limit 30`,
-    [measurementId]
+    [measurementId, tenantId]
   );
   return result.rows;
 }
 
-async function buildNdtMeasurementReadiness(client: PoolClient, row: DbRow): Promise<Record<string, unknown>> {
+async function buildNdtMeasurementReadiness(client: PoolClient, row: DbRow, tenantId: string): Promise<Record<string, unknown>> {
   const measurementId = String(row.id);
   const assetId = String(row.asset_id);
   const inspectionEventId = asString(row.inspection_event_id);
 
   const [evidenceLinks, findings, calculationInputs, reviews, approvals, auditEvents, inspectionEvent] = await Promise.all([
-    loadNdtEvidenceLinks(client, measurementId),
+    loadNdtEvidenceLinks(client, measurementId, tenantId),
     client.query<DbRow>(
       `select id, finding_code, title, severity, status, source_type, source_entity_id, ndt_measurement_id, calculation_run_id, created_at, updated_at
        from findings
-       where ndt_measurement_id = $1::uuid
+       where tenant_id = $2::uuid
+         and (
+          ndt_measurement_id = $1::uuid
           or (source_type = 'ndt_measurement' and source_entity_id = $1::uuid)
+         )
        order by created_at desc`,
-      [measurementId]
+      [measurementId, tenantId]
     ),
     client.query<DbRow>(
       `select ci.id, ci.calculation_run_id, ci.input_name, ci.validation_status, ci.evidence_file_id, ci.created_at,
@@ -272,28 +282,31 @@ async function buildNdtMeasurementReadiness(client: PoolClient, row: DbRow): Pro
        join calculation_runs cr on cr.id = ci.calculation_run_id
        where ci.source_entity_type = 'ndt_measurement'
          and ci.source_entity_id = $1::uuid
+         and cr.tenant_id = $2::uuid
        order by cr.created_at desc, ci.input_name`,
-      [measurementId]
+      [measurementId, tenantId]
     ),
     client.query<DbRow>(
       `select id, review_code, entity_type, entity_id, review_type, review_status, reviewer_id, reviewed_at, locked_flag, created_at, updated_at
        from engineering_reviews
        where entity_type = 'ndt_measurement'
          and entity_id = $1::uuid
+         and tenant_id = $2::uuid
        order by reviewed_at desc nulls last, updated_at desc nulls last, created_at desc`,
-      [measurementId]
+      [measurementId, tenantId]
     ),
     client.query<DbRow>(
       `select id, approval_code, entity_type, entity_id, approval_type, approval_status, approver_id, approved_at, locked_flag, created_at, updated_at
        from approval_records
        where entity_type = 'ndt_measurement'
          and entity_id = $1::uuid
+         and tenant_id = $2::uuid
        order by approved_at desc nulls last, updated_at desc nulls last, created_at desc`,
-      [measurementId]
+      [measurementId, tenantId]
     ),
-    loadNdtAuditEvents(client, measurementId),
+    loadNdtAuditEvents(client, measurementId, tenantId),
     inspectionEventId
-      ? client.query<DbRow>('select * from inspection_events where id = $1::uuid and asset_id = $2::uuid limit 1', [inspectionEventId, assetId])
+      ? client.query<DbRow>('select * from inspection_events where id = $1::uuid and asset_id = $2::uuid and tenant_id = $3::uuid limit 1', [inspectionEventId, assetId, tenantId])
       : Promise.resolve({ rows: [], rowCount: 0 })
   ]);
 
@@ -413,13 +426,13 @@ function validationStatusForEvidence(evidenceFileId: string | undefined, isCriti
   return { status: 'warning', message: 'NDT measurement has no direct evidence; link evidence before approval if critical.' };
 }
 
-async function getLinkedEvidenceRows(client: PoolClient, measurementId: string): Promise<LinkedEvidenceRow[]> {
+async function getLinkedEvidenceRows(client: PoolClient, measurementId: string, tenantId: string): Promise<LinkedEvidenceRow[]> {
   const result = await client.query<LinkedEvidenceRow>(
     `select el.evidence_file_id, ef.asset_id
      from evidence_links el
      join evidence_files ef on ef.id = el.evidence_file_id
-     where el.linked_entity_type = 'ndt_measurement' and el.linked_entity_id = $1`,
-    [measurementId]
+     where el.linked_entity_type = 'ndt_measurement' and el.linked_entity_id = $1 and ef.tenant_id = $2::uuid`,
+    [measurementId, tenantId]
   );
   return result.rows;
 }
@@ -446,26 +459,27 @@ function crossAssetEvidenceError(res: ApiResponse, invalidEvidenceFileIds: strin
   });
 }
 
-async function loadNdtMeasurement(client: PoolClient, measurementId: string): Promise<DbRow | undefined> {
+async function loadNdtMeasurement(client: PoolClient, measurementId: string, tenantId: string): Promise<DbRow | undefined> {
   const result = await client.query<DbRow>(
     `select nm.*, ef.id as evidence_id, ef.evidence_code, ef.file_name, ef.original_filename, ef.file_type, ef.file_extension,
             ef.object_storage_path, ef.object_storage_uri, ef.checksum, ef.checksum_sha256, ef.evidence_status, ef.status as evidence_file_status,
             ef.asset_id as direct_evidence_asset_id
      from ndt_measurements nm
-     left join evidence_files ef on ef.id = nm.evidence_file_id
-     where nm.id = $1`,
-    [measurementId]
+     left join evidence_files ef on ef.id = nm.evidence_file_id and ef.tenant_id = $2::uuid
+     where nm.id = $1 and nm.tenant_id = $2::uuid`,
+    [measurementId, tenantId]
   );
   return result.rows[0];
 }
 
-async function nextMeasurementCode(client: PoolClient): Promise<string> {
-  const result = await client.query<{ count: string }>('select count(*)::text as count from ndt_measurements');
+async function nextMeasurementCode(client: PoolClient, tenantId: string): Promise<string> {
+  const result = await client.query<{ count: string }>('select count(*)::text as count from ndt_measurements where tenant_id = $1::uuid', [tenantId]);
   const next = Number(result.rows[0]?.count ?? '0') + 1;
   return `NDT-${String(next).padStart(6, '0')}`;
 }
 
 async function createMeasurement(client: PoolClient, req: Request, body: Record<string, unknown>, source: 'manual' | 'bulk_import'): Promise<DbRow> {
+  const tenant = requireTenantContextFromRequest(req);
   const issues = validateNdtMeasurementPayload(body);
   if (issues.length > 0) {
     const error = new Error('VALIDATION_FAILED');
@@ -482,7 +496,7 @@ async function createMeasurement(client: PoolClient, req: Request, body: Record<
     throw new Error('NDT payload unexpectedly invalid after validation.');
   }
 
-  const assetResult = await client.query('select id from assets where id = $1 and deleted_at is null', [assetId]);
+  const assetResult = await client.query('select id from assets where id = $1 and tenant_id = $2::uuid and deleted_at is null', [assetId, tenant.tenantId]);
   if (assetResult.rowCount === 0) {
     const error = new Error('ASSET_NOT_FOUND');
     (error as Error & { statusCode?: number }).statusCode = 404;
@@ -491,7 +505,7 @@ async function createMeasurement(client: PoolClient, req: Request, body: Record<
 
   const inspectionEventId = asString(body.inspection_event_id) ?? null;
   if (inspectionEventId) {
-    const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2', [inspectionEventId, assetId]);
+    const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2 and tenant_id = $3::uuid', [inspectionEventId, assetId, tenant.tenantId]);
     if (inspectionResult.rowCount === 0) {
       const error = new Error('INSPECTION_NOT_FOUND');
       (error as Error & { statusCode?: number }).statusCode = 404;
@@ -501,7 +515,7 @@ async function createMeasurement(client: PoolClient, req: Request, body: Record<
 
   const evidenceFileId = asString(body.evidence_file_id);
   if (evidenceFileId) {
-    const evidenceResult = await client.query('select id from evidence_files where id = $1 and asset_id = $2', [evidenceFileId, assetId]);
+    const evidenceResult = await client.query('select id from evidence_files where id = $1 and asset_id = $2 and tenant_id = $3::uuid', [evidenceFileId, assetId, tenant.tenantId]);
     if (evidenceResult.rowCount === 0) {
       const error = new Error('EVIDENCE_NOT_FOUND');
       (error as Error & { statusCode?: number }).statusCode = 404;
@@ -514,11 +528,12 @@ async function createMeasurement(client: PoolClient, req: Request, body: Record<
   const measuredThicknessMm = normalizeThicknessToMillimeters(measuredThicknessRaw, asString(body.measured_thickness_unit) ?? 'mm');
   const elevationRaw = asNumber(body.elevation);
   const elevationM = elevationRaw === undefined ? null : normalizeLengthToMeters(elevationRaw, asString(body.elevation_unit) ?? 'm');
-  const measurementCode = asString(body.measurement_code) ?? await nextMeasurementCode(client);
+  const measurementCode = asString(body.measurement_code) ?? await nextMeasurementCode(client, tenant.tenantId);
 
   const result = await client.query<DbRow>(
     `insert into ndt_measurements(
       measurement_code,
+      tenant_id,
       asset_id,
       inspection_event_id,
       component,
@@ -538,10 +553,11 @@ async function createMeasurement(client: PoolClient, req: Request, body: Record<
       validation_message,
       is_critical,
       created_by
-    ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'needs_review', $16, $17, $18, $19)
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'needs_review', $17, $18, $19, $20)
     returning *`,
     [
       measurementCode,
+      tenant.tenantId,
       assetId,
       inspectionEventId,
       component,
@@ -567,8 +583,9 @@ async function createMeasurement(client: PoolClient, req: Request, body: Record<
 
 ndtRouter.get('/ndt/measurements', requirePermission('ndt.read'), async (req, res, next) => {
   try {
-    const values: string[] = [];
-    const filters = ['1 = 1'];
+    const tenant = requireTenantContextFromRequest(req);
+    const values: string[] = [tenant.tenantId];
+    const filters = ['nm.tenant_id = $1::uuid'];
     const assetId = asString(req.query.asset_id);
     const status = asString(req.query.reviewer_status);
 
@@ -586,7 +603,7 @@ ndtRouter.get('/ndt/measurements', requirePermission('ndt.read'), async (req, re
       `select nm.*, ef.id as evidence_id, ef.evidence_code, ef.file_name, ef.original_filename, ef.file_type, ef.file_extension,
               ef.object_storage_path, ef.object_storage_uri, ef.checksum, ef.checksum_sha256, ef.evidence_status, ef.status as evidence_file_status
        from ndt_measurements nm
-       left join evidence_files ef on ef.id = nm.evidence_file_id
+       left join evidence_files ef on ef.id = nm.evidence_file_id and ef.tenant_id = $1::uuid
        where ${filters.join(' and ')}
        order by nm.created_at desc`,
       values
@@ -608,12 +625,13 @@ ndtRouter.get('/ndt/measurements/:measurementId/readiness', requirePermission('n
 
   const client = await pool.connect();
   try {
-    const row = await loadNdtMeasurement(client, measurementId);
+    const tenant = requireTenantContextFromRequest(req);
+    const row = await loadNdtMeasurement(client, measurementId, tenant.tenantId);
     if (!row) {
       res.status(404).json({ error: { code: 'NDT_MEASUREMENT_NOT_FOUND', message: 'NDT measurement not found.' } });
       return;
     }
-    const readiness = await buildNdtMeasurementReadiness(client, row);
+    const readiness = await buildNdtMeasurementReadiness(client, row, tenant.tenantId);
     res.json({ data: readiness });
   } catch (error) {
     next(error);
@@ -631,12 +649,13 @@ ndtRouter.get('/ndt/measurements/:measurementId', requirePermission('ndt.read'),
 
   const client = await pool.connect();
   try {
-    const row = await loadNdtMeasurement(client, measurementId);
+    const tenant = requireTenantContextFromRequest(req);
+    const row = await loadNdtMeasurement(client, measurementId, tenant.tenantId);
     if (!row) {
       res.status(404).json({ error: { code: 'NDT_MEASUREMENT_NOT_FOUND', message: 'NDT measurement not found.' } });
       return;
     }
-    const linkedEvidenceRows = await getLinkedEvidenceRows(client, measurementId);
+    const linkedEvidenceRows = await getLinkedEvidenceRows(client, measurementId, tenant.tenantId);
     const assetId = String(row.asset_id);
     const validLinkedEvidenceIds = sameAssetLinkedEvidenceIds(linkedEvidenceRows, assetId);
     const invalidLinkedEvidenceIds = crossAssetLinkedEvidenceIds(linkedEvidenceRows, assetId);
@@ -754,7 +773,8 @@ ndtRouter.post('/ndt/measurements/:measurementId/review', requirePermission('ndt
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await loadNdtMeasurement(client, measurementId);
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadNdtMeasurement(client, measurementId, tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'NDT_MEASUREMENT_NOT_FOUND', message: 'NDT measurement not found.' } });
@@ -764,9 +784,9 @@ ndtRouter.post('/ndt/measurements/:measurementId/review', requirePermission('ndt
     const result = await client.query<DbRow>(
       `update ndt_measurements
        set reviewer_status = $2, reviewed_by = $3, reviewed_at = now(), updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $4::uuid
        returning *`,
-      [measurementId, reviewerStatus, actorUserId(req)]
+      [measurementId, reviewerStatus, actorUserId(req), tenant.tenantId]
     );
     const after = result.rows[0] ?? {};
     const auditLogId = await writeAudit(client, req, 'NDT_MEASUREMENT_REVIEWED', 'ndt_measurement', measurementId, mapNdt(before), mapNdt(after), {
@@ -795,7 +815,8 @@ ndtRouter.post('/ndt/measurements/:measurementId/approve', requirePermission('nd
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const before = await loadNdtMeasurement(client, measurementId);
+    const tenant = requireTenantContextFromRequest(req);
+    const before = await loadNdtMeasurement(client, measurementId, tenant.tenantId);
     if (!before) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'NDT_MEASUREMENT_NOT_FOUND', message: 'NDT measurement not found.' } });
@@ -803,7 +824,7 @@ ndtRouter.post('/ndt/measurements/:measurementId/approve', requirePermission('nd
     }
 
     const assetId = String(before.asset_id);
-    const linkedEvidenceRows = await getLinkedEvidenceRows(client, measurementId);
+    const linkedEvidenceRows = await getLinkedEvidenceRows(client, measurementId, tenant.tenantId);
     const invalidLinkedEvidenceIds = crossAssetLinkedEvidenceIds(linkedEvidenceRows, assetId);
     if (invalidLinkedEvidenceIds.length > 0) {
       await client.query('rollback');
@@ -835,9 +856,9 @@ ndtRouter.post('/ndt/measurements/:measurementId/approve', requirePermission('nd
     const result = await client.query<DbRow>(
       `update ndt_measurements
        set reviewer_status = 'approved', validation_status = $2, validation_message = $3, approved_by = $4, approved_at = now(), updated_at = now()
-       where id = $1
+       where id = $1 and tenant_id = $5::uuid
        returning *`,
-      [measurementId, evidenceGate.status === 'warning' ? 'warning' : 'valid', evidenceGate.reason, actorUserId(req)]
+      [measurementId, evidenceGate.status === 'warning' ? 'warning' : 'valid', evidenceGate.reason, actorUserId(req), tenant.tenantId]
     );
     const after = result.rows[0] ?? {};
     const auditLogId = await writeAudit(client, req, 'NDT_MEASUREMENT_APPROVED', 'ndt_measurement', measurementId, mapNdt(before), mapNdt(after), {
