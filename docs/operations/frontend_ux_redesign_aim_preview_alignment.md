@@ -14,7 +14,7 @@ Included changes:
 
 ## Governance Boundaries Preserved
 
-- Database migration history remains unchanged. Already-tagged migrations `0028` and `0029` must not be rewritten by this frontend package; any database correction must be handled in a separate forward-only migration package.
+- Database migration history is treated as release evidence. Already-tagged migration `0028` is restored to the MT Sprint 1 baseline. Migration `0029` contains only a narrow PostgreSQL compatibility correction for fresh database setup: it rewrites the `evidence_upload_sessions` tenant backfill to avoid PostgreSQL target-alias scope errors while preserving the Sprint 2 schema shape and avoiding trigger-disable logic. No frontend UX work is allowed to add new schema behavior or bypass governance controls.
 
 - Frontend does not write directly to PostgreSQL, object storage, or n8n.
 - Login continues to call the backend auth API through `loginToAim`.
@@ -78,6 +78,11 @@ Implement AI Photo Extraction as a real backend-backed module only after adding 
 - linkage to findings, reports, and integrity decisions;
 - audit events for every review/correction/link action.
 
-## Database migration correction
+## Database migration audit note
 
-If a local copy of this frontend package touched `db/migrations/0028_enterprise_multitenant_sprint1_tenant_context.sql` or `db/migrations/0029_enterprise_multitenant_sprint2_route_filtering_object_boundary.sql`, revert those files to the already-tagged MT Sprint 1/Sprint 2 baseline. Frontend UX alignment must not rewrite historical migrations.
+This frontend UX cleanup intentionally documents the final database-file state after review:
+
+- `db/migrations/0028_enterprise_multitenant_sprint1_tenant_context.sql` is restored to the already-tagged MT Sprint 1 baseline and must not include broad `disable trigger user` statements.
+- `db/migrations/0029_enterprise_multitenant_sprint2_route_filtering_object_boundary.sql` contains a narrow PostgreSQL-scope compatibility correction for the `evidence_upload_sessions` tenant backfill. The correction keeps the Sprint 2 schema shape, removes the invalid target-alias reference that caused fresh CI migration failure, and does not disable triggers.
+
+Any future database behavior change must be implemented as a separate reviewed database package or a forward-only migration. Frontend UX alignment must not silently rewrite historical migrations or bypass backend governance controls.
