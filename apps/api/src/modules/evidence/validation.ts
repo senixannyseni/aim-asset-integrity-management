@@ -3,6 +3,7 @@ export type EvidenceLinkEntityType =
   | 'inspection_event'
   | 'ndt_measurement'
   | 'calculation_run'
+  | 'calculation_input'
   | 'finding'
   | 'extraction_job'
   | 'extraction_field'
@@ -37,6 +38,7 @@ export const LINK_ENTITY_TYPES: EvidenceLinkEntityType[] = [
   'inspection_event',
   'ndt_measurement',
   'calculation_run',
+  'calculation_input',
   'finding',
   'extraction_job',
   'extraction_field',

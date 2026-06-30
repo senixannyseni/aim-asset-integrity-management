@@ -2712,9 +2712,10 @@ paths:
           type: string
           format: uuid
       tags: *id001
-      x-source-of-truth-boundary: AIM is the system of record. Promotion updates only
-        governed staging promotion status and review gates; raw AI output is never
-        written directly to final engineering tables.
+      x-source-of-truth-boundary: AIM is the system of record. Promotion writes reviewed
+        staging data to final engineering tables only through explicit allowlisted mappings,
+        then updates governed staging promotion status and review gates. Raw AI output is
+        never written directly or dynamically to final engineering tables.
       x-ai-output-staging-only: true
       x-human-review-required: true
       x-evidence-link-required: true
@@ -5263,7 +5264,7 @@ components:
           - returned_for_evidence
         final_table_mutation:
           type: boolean
-          default: false
+          description: True only after reviewed staging data is written through an allowlisted final-table promotion mapping.
     StagingPromotionRequest:
       type: object
       required:

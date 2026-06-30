@@ -12,7 +12,7 @@ function readRepoFile(relativePath: string): string {
 }
 
 describe('Phase 1.3 governance batch', () => {
-  it('mounts AI extraction/staging routes and keeps staging-only promotion semantics', () => {
+  it('mounts AI extraction/staging routes and keeps reviewed, allowlisted final promotion semantics', () => {
     const app = readRepoFile('apps/api/src/app.ts');
     const route = readRepoFile('apps/api/src/routes/ai-extraction.ts');
     expect(app).toContain("aiExtractionRouter");
@@ -20,7 +20,8 @@ describe('Phase 1.3 governance batch', () => {
     expect(route).toContain("aiExtractionRouter.post('/extraction-jobs'");
     expect(route).toContain("aiExtractionRouter.post('/extraction-fields/:fieldId/review'");
     expect(route).toContain("aiExtractionRouter.post('/staging-records/:stagingRecordId/promote'");
-    expect(route).toContain('final_table_mutation: false');
+    expect(route).toContain('FINAL_PROMOTION_ALLOWLIST');
+    expect(route).toContain('final_table_mutation: true');
     expect(route).toContain('EVIDENCE_LINK_REQUIRED');
     expect(route).toContain('AI_ATTEMPTED_APPROVAL_OR_DECISION');
   });

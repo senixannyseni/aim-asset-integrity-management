@@ -91,15 +91,28 @@ function controlledError(res: ApiResponse, status: number, code: string, message
 }
 
 const SERVICE_ONLY_ACTOR_ROLES = new Set(['ai_agent', 'n8n_service', 'integration_service', 'workflow_service', 'system_service']);
+const HUMAN_ENGINEERING_REVIEW_ROLES = new Set(['engineer', 'lead_engineer', 'senior_engineer']);
 
 function isServiceOnlyActor(req: Request): boolean {
   return actorRoles(req).some((role) => SERVICE_ONLY_ACTOR_ROLES.has(role));
+}
+
+function hasHumanEngineeringReviewRole(req: Request): boolean {
+  return actorRoles(req).some((role) => HUMAN_ENGINEERING_REVIEW_ROLES.has(role));
 }
 
 function ensureHumanReviewerActor(req: Request, res: ApiResponse, action: string): boolean {
   if (!actorUserId(req) || isServiceOnlyActor(req)) {
     controlledError(res, 403, 'AI_SERVICE_ACTOR_BLOCKED', `Human engineer actor is required to ${action}.`, {
       actor_roles: actorRoles(req),
+      human_review_required: true
+    });
+    return false;
+  }
+  if (!hasHumanEngineeringReviewRole(req)) {
+    controlledError(res, 403, 'HUMAN_ENGINEER_ROLE_REQUIRED', `Engineer or Lead Engineer role is required to ${action}.`, {
+      actor_roles: actorRoles(req),
+      required_roles: Array.from(HUMAN_ENGINEERING_REVIEW_ROLES),
       human_review_required: true
     });
     return false;
@@ -609,6 +622,12 @@ async function buildPromotionGateResults(
     pass('extraction_field_exists', 'Extraction field exists.', { extraction_field_id: params.field.id });
   }
 
+  if (params.staging.promotion_status === 'promoted' || reviewStatus === 'promoted') {
+    block('promotion_status', 'STAGING_RECORD_ALREADY_PROMOTED', 'Already-promoted staging records cannot be promoted again; the immutable source snapshot must remain stable.');
+  } else {
+    pass('promotion_status', 'Staging record has not already been promoted.', { promotion_status: params.staging.promotion_status ?? 'not_promoted' });
+  }
+
   if (reviewStatus === 'rejected' || fieldStatus === 'rejected_by_engineer') {
     block('engineer_review_status', 'REJECTED_FIELD_CANNOT_BE_PROMOTED', 'Rejected AI extraction fields cannot be promoted.');
   } else if (!['approved_for_promotion', 'corrected'].includes(reviewStatus)) {
@@ -617,10 +636,10 @@ async function buildPromotionGateResults(
     pass('engineer_review_status', 'Human engineer review status allows promotion.', { review_status: reviewStatus });
   }
 
-  if (['invalid', 'rejected_by_validation'].includes(fieldStatus)) {
-    block('field_validation_status', 'FIELD_VALIDATION_STATUS_BLOCKED', 'Invalid or validation-rejected fields cannot be promoted.', { field_status: fieldStatus });
+  if (!['approved_by_engineer', 'corrected_by_engineer'].includes(fieldStatus)) {
+    block('field_validation_status', 'FIELD_ENGINEER_REVIEW_STATUS_REQUIRED', 'Extraction field status must be approved_by_engineer or corrected_by_engineer before final-table promotion.', { field_status: fieldStatus });
   } else {
-    pass('field_validation_status', 'Field validation status allows promotion.', { field_status: fieldStatus });
+    pass('field_validation_status', 'Field human review status allows promotion.', { field_status: fieldStatus });
   }
 
   if (await hasBlockingDataQualityChecks(client, String(params.staging.id), tenant.tenantId)) {
@@ -772,6 +791,559 @@ async function persistPromotionGates(
         })
       ]
     );
+  }
+}
+
+
+class PromotionFailure extends Error {
+  constructor(
+    readonly statusCode: number,
+    readonly code: string,
+    message: string,
+    readonly details: Record<string, unknown> = {}
+  ) {
+    super(message);
+  }
+}
+
+type VerifiedEvidenceReference = { evidence_file_id: string; evidence_code: string | null };
+type PromotionReadyItem = {
+  staging: DbRow;
+  field: DbRow | null;
+  job: DbRow | null;
+  gates: PromotionGateResult[];
+  verifiedEvidence: VerifiedEvidenceReference | null;
+};
+type FinalPromotionResult = {
+  final_table: string;
+  final_record_id: string;
+  final_column: string;
+  operation: 'insert' | 'update';
+  evidence_file_id: string | null;
+  immutable_source_snapshot: Record<string, unknown>;
+};
+
+const FINAL_PROMOTION_ALLOWLIST: Record<string, readonly string[]> = {
+  ndt_measurements: [
+    'component',
+    'shell_course_no',
+    'cml_tml_id',
+    'grid_ref',
+    'elevation_m',
+    'orientation',
+    'measured_thickness_mm',
+    'reading_date',
+    'method',
+    'confidence',
+    'validation_status'
+  ],
+  findings: [
+    'title',
+    'description',
+    'finding_type',
+    'component',
+    'shell_course_no',
+    'cml_tml_id',
+    'grid_ref',
+    'elevation',
+    'orientation',
+    'severity',
+    'status'
+  ],
+  calculation_inputs: [
+    'input_name',
+    'raw_value',
+    'normalized_value',
+    'raw_unit',
+    'normalized_unit',
+    'source_entity_type',
+    'source_entity_id',
+    'validation_status'
+  ],
+  assets: [
+    'asset_name',
+    'facility',
+    'area',
+    'service_fluid',
+    'design_code',
+    'design_code_edition'
+  ],
+  shell_courses: [
+    'nominal_thickness_mm',
+    'minimum_required_thickness_mm',
+    'height_mm',
+    'joint_efficiency',
+    'corrosion_allowance_mm'
+  ]
+} as const;
+
+function normalizedTargetTable(value: unknown): string | undefined {
+  return asString(value)?.toLowerCase();
+}
+
+function normalizedTargetColumn(value: unknown): string | undefined {
+  return asString(value)?.toLowerCase();
+}
+
+function isAllowedPromotionColumn(table: string | undefined, column: string | undefined): table is keyof typeof FINAL_PROMOTION_ALLOWLIST {
+  if (!table || !column) return false;
+  const allowedColumns = (FINAL_PROMOTION_ALLOWLIST as Record<string, readonly string[]>)[table];
+  return Boolean(allowedColumns?.includes(column));
+}
+
+function recordMetadata(row: DbRow | null | undefined): Record<string, unknown> {
+  return isPlainObject(row?.metadata_json) ? row.metadata_json : {};
+}
+
+function effectivePromotionValue(item: PromotionReadyItem): string | null {
+  return asString(item.staging.normalized_value)
+    ?? asString(item.field?.normalized_value)
+    ?? asString(item.staging.proposed_value)
+    ?? asString(item.field?.extracted_value)
+    ?? null;
+}
+
+function requirePromotionValue(item: PromotionReadyItem, column: string): string {
+  const value = effectivePromotionValue(item);
+  if (value === null) {
+    throw new PromotionFailure(422, 'promotion_value_missing', `Reviewed staging value is required for final column ${column}.`, {
+      target_table: item.staging.target_table,
+      target_column: column,
+      staging_record_id: item.staging.id
+    });
+  }
+  return value;
+}
+
+function numberPromotionValue(item: PromotionReadyItem, column: string): number {
+  const value = asNumber(effectivePromotionValue(item));
+  if (value === undefined) {
+    throw new PromotionFailure(422, 'promotion_value_invalid', `Numeric reviewed staging value is required for final column ${column}.`, {
+      target_table: item.staging.target_table,
+      target_column: column,
+      staging_record_id: item.staging.id
+    });
+  }
+  return value;
+}
+
+function integerPromotionValue(item: PromotionReadyItem, column: string): number {
+  const value = numberPromotionValue(item, column);
+  if (!Number.isInteger(value)) {
+    throw new PromotionFailure(422, 'promotion_value_invalid', `Integer reviewed staging value is required for final column ${column}.`, {
+      target_table: item.staging.target_table,
+      target_column: column,
+      staging_record_id: item.staging.id
+    });
+  }
+  return value;
+}
+
+function datePromotionValue(item: PromotionReadyItem, column: string): string {
+  const value = requirePromotionValue(item, column);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new PromotionFailure(422, 'promotion_value_invalid', `YYYY-MM-DD reviewed staging value is required for final column ${column}.`, {
+      target_table: item.staging.target_table,
+      target_column: column,
+      staging_record_id: item.staging.id
+    });
+  }
+  return value;
+}
+
+function sourceSnapshot(item: PromotionReadyItem, req: Request, comment: string): Record<string, unknown> {
+  const metadata = recordMetadata(item.staging);
+  return {
+    source: 'ai_staging_promotion',
+    extraction_job_id: item.staging.extraction_job_id,
+    extraction_field_id: item.staging.extraction_field_id,
+    staging_record_id: item.staging.id,
+    field_name: item.field?.field_name ?? item.staging.target_column ?? null,
+    field_path: item.field?.field_path ?? null,
+    ai_original_value: item.field?.extracted_value ?? item.staging.proposed_value ?? null,
+    reviewed_value: effectivePromotionValue(item),
+    unit: item.staging.unit ?? item.field?.unit ?? null,
+    field_status: item.field?.field_status ?? null,
+    review_status: item.staging.review_status ?? null,
+    validation_flags: item.field?.validation_flags ?? [],
+    reviewer_id: item.staging.reviewer_id ?? item.field?.reviewer_id ?? null,
+    reviewed_at: item.staging.reviewed_at ?? item.field?.reviewed_at ?? null,
+    promoted_by: actorUserId(req),
+    promoted_at: new Date().toISOString(),
+    evidence_file_id: item.verifiedEvidence?.evidence_file_id ?? null,
+    evidence_code: item.verifiedEvidence?.evidence_code ?? null,
+    source_reference: item.field?.source_reference_json ?? null,
+    promotion_comment: comment,
+    target_table: item.staging.target_table ?? null,
+    target_column: item.staging.target_column ?? null,
+    target_entity_type: item.staging.target_entity_type ?? null,
+    target_entity_id: item.staging.target_entity_id ?? null,
+    metadata
+  };
+}
+
+function unsupportedPromotionTarget(item: PromotionReadyItem, table?: string, column?: string): PromotionFailure {
+  return new PromotionFailure(422, 'unsupported_promotion_target', 'AI staging promotion target is not allowlisted for final table mutation.', {
+    target_table: table ?? item.staging.target_table ?? null,
+    target_column: column ?? item.staging.target_column ?? null,
+    supported_targets: Object.fromEntries(Object.entries(FINAL_PROMOTION_ALLOWLIST).map(([key, value]) => [key, [...value]])),
+    staging_record_id: item.staging.id
+  });
+}
+
+async function assertTargetAssetTenant(client: PoolClient, assetId: string, tenantId: string): Promise<void> {
+  const result = await client.query('select 1 from assets where id = $1::uuid and tenant_id = $2::uuid and deleted_at is null limit 1', [assetId, tenantId]);
+  if ((result.rowCount ?? 0) === 0) {
+    throw new PromotionFailure(404, 'promotion_target_not_found', 'Target asset was not found in the current tenant.', { asset_id: assetId });
+  }
+}
+
+async function updateCalculationInputColumn(
+  client: PoolClient,
+  params: { id: string; column: string; item: PromotionReadyItem; tenantId: string; evidence: VerifiedEvidenceReference | null }
+): Promise<string> {
+  const value = params.column === 'normalized_value'
+    ? numberPromotionValue(params.item, params.column)
+    : params.column === 'source_entity_id'
+      ? asUuid(requirePromotionValue(params.item, params.column))
+      : requirePromotionValue(params.item, params.column);
+  if (params.column === 'source_entity_id' && !value) {
+    throw new PromotionFailure(422, 'promotion_value_invalid', 'source_entity_id must be a UUID.', { staging_record_id: params.item.staging.id });
+  }
+
+  let result: { rows: DbRow[]; rowCount: number | null };
+  switch (params.column) {
+    case 'input_name':
+      result = await client.query<DbRow>(`update calculation_inputs ci set input_name = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), validation_status = 'valid' from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    case 'raw_value':
+      result = await client.query<DbRow>(`update calculation_inputs ci set raw_value = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), validation_status = 'valid' from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    case 'normalized_value':
+      result = await client.query<DbRow>(`update calculation_inputs ci set normalized_value = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), validation_status = 'valid' from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    case 'raw_unit':
+      result = await client.query<DbRow>(`update calculation_inputs ci set raw_unit = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), validation_status = 'valid' from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    case 'normalized_unit':
+      result = await client.query<DbRow>(`update calculation_inputs ci set normalized_unit = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), validation_status = 'valid' from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    case 'source_entity_type':
+      result = await client.query<DbRow>(`update calculation_inputs ci set source_entity_type = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), validation_status = 'valid' from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    case 'source_entity_id':
+      result = await client.query<DbRow>(`update calculation_inputs ci set source_entity_id = $2::uuid, evidence_file_id = coalesce($3::uuid, evidence_file_id), validation_status = 'valid' from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    case 'validation_status':
+      result = await client.query<DbRow>(`update calculation_inputs ci set validation_status = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id) from calculation_runs cr where ci.calculation_run_id = cr.id and ci.id = $1::uuid and cr.tenant_id = $4::uuid returning ci.*`, [params.id, value, params.evidence?.evidence_file_id ?? null, params.tenantId]);
+      break;
+    default:
+      throw unsupportedPromotionTarget(params.item, 'calculation_inputs', params.column);
+  }
+  const updatedId = asString(result.rows[0]?.id);
+  if (!updatedId) {
+    throw new PromotionFailure(404, 'promotion_target_not_found', 'Calculation input was not found in the current tenant.', { calculation_input_id: params.id });
+  }
+  return updatedId;
+}
+
+async function promoteCalculationInput(client: PoolClient, req: Request, item: PromotionReadyItem, column: string, tenantId: string, evidence: VerifiedEvidenceReference | null, snapshot: Record<string, unknown>): Promise<FinalPromotionResult> {
+  const existingInputId = asUuid(item.staging.target_entity_id);
+  if (existingInputId && item.staging.target_entity_type !== 'calculation_run') {
+    const updatedId = await updateCalculationInputColumn(client, { id: existingInputId, column, item, tenantId, evidence });
+    return { final_table: 'calculation_inputs', final_record_id: updatedId, final_column: column, operation: 'update', evidence_file_id: evidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+  }
+
+  const metadata = recordMetadata(item.staging);
+  const calculationRunId = asUuid(metadata.calculation_run_id) ?? (item.staging.target_entity_type === 'calculation_run' ? asUuid(item.staging.target_entity_id) : null);
+  if (!calculationRunId) {
+    throw new PromotionFailure(422, 'unsupported_promotion_target', 'Creating a calculation input from AI staging requires target_entity_type=calculation_run or metadata.calculation_run_id.', { staging_record_id: item.staging.id });
+  }
+  const runResult = await client.query('select 1 from calculation_runs where id = $1::uuid and tenant_id = $2::uuid limit 1', [calculationRunId, tenantId]);
+  if ((runResult.rowCount ?? 0) === 0) {
+    throw new PromotionFailure(404, 'promotion_target_not_found', 'Calculation run was not found in the current tenant.', { calculation_run_id: calculationRunId });
+  }
+  const inputName = asString(metadata.input_name) ?? asString(item.field?.field_name) ?? asString(item.field?.field_path) ?? column;
+  const rawValue = column === 'raw_value' ? requirePromotionValue(item, column) : asString(metadata.raw_value) ?? effectivePromotionValue(item);
+  const normalizedValue = column === 'normalized_value' ? numberPromotionValue(item, column) : asNumber(metadata.normalized_value);
+  const rawUnit = column === 'raw_unit' ? requirePromotionValue(item, column) : asString(metadata.raw_unit) ?? asString(item.staging.unit ?? item.field?.unit);
+  const normalizedUnit = column === 'normalized_unit' ? requirePromotionValue(item, column) : asString(metadata.normalized_unit) ?? rawUnit ?? null;
+  const created = await client.query<DbRow>(
+    `insert into calculation_inputs(
+      calculation_run_id, input_name, raw_value, normalized_value, raw_unit, normalized_unit,
+      source_entity_type, source_entity_id, evidence_file_id, validation_status
+    ) values ($1,$2,$3,$4,$5,$6,'ai_staging',$7,$8,'valid') returning *`,
+    [calculationRunId, inputName, rawValue, normalizedValue ?? null, rawUnit ?? null, normalizedUnit, item.staging.id, evidence?.evidence_file_id ?? null]
+  );
+  return { final_table: 'calculation_inputs', final_record_id: String(created.rows[0]?.id), final_column: column, operation: 'insert', evidence_file_id: evidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+}
+
+async function updateNdtColumn(client: PoolClient, params: { id: string; column: string; item: PromotionReadyItem; tenantId: string; actorId: string | null; evidence: VerifiedEvidenceReference | null }): Promise<string> {
+  let result: { rows: DbRow[]; rowCount: number | null };
+  switch (params.column) {
+    case 'component':
+      result = await client.query<DbRow>(`update ndt_measurements set component = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, requirePromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'shell_course_no':
+      result = await client.query<DbRow>(`update ndt_measurements set shell_course_no = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, integerPromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'cml_tml_id':
+      result = await client.query<DbRow>(`update ndt_measurements set cml_tml_id = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, requirePromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'grid_ref':
+      result = await client.query<DbRow>(`update ndt_measurements set grid_ref = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, requirePromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'elevation_m':
+      result = await client.query<DbRow>(`update ndt_measurements set elevation_m = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, numberPromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'orientation':
+      result = await client.query<DbRow>(`update ndt_measurements set orientation = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, requirePromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'measured_thickness_mm':
+      result = await client.query<DbRow>(`update ndt_measurements set measured_thickness_mm = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, numberPromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'reading_date':
+      result = await client.query<DbRow>(`update ndt_measurements set reading_date = $2::date, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, datePromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'method':
+      result = await client.query<DbRow>(`update ndt_measurements set method = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, requirePromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'confidence':
+      result = await client.query<DbRow>(`update ndt_measurements set confidence = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', validation_status = 'valid', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, numberPromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    case 'validation_status':
+      result = await client.query<DbRow>(`update ndt_measurements set validation_status = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), extraction_source = 'ai_staging', reviewer_status = 'reviewed', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [params.id, requirePromotionValue(params.item, params.column), params.evidence?.evidence_file_id ?? null, params.actorId, params.tenantId]);
+      break;
+    default:
+      throw unsupportedPromotionTarget(params.item, 'ndt_measurements', params.column);
+  }
+  const updatedId = asString(result.rows[0]?.id);
+  if (!updatedId) {
+    throw new PromotionFailure(404, 'promotion_target_not_found', 'NDT measurement was not found in the current tenant.', { ndt_measurement_id: params.id });
+  }
+  return updatedId;
+}
+
+async function promoteNdtMeasurement(client: PoolClient, req: Request, item: PromotionReadyItem, column: string, tenantId: string, evidence: VerifiedEvidenceReference | null, snapshot: Record<string, unknown>): Promise<FinalPromotionResult> {
+  const existingId = asUuid(item.staging.target_entity_id);
+  if (existingId) {
+    const updatedId = await updateNdtColumn(client, { id: existingId, column, item, tenantId, actorId: actorUserId(req), evidence });
+    return { final_table: 'ndt_measurements', final_record_id: updatedId, final_column: column, operation: 'update', evidence_file_id: evidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+  }
+  const metadata = recordMetadata(item.staging);
+  const assetId = asUuid(metadata.asset_id) ?? asString(item.job?.asset_id);
+  if (!assetId) {
+    throw new PromotionFailure(422, 'unsupported_promotion_target', 'Creating an NDT measurement from AI staging requires job asset context or metadata.asset_id.', { staging_record_id: item.staging.id });
+  }
+  await assertTargetAssetTenant(client, assetId, tenantId);
+  const component = asString(metadata.component) ?? (column === 'component' ? requirePromotionValue(item, column) : undefined);
+  const method = asString(metadata.method) ?? (column === 'method' ? requirePromotionValue(item, column) : undefined);
+  const readingDate = asString(metadata.reading_date ?? metadata.inspection_date) ?? (column === 'reading_date' ? datePromotionValue(item, column) : undefined);
+  const measuredThickness = column === 'measured_thickness_mm' ? numberPromotionValue(item, column) : asNumber(metadata.measured_thickness_mm);
+  if (!component || !method || !readingDate || measuredThickness === undefined) {
+    throw new PromotionFailure(422, 'unsupported_promotion_target', 'Creating an NDT measurement from AI staging requires component, method, reading_date, and measured_thickness_mm.', { staging_record_id: item.staging.id });
+  }
+  const measurementCode = asString(metadata.measurement_code) ?? `NDT-AI-${String(item.staging.id).slice(0, 8)}`;
+  const created = await client.query<DbRow>(
+    `insert into ndt_measurements(
+      tenant_id, measurement_code, asset_id, inspection_event_id, component, shell_course_no, cml_tml_id,
+      grid_ref, elevation_m, orientation, measured_thickness_mm, reading_date, method, confidence,
+      evidence_file_id, extraction_source, reviewer_status, validation_status, created_by, reviewed_by, reviewed_at
+    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::date,$13,$14,$15,'ai_staging','reviewed','valid',$16,$16,now()) returning *`,
+    [
+      tenantId,
+      measurementCode,
+      assetId,
+      asUuid(metadata.inspection_event_id) ?? asString(item.job?.inspection_event_id) ?? null,
+      component,
+      asNumber(metadata.shell_course_no) ?? null,
+      asString(metadata.cml_tml_id) ?? null,
+      asString(metadata.grid_ref) ?? null,
+      asNumber(metadata.elevation_m) ?? null,
+      asString(metadata.orientation) ?? null,
+      measuredThickness,
+      readingDate,
+      method,
+      asNumber(metadata.confidence) ?? asNumber(item.field?.confidence_score) ?? 1,
+      evidence?.evidence_file_id ?? null,
+      actorUserId(req)
+    ]
+  );
+  return { final_table: 'ndt_measurements', final_record_id: String(created.rows[0]?.id), final_column: column, operation: 'insert', evidence_file_id: evidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+}
+
+async function promoteFinding(client: PoolClient, req: Request, item: PromotionReadyItem, column: string, tenantId: string, evidence: VerifiedEvidenceReference | null, snapshot: Record<string, unknown>): Promise<FinalPromotionResult> {
+  const existingId = asUuid(item.staging.target_entity_id);
+  const value = requirePromotionValue(item, column);
+  let result: { rows: DbRow[]; rowCount: number | null };
+  if (existingId) {
+    switch (column) {
+      case 'title':
+        result = await client.query<DbRow>(`update findings set title = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'description':
+        result = await client.query<DbRow>(`update findings set description = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'finding_type':
+        result = await client.query<DbRow>(`update findings set finding_type = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'component':
+        result = await client.query<DbRow>(`update findings set component = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'shell_course_no':
+        result = await client.query<DbRow>(`update findings set shell_course_no = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, integerPromotionValue(item, column), evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'cml_tml_id':
+        result = await client.query<DbRow>(`update findings set cml_tml_id = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'grid_ref':
+        result = await client.query<DbRow>(`update findings set grid_ref = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'elevation':
+        result = await client.query<DbRow>(`update findings set elevation = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'orientation':
+        result = await client.query<DbRow>(`update findings set orientation = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'severity':
+        result = await client.query<DbRow>(`update findings set severity = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      case 'status':
+        result = await client.query<DbRow>(`update findings set status = $2, evidence_file_id = coalesce($3::uuid, evidence_file_id), source_type = 'evidence_review', reviewed_by = $4, reviewed_at = now(), updated_at = now() where id = $1::uuid and tenant_id = $5::uuid returning *`, [existingId, value, evidence?.evidence_file_id ?? null, actorUserId(req), tenantId]);
+        break;
+      default:
+        throw unsupportedPromotionTarget(item, 'findings', column);
+    }
+    const updatedId = asString(result.rows[0]?.id);
+    if (!updatedId) throw new PromotionFailure(404, 'promotion_target_not_found', 'Finding was not found in the current tenant.', { finding_id: existingId });
+    return { final_table: 'findings', final_record_id: updatedId, final_column: column, operation: 'update', evidence_file_id: evidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+  }
+
+  const metadata = recordMetadata(item.staging);
+  const assetId = asUuid(metadata.asset_id) ?? asString(item.job?.asset_id);
+  if (!assetId) throw new PromotionFailure(422, 'unsupported_promotion_target', 'Creating a finding from AI staging requires job asset context or metadata.asset_id.', { staging_record_id: item.staging.id });
+  await assertTargetAssetTenant(client, assetId, tenantId);
+  const title = asString(metadata.title) ?? (column === 'title' ? value : undefined);
+  const findingType = asString(metadata.finding_type) ?? (column === 'finding_type' ? value : undefined);
+  const severity = asString(metadata.severity) ?? (column === 'severity' ? value : undefined);
+  if (!title || !findingType || !severity) {
+    throw new PromotionFailure(422, 'unsupported_promotion_target', 'Creating a finding from AI staging requires title, finding_type, and severity.', { staging_record_id: item.staging.id });
+  }
+  const findingCode = asString(metadata.finding_code) ?? `FND-AI-${String(item.staging.id).slice(0, 8)}`;
+  const created = await client.query<DbRow>(
+    `insert into findings(
+      tenant_id, finding_code, asset_id, inspection_event_id, title, description, finding_type,
+      component, shell_course_no, cml_tml_id, grid_ref, elevation, orientation, severity,
+      status, source_type, source_entity_id, evidence_file_id, identified_by, reviewed_by, reviewed_at, created_by
+    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,coalesce($15,'under_review'),'evidence_review',$16,$17,$18,$18,now(),$18) returning *`,
+    [
+      tenantId,
+      findingCode,
+      assetId,
+      asUuid(metadata.inspection_event_id) ?? asString(item.job?.inspection_event_id) ?? null,
+      title,
+      asString(metadata.description) ?? (column === 'description' ? value : null),
+      findingType,
+      asString(metadata.component) ?? (column === 'component' ? value : null),
+      asNumber(metadata.shell_course_no) ?? (column === 'shell_course_no' ? integerPromotionValue(item, column) : null),
+      asString(metadata.cml_tml_id) ?? null,
+      asString(metadata.grid_ref) ?? null,
+      asString(metadata.elevation) ?? null,
+      asString(metadata.orientation) ?? null,
+      severity,
+      asString(metadata.status),
+      item.staging.id,
+      evidence?.evidence_file_id ?? null,
+      actorUserId(req)
+    ]
+  );
+  return { final_table: 'findings', final_record_id: String(created.rows[0]?.id), final_column: column, operation: 'insert', evidence_file_id: evidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+}
+
+async function promoteAssetMetadata(client: PoolClient, req: Request, item: PromotionReadyItem, column: string, tenantId: string, snapshot: Record<string, unknown>): Promise<FinalPromotionResult> {
+  const assetId = asUuid(item.staging.target_entity_id) ?? asString(item.job?.asset_id);
+  if (!assetId) throw new PromotionFailure(422, 'unsupported_promotion_target', 'Asset metadata promotion requires a target asset id.', { staging_record_id: item.staging.id });
+  await assertTargetAssetTenant(client, assetId, tenantId);
+  const value = requirePromotionValue(item, column);
+  let result: { rows: DbRow[]; rowCount: number | null };
+  switch (column) {
+    case 'asset_name':
+      result = await client.query<DbRow>(`update assets set asset_name = $2, updated_at = now() where id = $1::uuid and tenant_id = $3::uuid returning *`, [assetId, value, tenantId]);
+      break;
+    case 'facility':
+      result = await client.query<DbRow>(`update assets set facility = $2, updated_at = now() where id = $1::uuid and tenant_id = $3::uuid returning *`, [assetId, value, tenantId]);
+      break;
+    case 'area':
+      result = await client.query<DbRow>(`update assets set area = $2, updated_at = now() where id = $1::uuid and tenant_id = $3::uuid returning *`, [assetId, value, tenantId]);
+      break;
+    case 'service_fluid':
+      result = await client.query<DbRow>(`update assets set service_fluid = $2, updated_at = now() where id = $1::uuid and tenant_id = $3::uuid returning *`, [assetId, value, tenantId]);
+      break;
+    case 'design_code':
+      result = await client.query<DbRow>(`update assets set design_code = $2, updated_at = now() where id = $1::uuid and tenant_id = $3::uuid returning *`, [assetId, value, tenantId]);
+      break;
+    case 'design_code_edition':
+      result = await client.query<DbRow>(`update assets set design_code_edition = $2, updated_at = now() where id = $1::uuid and tenant_id = $3::uuid returning *`, [assetId, value, tenantId]);
+      break;
+    default:
+      throw unsupportedPromotionTarget(item, 'assets', column);
+  }
+  const updatedId = asString(result.rows[0]?.id);
+  if (!updatedId) throw new PromotionFailure(404, 'promotion_target_not_found', 'Asset was not found in the current tenant.', { asset_id: assetId });
+  return { final_table: 'assets', final_record_id: updatedId, final_column: column, operation: 'update', evidence_file_id: item.verifiedEvidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+}
+
+async function promoteShellCourse(client: PoolClient, item: PromotionReadyItem, column: string, tenantId: string, snapshot: Record<string, unknown>): Promise<FinalPromotionResult> {
+  const shellCourseId = asUuid(item.staging.target_entity_id);
+  if (!shellCourseId) throw new PromotionFailure(422, 'unsupported_promotion_target', 'Shell course promotion requires target_entity_id.', { staging_record_id: item.staging.id });
+  const value = numberPromotionValue(item, column);
+  let result: { rows: DbRow[]; rowCount: number | null };
+  switch (column) {
+    case 'nominal_thickness_mm':
+      result = await client.query<DbRow>(`update shell_courses sc set nominal_thickness_mm = $2, source_evidence_id = coalesce($3::uuid, source_evidence_id), status = 'in_review', updated_at = now() from assets a where sc.asset_id = a.id and sc.id = $1::uuid and a.tenant_id = $4::uuid returning sc.*`, [shellCourseId, value, item.verifiedEvidence?.evidence_file_id ?? null, tenantId]);
+      break;
+    case 'minimum_required_thickness_mm':
+      result = await client.query<DbRow>(`update shell_courses sc set minimum_required_thickness_mm = $2, source_evidence_id = coalesce($3::uuid, source_evidence_id), status = 'in_review', updated_at = now() from assets a where sc.asset_id = a.id and sc.id = $1::uuid and a.tenant_id = $4::uuid returning sc.*`, [shellCourseId, value, item.verifiedEvidence?.evidence_file_id ?? null, tenantId]);
+      break;
+    case 'height_mm':
+      result = await client.query<DbRow>(`update shell_courses sc set height_mm = $2, source_evidence_id = coalesce($3::uuid, source_evidence_id), status = 'in_review', updated_at = now() from assets a where sc.asset_id = a.id and sc.id = $1::uuid and a.tenant_id = $4::uuid returning sc.*`, [shellCourseId, value, item.verifiedEvidence?.evidence_file_id ?? null, tenantId]);
+      break;
+    case 'joint_efficiency':
+      result = await client.query<DbRow>(`update shell_courses sc set joint_efficiency = $2, source_evidence_id = coalesce($3::uuid, source_evidence_id), status = 'in_review', updated_at = now() from assets a where sc.asset_id = a.id and sc.id = $1::uuid and a.tenant_id = $4::uuid returning sc.*`, [shellCourseId, value, item.verifiedEvidence?.evidence_file_id ?? null, tenantId]);
+      break;
+    case 'corrosion_allowance_mm':
+      result = await client.query<DbRow>(`update shell_courses sc set corrosion_allowance_mm = $2, source_evidence_id = coalesce($3::uuid, source_evidence_id), status = 'in_review', updated_at = now() from assets a where sc.asset_id = a.id and sc.id = $1::uuid and a.tenant_id = $4::uuid returning sc.*`, [shellCourseId, value, item.verifiedEvidence?.evidence_file_id ?? null, tenantId]);
+      break;
+    default:
+      throw unsupportedPromotionTarget(item, 'shell_courses', column);
+  }
+  const updatedId = asString(result.rows[0]?.id);
+  if (!updatedId) throw new PromotionFailure(404, 'promotion_target_not_found', 'Shell course was not found in the current tenant.', { shell_course_id: shellCourseId });
+  return { final_table: 'shell_courses', final_record_id: updatedId, final_column: column, operation: 'update', evidence_file_id: item.verifiedEvidence?.evidence_file_id ?? null, immutable_source_snapshot: snapshot };
+}
+
+async function promoteReviewedStagingToFinalTable(client: PoolClient, req: Request, item: PromotionReadyItem, comment: string): Promise<FinalPromotionResult> {
+  const tenant = requireTenantContextFromRequest(req);
+  const table = normalizedTargetTable(item.staging.target_table);
+  const column = normalizedTargetColumn(item.staging.target_column);
+  if (!isAllowedPromotionColumn(table, column)) {
+    throw unsupportedPromotionTarget(item, table, column);
+  }
+  const snapshot = sourceSnapshot(item, req, comment);
+  const allowedColumn = column as string;
+  switch (table) {
+    case 'calculation_inputs':
+      return promoteCalculationInput(client, req, item, allowedColumn, tenant.tenantId, item.verifiedEvidence, snapshot);
+    case 'ndt_measurements':
+      return promoteNdtMeasurement(client, req, item, allowedColumn, tenant.tenantId, item.verifiedEvidence, snapshot);
+    case 'findings':
+      return promoteFinding(client, req, item, allowedColumn, tenant.tenantId, item.verifiedEvidence, snapshot);
+    case 'assets':
+      return promoteAssetMetadata(client, req, item, allowedColumn, tenant.tenantId, snapshot);
+    case 'shell_courses':
+      return promoteShellCourse(client, item, allowedColumn, tenant.tenantId, snapshot);
+    default:
+      throw unsupportedPromotionTarget(item, table, column);
   }
 }
 
@@ -1396,8 +1968,11 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
       return;
     }
 
-    const promoted = [];
+    const promoted: Record<string, unknown>[] = [];
+    const finalPromotionResults: FinalPromotionResult[] = [];
     for (const item of readiness) {
+      const finalPromotion = await promoteReviewedStagingToFinalTable(client, req, { ...item, job }, comment);
+      finalPromotionResults.push(finalPromotion);
       const result = await client.query<DbRow>(
         `update staging_records
          set review_status = 'promoted',
@@ -1420,15 +1995,17 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
           JSON.stringify({
             rc3c_promoted: true,
             promoted_from_ai_staging: true,
-            final_table_mutation: false,
+            final_table_mutation: true,
             promotion_comment: comment,
-            verified_evidence_file_id: item.verifiedEvidence?.evidence_file_id ?? null
+            verified_evidence_file_id: item.verifiedEvidence?.evidence_file_id ?? null,
+            final_promotion_result: finalPromotion,
+            immutable_source_snapshot: finalPromotion.immutable_source_snapshot
           }),
           tenant.tenantId
         ]
       );
       const updated = result.rows[0] ?? {};
-      promoted.push(mapStagingRecord(updated));
+      promoted.push({ ...mapStagingRecord(updated), final_promotion_result: finalPromotion });
       await writeAudit(client, req, 'AI_STAGING_PROMOTED', 'staging_record', String(item.staging.id), mapStagingRecord(item.staging), mapStagingRecord(updated), {
         legacy_event_alias: 'staging_record.promoted',
         extraction_job_id: jobId,
@@ -1437,7 +2014,9 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
         field_name: item.field?.field_name ?? null,
         evidence_id: item.verifiedEvidence?.evidence_file_id ?? null,
         promotion_gate_results: item.gates,
-        final_table_mutation: false,
+        final_table_mutation: true,
+        final_promotion_result: finalPromotion,
+        immutable_source_snapshot: finalPromotion.immutable_source_snapshot,
         comment
       });
     }
@@ -1458,7 +2037,8 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
         JSON.stringify({
           rc3c_promotion_governance: 'passed',
           promoted_staging_record_count: promoted.length,
-          final_table_mutation: false
+          final_table_mutation: true,
+          final_promotion_results: finalPromotionResults
         }),
         tenant.tenantId
       ]
@@ -1469,7 +2049,8 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
       data: {
         extraction_job_id: jobId,
         promoted_staging_records: promoted,
-        final_table_mutation: false,
+        final_table_mutation: true,
+        final_promotion_results: finalPromotionResults,
         promotion_gate_results: readiness.map((item) => ({ staging_record_id: item.staging.id, gates: item.gates }))
       }
     });
@@ -1479,13 +2060,19 @@ aiExtractionRouter.post('/extraction-jobs/:jobId/promote', requirePermission('ai
       const auditClient = await pool.connect();
       try {
         await writeAudit(auditClient, req, 'AI_STAGING_PROMOTION_FAILED', 'extraction_job', jobId, null, null, {
-          blocked_reason: error instanceof Error ? error.message : 'Unknown promotion failure.'
+          blocked_reason: error instanceof Error ? error.message : 'Unknown promotion failure.',
+          error_code: error instanceof PromotionFailure ? error.code : undefined,
+          ...(error instanceof PromotionFailure ? error.details : {})
         });
       } finally {
         auditClient.release();
       }
     } catch {
       // Preserve original failure path; audit failure must not mask API error.
+    }
+    if (error instanceof PromotionFailure) {
+      controlledError(res, error.statusCode, error.code, error.message, error.details);
+      return;
     }
     next(error);
   } finally {
@@ -1545,6 +2132,7 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
       return;
     }
 
+    const finalPromotion = await promoteReviewedStagingToFinalTable(client, req, { staging: before, field, job, gates: gateResult.gates, verifiedEvidence: gateResult.verifiedEvidence }, comment);
     const result = await client.query<DbRow>(
       `update staging_records
        set review_status = 'promoted',
@@ -1567,9 +2155,11 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
         JSON.stringify({
           rc3c_promoted: true,
           promoted_from_ai_staging: true,
-          final_table_mutation: false,
+          final_table_mutation: true,
           promotion_comment: comment,
-          verified_evidence_file_id: gateResult.verifiedEvidence?.evidence_file_id ?? null
+          verified_evidence_file_id: gateResult.verifiedEvidence?.evidence_file_id ?? null,
+          final_promotion_result: finalPromotion,
+          immutable_source_snapshot: finalPromotion.immutable_source_snapshot
         }),
         tenant.tenantId
       ]
@@ -1584,13 +2174,18 @@ aiExtractionRouter.post('/staging-records/:stagingRecordId/promote', requirePerm
       evidence_id: gateResult.verifiedEvidence?.evidence_file_id ?? null,
       promotion_gate_results: gateResult.gates,
       evidence_link_required: true,
-      final_table_mutation: false,
-      note: 'Promotion state recorded; final table mapping remains deterministic and reviewed in later implementation.'
+      final_table_mutation: true,
+      final_promotion_result: finalPromotion,
+      immutable_source_snapshot: finalPromotion.immutable_source_snapshot
     });
     await client.query('commit');
-    res.json({ data: mapStagingRecord(updated ?? {}), auditLogId });
+    res.json({ data: { ...mapStagingRecord(updated ?? {}), final_promotion_result: finalPromotion, final_table_mutation: true }, auditLogId });
   } catch (error) {
     await client.query('rollback');
+    if (error instanceof PromotionFailure) {
+      controlledError(res, error.statusCode, error.code, error.message, error.details);
+      return;
+    }
     next(error);
   } finally {
     client.release();

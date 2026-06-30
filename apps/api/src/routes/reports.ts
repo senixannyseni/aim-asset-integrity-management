@@ -473,6 +473,7 @@ type ReportGateContext = {
   reportEvidenceCount: number;
   calculationRunEvidenceCount: number;
   calculationInputEvidenceCount: number;
+  calculationInputTotalCount: number;
   integrityDecisionEvidenceCount: number;
   openCriticalErrorCount: number;
   blockingReviewGateCount: number;
@@ -526,38 +527,69 @@ async function loadReportGateContext(client: PoolClient, report: DbRow, tenantId
           report_evidence_count: string;
           calculation_run_evidence_count: string;
           calculation_input_evidence_count: string;
+          calculation_input_total_count: string;
           integrity_decision_evidence_count: string;
           total_evidence_count: string;
         }>(
-          `with evidence_counts as (
+          `with calculation_input_rows as (
+             select ci.id, ci.evidence_file_id
+             from calculation_inputs ci
+             join calculation_runs cr on cr.id = ci.calculation_run_id
+             where ci.calculation_run_id = $2::uuid
+               and cr.tenant_id = $3::uuid
+           ), linked_evidence_counts as (
              select
-               count(*) filter (where linked_entity_type = 'report' and linked_entity_id = $1::uuid)::text as report_evidence_count,
-               count(*) filter (where linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)::text as calculation_run_evidence_count,
-               count(*) filter (where linked_entity_type = 'calculation_input' and linked_entity_id in (
-                 select id from calculation_inputs where calculation_run_id = $2::uuid
-               ))::text as calculation_input_evidence_count,
-             count(*) filter (where linked_entity_type = 'integrity_decision' and linked_entity_id in (
+               count(*) filter (where el.linked_entity_type = 'report' and el.linked_entity_id = $1::uuid)::integer as report_evidence_count,
+               count(*) filter (where el.linked_entity_type = 'calculation_run' and el.linked_entity_id = $2::uuid)::integer as calculation_run_evidence_count,
+               count(*) filter (where el.linked_entity_type = 'integrity_decision' and el.linked_entity_id in (
                  select id from integrity_decisions where calculation_run_id = $2::uuid and tenant_id = $3::uuid and decision_status = 'approved'
-               ))::text as integrity_decision_evidence_count,
-               count(*)::text as total_evidence_count
+               ))::integer as integrity_decision_evidence_count,
+               count(*)::integer as total_evidence_count
              from evidence_links el
-           join evidence_files ef on ef.id = el.evidence_file_id
-            and ef.upload_status = 'verified'
-            and ef.tenant_id = $3::uuid
-            and coalesce(ef.object_key, ef.object_storage_path, ef.object_storage_uri) is not null
-             where (linked_entity_type = 'report' and linked_entity_id = $1::uuid)
-                or (linked_entity_type = 'calculation_run' and linked_entity_id = $2::uuid)
-                or (linked_entity_type = 'calculation_input' and linked_entity_id in (
-                  select id from calculation_inputs where calculation_run_id = $2::uuid
-                ))
-                or (linked_entity_type = 'integrity_decision' and linked_entity_id in (
+             join evidence_files ef on ef.id = el.evidence_file_id
+              and ef.upload_status = 'verified'
+              and ef.tenant_id = $3::uuid
+              and coalesce(ef.object_key, ef.object_storage_path, ef.object_storage_uri) is not null
+             where (el.linked_entity_type = 'report' and el.linked_entity_id = $1::uuid)
+                or (el.linked_entity_type = 'calculation_run' and el.linked_entity_id = $2::uuid)
+                or (el.linked_entity_type = 'calculation_input' and el.linked_entity_id in (select id from calculation_input_rows))
+                or (el.linked_entity_type = 'integrity_decision' and el.linked_entity_id in (
                   select id from integrity_decisions where calculation_run_id = $2::uuid and tenant_id = $3::uuid and decision_status = 'approved'
                 ))
+           ), calculation_input_traceability as (
+             select
+               count(*)::integer as calculation_input_total_count,
+               count(*) filter (
+                 where exists (
+                   select 1 from evidence_links el
+                   join evidence_files ef on ef.id = el.evidence_file_id
+                    and ef.upload_status = 'verified'
+                    and ef.tenant_id = $3::uuid
+                    and coalesce(ef.object_key, ef.object_storage_path, ef.object_storage_uri) is not null
+                   where el.linked_entity_type = 'calculation_input'
+                     and el.linked_entity_id = calculation_input_rows.id
+                 )
+                 or exists (
+                   select 1 from evidence_files direct_ef
+                   where direct_ef.id = calculation_input_rows.evidence_file_id
+                     and direct_ef.tenant_id = $3::uuid
+                     and direct_ef.upload_status = 'verified'
+                     and coalesce(direct_ef.object_key, direct_ef.object_storage_path, direct_ef.object_storage_uri) is not null
+                 )
+               )::integer as calculation_input_evidence_count
+             from calculation_input_rows
            )
-           select * from evidence_counts`,
+           select
+             coalesce(linked_evidence_counts.report_evidence_count, 0)::text as report_evidence_count,
+             coalesce(linked_evidence_counts.calculation_run_evidence_count, 0)::text as calculation_run_evidence_count,
+             coalesce(calculation_input_traceability.calculation_input_evidence_count, 0)::text as calculation_input_evidence_count,
+             coalesce(calculation_input_traceability.calculation_input_total_count, 0)::text as calculation_input_total_count,
+             coalesce(linked_evidence_counts.integrity_decision_evidence_count, 0)::text as integrity_decision_evidence_count,
+             (coalesce(linked_evidence_counts.total_evidence_count, 0) + coalesce(calculation_input_traceability.calculation_input_evidence_count, 0))::text as total_evidence_count
+           from linked_evidence_counts cross join calculation_input_traceability`,
           [reportId ?? null, calculationRunId ?? null, tenantId]
         )
-      : Promise.resolve({ rows: [{ report_evidence_count: '0', calculation_run_evidence_count: '0', calculation_input_evidence_count: '0', integrity_decision_evidence_count: '0', total_evidence_count: '0' }], rowCount: 1 }),
+      : Promise.resolve({ rows: [{ report_evidence_count: '0', calculation_run_evidence_count: '0', calculation_input_evidence_count: '0', calculation_input_total_count: '0', integrity_decision_evidence_count: '0', total_evidence_count: '0' }], rowCount: 1 }),
     client.query<{ count: string }>(
       `select count(*)::text as count
        from error_logs
@@ -598,6 +630,7 @@ async function loadReportGateContext(client: PoolClient, report: DbRow, tenantId
     reportEvidenceCount: Number(evidenceResult.rows[0]?.report_evidence_count ?? 0),
     calculationRunEvidenceCount: Number(evidenceResult.rows[0]?.calculation_run_evidence_count ?? 0),
     calculationInputEvidenceCount: Number(evidenceResult.rows[0]?.calculation_input_evidence_count ?? 0),
+    calculationInputTotalCount: Number(evidenceResult.rows[0]?.calculation_input_total_count ?? 0),
     integrityDecisionEvidenceCount: Number(evidenceResult.rows[0]?.integrity_decision_evidence_count ?? 0),
     openCriticalErrorCount: Number(criticalErrorResult.rows[0]?.count ?? 0),
     blockingReviewGateCount: Number(blockingGateResult.rows[0]?.count ?? 0)
@@ -615,17 +648,23 @@ function buildReportGateChecklist(context: ReportGateContext, issueCommentPresen
   const calculationReviewStatus = asString(calculation?.review_status);
   const calculationApprovalStatus = asString(calculation?.approval_status);
 
+  const calculationInputEvidenceComplete = context.calculationInputTotalCount === 0 || context.calculationInputEvidenceCount >= context.calculationInputTotalCount;
+
   return [
     gate('required_data_complete', Boolean(report.content_hash && report.sections_json && report.traceability_json), 'Report content, sections, traceability, and content hash must exist.'),
-    gate('evidence_linked', context.reportEvidenceCount > 0 && context.calculationRunEvidenceCount > 0 && context.integrityDecisionEvidenceCount > 0, 'Report, calculation run, and approved integrity decision must each have direct linked evidence.', {
+    gate('evidence_linked', context.reportEvidenceCount > 0 && context.calculationRunEvidenceCount > 0 && calculationInputEvidenceComplete && context.integrityDecisionEvidenceCount > 0, 'Report, calculation run, calculation inputs where present, and approved integrity decision must each have verified tenant-scoped evidence.', {
       evidence_count: context.evidenceCount,
       report_evidence_count: context.reportEvidenceCount,
       calculation_run_evidence_count: context.calculationRunEvidenceCount,
       calculation_input_evidence_count: context.calculationInputEvidenceCount,
+      calculation_input_total_count: context.calculationInputTotalCount,
+      calculation_input_evidence_complete: calculationInputEvidenceComplete,
+      calculation_input_direct_evidence_file_id_counts_as_equivalent: true,
       integrity_decision_evidence_count: context.integrityDecisionEvidenceCount,
       missing_required_evidence: [
         context.reportEvidenceCount > 0 ? null : 'report',
         context.calculationRunEvidenceCount > 0 ? null : 'calculation_run',
+        calculationInputEvidenceComplete ? null : 'calculation_input',
         context.integrityDecisionEvidenceCount > 0 ? null : 'integrity_decision'
       ].filter(Boolean)
     }),

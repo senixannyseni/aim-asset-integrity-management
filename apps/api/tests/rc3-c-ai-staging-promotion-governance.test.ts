@@ -49,7 +49,8 @@ describe('RC3-C AI staging promotion governance', () => {
     expect(route).toContain('AI_STAGING_PROMOTED');
     expect(route).toContain('AI_STAGING_PROMOTION_FAILED');
     expect(route).toContain('PROMOTION_GATE_FAILED');
-    expect(route).toContain('final_table_mutation: false');
+    expect(route).toContain('FINAL_PROMOTION_ALLOWLIST');
+    expect(route).toContain('final_table_mutation: true');
   });
 
   it('blocks rejected, low-confidence, and SoD-violating promotion', () => {
