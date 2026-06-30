@@ -1,0 +1,434 @@
+{
+  "metadata": {
+    "document": "05_n8n/payload_examples.json",
+    "purpose": "Representative n8n-to-AIM API payloads for AIM MVP workflow orchestration.",
+    "boundary": "n8n must call AIM backend APIs only and must not write directly to PostgreSQL or final engineering tables.",
+    "version": "1.0.0",
+    "created_for": "AIM+n8n MVP"
+  },
+  "common_headers": {
+    "Authorization": "Bearer <aim_service_token>",
+    "Content-Type": "application/json",
+    "Idempotency-Key": "wf-001-54231-20260611T070000Z"
+  },
+  "workflow_payloads": {
+    "WF-001_File_Intake": {
+      "trigger_payload": {
+        "workflow_id": "WF-001",
+        "source_system": "AIM",
+        "n8n_execution_id": "54231",
+        "asset_id": "33333333-3333-4333-8333-333333333333",
+        "inspection_id": "55555555-5555-4555-8555-555555555555",
+        "storage_uri": "s3://aim-evidence/site-a/T-02/ut-report.pdf",
+        "original_file_name": "ut-report.pdf",
+        "file_type": "pdf",
+        "mime_type": "application/pdf",
+        "checksum_sha256": "7d793037a0760186574b0282f2f435e711111111111111111111111111111111",
+        "file_size_bytes": 2457600,
+        "entity_type": "inspection",
+        "entity_id": "55555555-5555-4555-8555-555555555555"
+      },
+      "aim_api_calls": {
+        "post_workflow_started": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "workflow.file_intake.started",
+            "entity_type": "evidence_file",
+            "entity_id": "pending",
+            "payload_json": {
+              "workflow_id": "WF-001",
+              "workflow_name": "File Intake",
+              "boundary_note": "n8n registers metadata through AIM API only."
+            },
+            "n8n_execution_id": "54231"
+          }
+        },
+        "register_evidence_metadata": {
+          "endpoint": "POST /api/evidence-files",
+          "body": {
+            "storage_uri": "s3://aim-evidence/site-a/T-02/ut-report.pdf",
+            "original_file_name": "ut-report.pdf",
+            "file_type": "pdf",
+            "mime_type": "application/pdf",
+            "checksum_sha256": "7d793037a0760186574b0282f2f435e711111111111111111111111111111111",
+            "file_size_bytes": 2457600,
+            "source_system": "AIM"
+          }
+        },
+        "link_evidence": {
+          "endpoint": "POST /api/evidence-links",
+          "body": {
+            "evidence_file_id": "e1111111-1111-4111-8111-111111111111",
+            "entity_type": "inspection",
+            "entity_id": "55555555-5555-4555-8555-555555555555",
+            "page_no": 1,
+            "coordinate_ref": null,
+            "evidence_code": "EV-T02-UT-001",
+            "description": "Uploaded UT inspection report linked to inspection record."
+          }
+        }
+      }
+    },
+    "WF-002_AI_Extraction_Trigger": {
+      "trigger_payload": {
+        "workflow_id": "WF-002",
+        "inspection_id": "55555555-5555-4555-8555-555555555555",
+        "evidence_file_id": "e1111111-1111-4111-8111-111111111111",
+        "requested_by": "88888888-8888-4888-8888-888888888888",
+        "extraction_scope": [
+          "asset",
+          "inspection",
+          "ndt_ut",
+          "calculation_inputs"
+        ]
+      },
+      "aim_api_calls": {
+        "create_extraction_job": {
+          "endpoint": "POST /api/extraction-jobs",
+          "body": {
+            "inspection_id": "55555555-5555-4555-8555-555555555555",
+            "evidence_file_id": "e1111111-1111-4111-8111-111111111111",
+            "ai_model_name": "gpt-extractor",
+            "ai_model_version": "2026-06-01",
+            "extraction_scope": [
+              "asset",
+              "inspection",
+              "ndt_ut",
+              "calculation_inputs"
+            ]
+          }
+        },
+        "post_workflow_event": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "workflow.ai_extraction_trigger.succeeded",
+            "entity_type": "extraction_job",
+            "entity_id": "a1111111-1111-4111-8111-111111111111",
+            "payload_json": {
+              "workflow_id": "WF-002",
+              "staging_only": true,
+              "message": "AI extraction job created. Output must be reviewed before promotion."
+            },
+            "n8n_execution_id": "54232"
+          }
+        }
+      }
+    },
+    "WF-003_Staging_Validation": {
+      "trigger_payload": {
+        "workflow_id": "WF-003",
+        "extraction_job_id": "a1111111-1111-4111-8111-111111111111",
+        "status": "completed",
+        "staging_record_count": 12
+      },
+      "aim_api_calls": {
+        "read_extraction_job": {
+          "endpoint": "GET /api/extraction-jobs/{extraction_job_id}",
+          "path_params": {
+            "extraction_job_id": "a1111111-1111-4111-8111-111111111111"
+          }
+        },
+        "read_staging_records": {
+          "endpoint": "GET /api/staging-records",
+          "query": {
+            "extraction_job_id": "a1111111-1111-4111-8111-111111111111",
+            "status": "pending_engineer_review"
+          }
+        },
+        "post_workflow_event": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "workflow.staging_validation.succeeded",
+            "entity_type": "extraction_job",
+            "entity_id": "a1111111-1111-4111-8111-111111111111",
+            "payload_json": {
+              "workflow_id": "WF-003",
+              "requires_engineer_review": true,
+              "record_count": 12
+            },
+            "n8n_execution_id": "54233"
+          }
+        }
+      }
+    },
+    "WF-004_Engineer_Review_Reminder": {
+      "trigger_payload": {
+        "workflow_id": "WF-004",
+        "scheduled_at": "2026-06-11T09:00:00+07:00",
+        "review_queue": "pending_engineer_review"
+      },
+      "aim_api_calls": {
+        "read_pending_staging_records": {
+          "endpoint": "GET /api/staging-records",
+          "query": {
+            "status": "pending_engineer_review",
+            "overdue": true
+          }
+        },
+        "post_workflow_event": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "notification.review_reminder.sent",
+            "entity_type": "workflow_task",
+            "entity_id": "task-review-staging-001",
+            "payload_json": {
+              "workflow_id": "WF-004",
+              "target_role": "Engineer",
+              "message": "Staging records require engineer review before promotion."
+            },
+            "n8n_execution_id": "54234"
+          }
+        }
+      }
+    },
+    "WF-005_Approval_Flow": {
+      "trigger_payload": {
+        "workflow_id": "WF-005",
+        "entity_type": "staging_record",
+        "entity_id": "b1111111-1111-4111-8111-111111111111",
+        "approval_action": "promote",
+        "assigned_approver_role": "Engineer"
+      },
+      "aim_api_calls": {
+        "promote_staging_record_after_human_approval": {
+          "endpoint": "POST /api/staging-records/{staging_record_id}/promote",
+          "path_params": {
+            "staging_record_id": "b1111111-1111-4111-8111-111111111111"
+          },
+          "body": {
+            "staging_record_id": "b1111111-1111-4111-8111-111111111111",
+            "target_table_name": "thickness_readings",
+            "target_field_name": "current_thickness_mm",
+            "approved_value": "7.200",
+            "approved_unit": "mm",
+            "evidence_link_id": "e2222222-2222-4222-8222-222222222222",
+            "promotion_comment": "Engineer-approved staging value promoted by AIM service after review gate."
+          }
+        },
+        "post_workflow_event": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "workflow.approval_flow.succeeded",
+            "entity_type": "staging_record",
+            "entity_id": "b1111111-1111-4111-8111-111111111111",
+            "payload_json": {
+              "workflow_id": "WF-005",
+              "human_approval_required": true,
+              "boundary_note": "n8n routed approval only. AIM backend performed promotion."
+            },
+            "n8n_execution_id": "54235"
+          }
+        }
+      }
+    },
+    "WF-006_Calculation_Review": {
+      "trigger_payload": {
+        "workflow_id": "WF-006",
+        "calculation_run_id": "b2222222-2222-4222-8222-222222222222",
+        "status": "completed_pending_review"
+      },
+      "aim_api_calls": {
+        "read_calculation": {
+          "endpoint": "GET /api/calculations/{calculation_run_id}",
+          "path_params": {
+            "calculation_run_id": "b2222222-2222-4222-8222-222222222222"
+          }
+        },
+        "approve_calculation_after_human_review": {
+          "endpoint": "POST /api/calculations/{calculation_run_id}/approve",
+          "path_params": {
+            "calculation_run_id": "b2222222-2222-4222-8222-222222222222"
+          },
+          "body": {
+            "approval_status": "approved",
+            "review_comment": "Deterministic MVP calculation output reviewed against validation workbook and evidence. Engineering review required before final use disclaimer retained.",
+            "reviewed_output_ids": [
+              "c2222222-2222-4222-8222-222222222222"
+            ],
+            "evidence_link_id": "e2222222-2222-4222-8222-222222222222"
+          }
+        }
+      }
+    },
+    "WF-007_Report_Approval": {
+      "trigger_payload": {
+        "workflow_id": "WF-007",
+        "report_id": "22222222-2222-4222-8222-222222222222",
+        "report_version_id": "33333333-3333-4333-8333-333333333334",
+        "status": "pending_issue_approval"
+      },
+      "aim_api_calls": {
+        "read_report": {
+          "endpoint": "GET /api/reports/{report_id}",
+          "path_params": {
+            "report_id": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        "issue_report_after_human_approval": {
+          "endpoint": "POST /api/reports/{report_id}/issue",
+          "path_params": {
+            "report_id": "22222222-2222-4222-8222-222222222222"
+          },
+          "body": {
+            "report_id": "22222222-2222-4222-8222-222222222222",
+            "report_version_id": "33333333-3333-4333-8333-333333333334",
+            "approved_by": "99999999-9999-4999-8999-999999999999",
+            "issue_comment": "All required gates satisfied. Report issued by authorized approver.",
+            "gate_confirmation": {
+              "required_data": true,
+              "calculation": true,
+              "review": true,
+              "evidence": true,
+              "approval": true
+            }
+          }
+        }
+      }
+    },
+    "WF-008_Action_Required_to_Work_Order": {
+      "trigger_payload": {
+        "workflow_id": "WF-008",
+        "decision_id": "d1111111-1111-4111-8111-111111111111",
+        "decision_status": "action_required",
+        "priority": "high"
+      },
+      "aim_api_calls": {
+        "create_internal_work_order": {
+          "endpoint": "POST /api/work-orders",
+          "body": {
+            "asset_id": "33333333-3333-4333-8333-333333333333",
+            "inspection_id": "55555555-5555-4555-8555-555555555555",
+            "decision_id": "d1111111-1111-4111-8111-111111111111",
+            "finding_id": "66666666-6666-4666-8666-666666666666",
+            "work_order_code": "WO-T02-2026-001",
+            "work_order_type": "followup_ut",
+            "priority": "high",
+            "description": "Perform follow-up UT on shell course 1 CML points and upload evidence to AIM.",
+            "assigned_to": "77777777-7777-4777-8777-777777777777",
+            "due_date": "2026-07-01",
+            "external_cmms_reference": null
+          }
+        },
+        "post_workflow_event": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "workflow.work_order_create.succeeded",
+            "entity_type": "work_order",
+            "entity_id": "w1111111-1111-4111-8111-111111111111",
+            "payload_json": {
+              "workflow_id": "WF-008",
+              "mvp_internal_work_order_fallback": true
+            },
+            "n8n_execution_id": "54238"
+          }
+        }
+      }
+    },
+    "WF-009_Dashboard_Refresh": {
+      "trigger_payload": {
+        "workflow_id": "WF-009",
+        "scheduled_at": "2026-06-11T08:00:00+07:00",
+        "refresh_scope": [
+          "assets",
+          "inspections",
+          "calculations",
+          "reports",
+          "work_orders"
+        ]
+      },
+      "aim_api_calls": {
+        "get_dashboard_kpis": {
+          "endpoint": "GET /api/dashboard/kpis",
+          "query": {
+            "site_name": "Fuel Terminal A",
+            "asset_type": "atmospheric_storage_tank"
+          }
+        },
+        "post_workflow_event": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "workflow.dashboard_refresh.succeeded",
+            "entity_type": "dashboard",
+            "entity_id": "dashboard-kpi-main",
+            "payload_json": {
+              "workflow_id": "WF-009",
+              "kpi_source": "AIM backend",
+              "stores_kpi_data_in_n8n": false
+            },
+            "n8n_execution_id": "54239"
+          }
+        }
+      }
+    },
+    "WF-010_Error_Queue_and_Recovery": {
+      "trigger_payload": {
+        "workflow_id": "WF-010",
+        "source": "n8n_error_trigger",
+        "parent_workflow_id": "WF-002",
+        "severity": "high"
+      },
+      "aim_api_calls": {
+        "create_error_log": {
+          "endpoint": "POST /api/error-logs",
+          "body": {
+            "source_system": "n8n",
+            "severity": "high",
+            "error_code": "N8N_WORKFLOW_API_TIMEOUT",
+            "error_message": "AIM API timeout while creating extraction job.",
+            "entity_type": "extraction_job",
+            "entity_id": "pending",
+            "request_id": "req_54240",
+            "diagnostics_json": {
+              "workflow_id": "WF-002",
+              "n8n_execution_id": "54240",
+              "safe_to_retry": true,
+              "retry_attempt": 1
+            }
+          }
+        },
+        "post_workflow_failed_event": {
+          "endpoint": "POST /api/workflow-events",
+          "body": {
+            "source_system": "n8n",
+            "event_type": "workflow.ai_extraction_trigger.failed",
+            "entity_type": "extraction_job",
+            "entity_id": "pending",
+            "payload_json": {
+              "workflow_id": "WF-002",
+              "error_code": "N8N_WORKFLOW_API_TIMEOUT",
+              "safe_to_retry": true
+            },
+            "n8n_execution_id": "54240"
+          }
+        }
+      }
+    }
+  },
+  "standard_failure_payload": {
+    "endpoint": "POST /api/error-logs",
+    "body": {
+      "source_system": "n8n",
+      "severity": "high",
+      "error_code": "N8N_WORKFLOW_FAILURE",
+      "error_message": "Workflow failed before successful AIM API completion.",
+      "entity_type": "workflow_event",
+      "entity_id": "wf-event-id-or-pending",
+      "request_id": "req_n8n_54231",
+      "diagnostics_json": {
+        "workflow_id": "WF-001",
+        "node_name": "HTTP Request - AIM API",
+        "http_status": 500,
+        "safe_to_retry": true,
+        "attempt": 1,
+        "boundary_note": "n8n does not write final engineering data and must recover through AIM APIs only."
+      }
+    }
+  }
+}

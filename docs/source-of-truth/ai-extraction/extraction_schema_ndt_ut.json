@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aim.local/schemas/extraction_schema_ndt_ut.json",
+  "title": "AIM NDT UT Extraction Schema",
+  "description": "AI extraction schema for Ultrasonic Thickness readings. AI output must go to extraction_fields and staging_records only.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "extraction_job_id",
+    "asset_tag",
+    "inspection_id",
+    "method",
+    "readings",
+    "extraction_fields"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "extraction_job_id": {
+      "type": "string"
+    },
+    "asset_tag": {
+      "type": "string"
+    },
+    "inspection_id": {
+      "type": "string"
+    },
+    "method": {
+      "const": "UT_THICKNESS"
+    },
+    "report_number": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "inspection_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "readings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "component",
+          "current_thickness_mm",
+          "source",
+          "confidence_score",
+          "field_status"
+        ],
+        "properties": {
+          "component": {
+            "type": "string",
+            "enum": [
+              "shell",
+              "roof",
+              "floor",
+              "nozzle",
+              "annular_plate",
+              "other"
+            ]
+          },
+          "course_no": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "cml_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tml_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_reference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "elevation_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "orientation_deg": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 360
+          },
+          "previous_thickness_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "current_thickness_mm": {
+            "type": "number"
+          },
+          "minimum_required_thickness_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit": {
+            "const": "mm"
+          },
+          "evidence_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "$ref": "#/$defs/sourceRef"
+          },
+          "confidence_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "field_status": {
+            "$ref": "#/$defs/fieldStatus"
+          },
+          "validation_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "extraction_fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/extractedField"
+      }
+    }
+  },
+  "$defs": {
+    "fieldStatus": {
+      "type": "string",
+      "description": "AI may set ai_extracted, needs_review, invalid, or rejected_by_validation. Human reviewer may later update status through staging review endpoints.",
+      "enum": [
+        "ai_extracted",
+        "needs_review",
+        "invalid",
+        "rejected_by_validation"
+      ]
+    },
+    "sourceRef": {
+      "type": "object",
+      "required": [
+        "evidence_code",
+        "source_file_name"
+      ],
+      "properties": {
+        "evidence_code": {
+          "type": "string",
+          "pattern": "^EVD-[0-9]{4}-[0-9]{6}$"
+        },
+        "source_file_name": {
+          "type": "string"
+        },
+        "page_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Page number/range for PDF evidence when applicable."
+        },
+        "figure_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "table_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cell_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Spreadsheet cell/range when source is XLSX/CSV."
+        },
+        "bbox": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "extraction_note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "extractedField": {
+      "type": "object",
+      "required": [
+        "field_name",
+        "value",
+        "source",
+        "confidence_score",
+        "field_status"
+      ],
+      "properties": {
+        "field_name": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "normalized_value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "field_status": {
+          "$ref": "#/$defs/fieldStatus"
+        },
+        "validation_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "review_required": {
+          "type": "boolean"
+        },
+        "review_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

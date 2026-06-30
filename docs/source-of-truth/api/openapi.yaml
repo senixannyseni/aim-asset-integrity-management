@@ -1,0 +1,4250 @@
+openapi: 3.0.3
+info:
+  title: AIM+n8n MVP API
+  version: 0.1.0
+  description: Implementation-ready API contract for the AIM+n8n MVP. AIM is the system of record; PostgreSQL stores final
+    structured engineering data; object storage stores original evidence; n8n orchestrates workflow only and must not write
+    directly to PostgreSQL. AI extraction output must go to staging first. Human engineering review/approval gates are mandatory
+    for final engineering data, calculations, integrity decisions, and issued reports.
+servers:
+- url: https://api.aim.local
+  description: Local/development placeholder
+tags:
+- name: Auth
+- name: Users and Roles
+- name: Assets
+- name: Evidence
+- name: Inspections
+- name: AI Extraction
+- name: Staging Review
+- name: NDT
+- name: Calculations
+- name: Integrity Decisions
+- name: Reports
+- name: Dashboard
+- name: Work Orders
+- name: Workflow Events
+- name: Audit
+- name: Error Logs
+paths:
+  /api/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login
+      description: Authenticate user and return an access token. Audit event captures login success/failure without storing
+        password.
+      security:
+      - bearerAuth: []
+      x-permission-required: public
+      x-audit-event-generated: auth.login
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /api/auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Get current user
+      description: Return authenticated user profile and roles.
+      security:
+      - bearerAuth: []
+      x-permission-required: auth.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Logout
+      description: Invalidate current refresh/session token.
+      security:
+      - bearerAuth: []
+      x-permission-required: auth.logout
+      x-audit-event-generated: auth.logout
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/users:
+    get:
+      tags:
+      - Users and Roles
+      summary: List users
+      description: List AIM users with optional role/status filters.
+      security:
+      - bearerAuth: []
+      x-permission-required: user.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: role_code
+        in: query
+        required: false
+        description: Filter by role code
+        schema:
+          type: string
+      - name: user_status
+        in: query
+        required: false
+        description: Filter by status
+        schema:
+          type: string
+    post:
+      tags:
+      - Users and Roles
+      summary: Create user
+      description: Create a human or service user. Role assignment must be audited.
+      security:
+      - bearerAuth: []
+      x-permission-required: user.manage
+      x-audit-event-generated: user.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+  /api/users/{user_id}:
+    get:
+      tags:
+      - Users and Roles
+      summary: Get user
+      description: Fetch one user.
+      security:
+      - bearerAuth: []
+      x-permission-required: user.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        description: User ID
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+      - Users and Roles
+      summary: Update user
+      description: Update user profile/status.
+      security:
+      - bearerAuth: []
+      x-permission-required: user.manage
+      x-audit-event-generated: user.updated
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        description: User ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+  /api/roles:
+    get:
+      tags:
+      - Users and Roles
+      summary: List roles
+      description: List roles and permission assignments.
+      security:
+      - bearerAuth: []
+      x-permission-required: role.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Users and Roles
+      summary: Create role
+      description: Create RBAC role and optional permission mapping.
+      security:
+      - bearerAuth: []
+      x-permission-required: role.manage
+      x-audit-event-generated: role.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateRequest'
+  /api/roles/{role_id}/permissions:
+    post:
+      tags:
+      - Users and Roles
+      summary: Grant role permissions
+      description: Grant permissions to an existing role.
+      security:
+      - bearerAuth: []
+      x-permission-required: permission.manage
+      x-audit-event-generated: role_permission.granted
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: role_id
+        in: path
+        required: true
+        description: Role ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateRequest'
+  /api/assets:
+    get:
+      tags:
+      - Assets
+      summary: List assets
+      description: List asset register records. MVP supports atmospheric storage tanks.
+      security:
+      - bearerAuth: []
+      x-permission-required: asset.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: site_name
+        in: query
+        required: false
+        description: Filter by site
+        schema:
+          type: string
+      - name: asset_status
+        in: query
+        required: false
+        description: Filter by asset status
+        schema:
+          type: string
+    post:
+      tags:
+      - Assets
+      summary: Create asset
+      description: Create an asset register record in AIM. This does not bypass engineering review when values are evidence-dependent.
+      security:
+      - bearerAuth: []
+      x-permission-required: asset.create
+      x-audit-event-generated: asset.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCreateRequest'
+  /api/assets/{asset_id}:
+    get:
+      tags:
+      - Assets
+      summary: Get asset
+      description: Fetch asset details.
+      security:
+      - bearerAuth: []
+      x-permission-required: asset.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: asset_id
+        in: path
+        required: true
+        description: Asset ID
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+      - Assets
+      summary: Update asset
+      description: Update asset register record. Evidence-linked engineering data must remain traceable.
+      security:
+      - bearerAuth: []
+      x-permission-required: asset.update
+      x-audit-event-generated: asset.updated
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: asset_id
+        in: path
+        required: true
+        description: Asset ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCreateRequest'
+  /api/assets/{asset_id}/approve:
+    post:
+      tags:
+      - Assets
+      summary: Approve asset data
+      description: Review and approve asset register data for use in reports/calculations. AI cannot perform this approval.
+      security:
+      - bearerAuth: []
+      x-permission-required: asset.approve
+      x-audit-event-generated: asset.approved
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: asset_id
+        in: path
+        required: true
+        description: Asset ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+  /api/evidence-files:
+    get:
+      tags:
+      - Evidence
+      summary: List evidence files
+      description: List evidence metadata. Original files remain in object storage.
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Evidence
+      summary: Create evidence metadata
+      description: Register original evidence file metadata after object storage upload. AIM stores metadata only; object
+        storage stores the file.
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.upload
+      x-audit-event-generated: evidence.uploaded
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceFile'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceFileMetadataRequest'
+  /api/evidence-files/{evidence_file_id}/verify:
+    post:
+      tags:
+      - Evidence
+      summary: Verify evidence file
+      description: Verify evidence metadata/checksum before it can satisfy approval gates.
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.verify
+      x-audit-event-generated: evidence.verified
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceFile'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: evidence_file_id
+        in: path
+        required: true
+        description: Evidence file ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+  /api/evidence-links:
+    get:
+      tags:
+      - Evidence
+      summary: List evidence links
+      description: List polymorphic evidence links by entity.
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: entity_type
+        in: query
+        required: false
+        description: Entity type
+        schema:
+          type: string
+      - name: entity_id
+        in: query
+        required: false
+        description: Entity ID
+        schema:
+          type: string
+    post:
+      tags:
+      - Evidence
+      summary: Link evidence
+      description: Create mandatory traceability link between evidence and AIM entity.
+      security:
+      - bearerAuth: []
+      x-permission-required: evidence.link
+      x-audit-event-generated: evidence.linked
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceLink'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceLinkRequest'
+  /api/inspections:
+    get:
+      tags:
+      - Inspections
+      summary: List inspections
+      description: List inspection workspaces.
+      security:
+      - bearerAuth: []
+      x-permission-required: inspection.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Inspections
+      summary: Create inspection
+      description: Create inspection workspace for an asset.
+      security:
+      - bearerAuth: []
+      x-permission-required: inspection.create
+      x-audit-event-generated: inspection.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspection'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionCreateRequest'
+  /api/inspections/{inspection_id}:
+    get:
+      tags:
+      - Inspections
+      summary: Get inspection
+      description: Fetch inspection workspace details.
+      security:
+      - bearerAuth: []
+      x-permission-required: inspection.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspection'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: inspection_id
+        in: path
+        required: true
+        description: Inspection ID
+        schema:
+          type: string
+          format: uuid
+  /api/inspections/{inspection_id}/submit:
+    post:
+      tags:
+      - Inspections
+      summary: Submit inspection
+      description: Submit inspection for engineering review.
+      security:
+      - bearerAuth: []
+      x-permission-required: inspection.submit
+      x-audit-event-generated: inspection.submitted
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspection'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: inspection_id
+        in: path
+        required: true
+        description: Inspection ID
+        schema:
+          type: string
+          format: uuid
+  /api/inspections/{inspection_id}/approve:
+    post:
+      tags:
+      - Inspections
+      summary: Approve inspection
+      description: Approve inspection workspace after engineering review.
+      security:
+      - bearerAuth: []
+      x-permission-required: inspection.approve
+      x-audit-event-generated: inspection.approved
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspection'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: inspection_id
+        in: path
+        required: true
+        description: Inspection ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+  /api/extraction-jobs:
+    get:
+      tags:
+      - AI Extraction
+      summary: List extraction jobs
+      description: List AI extraction jobs. AI outputs remain staging candidates only.
+      security:
+      - bearerAuth: []
+      x-permission-required: extraction.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - AI Extraction
+      summary: Create extraction job
+      description: Start AI extraction from evidence. Output is written to extraction/staging tables only, never final engineering
+        tables.
+      security:
+      - bearerAuth: []
+      x-permission-required: extraction.submit
+      x-audit-event-generated: extraction_job.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionJob'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionJobCreateRequest'
+  /api/extraction-jobs/{extraction_job_id}:
+    get:
+      tags:
+      - AI Extraction
+      summary: Get extraction job
+      description: Fetch extraction job and field status.
+      security:
+      - bearerAuth: []
+      x-permission-required: extraction.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionJob'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: extraction_job_id
+        in: path
+        required: true
+        description: Extraction job ID
+        schema:
+          type: string
+          format: uuid
+  /api/extraction-fields/{extraction_field_id}/review:
+    post:
+      tags:
+      - Staging Review
+      summary: Review extraction field
+      description: Engineer accepts/rejects/corrects extracted field into staging. AI cannot approve final engineering data.
+      security:
+      - bearerAuth: []
+      x-permission-required: staging.review
+      x-audit-event-generated: extraction_field.reviewed
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: extraction_field_id
+        in: path
+        required: true
+        description: Extraction field ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionFieldApprovalRequest'
+  /api/staging-records:
+    get:
+      tags:
+      - Staging Review
+      summary: List staging records
+      description: List proposed records awaiting review/promotion.
+      security:
+      - bearerAuth: []
+      x-permission-required: staging.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: review_status
+        in: query
+        required: false
+        description: Filter by staging review status
+        schema:
+          type: string
+  /api/staging-records/{staging_record_id}/promote:
+    post:
+      tags:
+      - Staging Review
+      summary: Promote staging record
+      description: Promote an approved staging record to final AIM table through AIM application service only. n8n must not
+        write directly to PostgreSQL.
+      security:
+      - bearerAuth: []
+      x-permission-required: staging.promote
+      x-audit-event-generated: staging_record.promoted
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: staging_record_id
+        in: path
+        required: true
+        description: Staging record ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StagingPromotionRequest'
+  /api/ndt-measurements:
+    get:
+      tags:
+      - NDT
+      summary: List NDT measurements
+      description: List UT thickness datasets.
+      security:
+      - bearerAuth: []
+      x-permission-required: ndt.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - NDT
+      summary: Create NDT measurement
+      description: Create UT thickness dataset with evidence-linked readings.
+      security:
+      - bearerAuth: []
+      x-permission-required: ndt.create
+      x-audit-event-generated: ndt_measurement.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NdtMeasurementCreateRequest'
+  /api/ndt-measurements/{measurement_id}/approve:
+    post:
+      tags:
+      - NDT
+      summary: Approve NDT measurement
+      description: Approve reviewed NDT dataset. Evidence link is required before approval.
+      security:
+      - bearerAuth: []
+      x-permission-required: ndt.approve
+      x-audit-event-generated: ndt_measurement.approved
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: measurement_id
+        in: path
+        required: true
+        description: Measurement ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+  /api/calculations/run:
+    post:
+      tags:
+      - Calculations
+      summary: Run calculation
+      description: Run deterministic MVP calculation using approved formula version only. No proprietary API/ASME formulas
+        are implemented here.
+      security:
+      - bearerAuth: []
+      x-permission-required: calculation.run
+      x-audit-event-generated: calculation.run
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculationRun'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculationRunRequest'
+  /api/calculations/{calculation_run_id}:
+    get:
+      tags:
+      - Calculations
+      summary: Get calculation run
+      description: Fetch calculation run inputs, outputs, status, warnings, evidence links, and disclaimer.
+      security:
+      - bearerAuth: []
+      x-permission-required: calculation.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculationRun'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: calculation_run_id
+        in: path
+        required: true
+        description: Calculation run ID
+        schema:
+          type: string
+          format: uuid
+  /api/calculations/{calculation_run_id}/approve:
+    post:
+      tags:
+      - Calculations
+      summary: Approve calculation
+      description: Human engineering approval of deterministic calculation outputs. AI cannot approve calculations.
+      security:
+      - bearerAuth: []
+      x-permission-required: calculation.approve
+      x-audit-event-generated: calculation.approved
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculationRun'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: calculation_run_id
+        in: path
+        required: true
+        description: Calculation run ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculationApprovalRequest'
+  /api/integrity-decisions:
+    get:
+      tags:
+      - Integrity Decisions
+      summary: List integrity decisions
+      description: List human-authored integrity decisions.
+      security:
+      - bearerAuth: []
+      x-permission-required: integrity.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Integrity Decisions
+      summary: Create integrity decision
+      description: Create human engineering decision based on reviewed data, evidence, and approved calculations where required.
+      security:
+      - bearerAuth: []
+      x-permission-required: integrity.decide
+      x-audit-event-generated: integrity_decision.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrityDecision'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrityDecisionCreateRequest'
+  /api/integrity-decisions/{decision_id}/approve:
+    post:
+      tags:
+      - Integrity Decisions
+      summary: Approve integrity decision
+      description: Approver approves/rejects integrity decision. AI cannot approve final integrity decisions.
+      security:
+      - bearerAuth: []
+      x-permission-required: integrity.approve
+      x-audit-event-generated: integrity_decision.approved
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrityDecision'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: decision_id
+        in: path
+        required: true
+        description: Decision ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+  /api/reports/generate:
+    post:
+      tags:
+      - Reports
+      summary: Generate report
+      description: Generate a report draft/version only after required data/evidence gates pass. Generated report is not issued.
+      security:
+      - bearerAuth: []
+      x-permission-required: report.generate
+      x-audit-event-generated: report.generated
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportGenerateRequest'
+  /api/reports/{report_id}:
+    get:
+      tags:
+      - Reports
+      summary: Get report
+      description: Fetch report header, current version, and issue gate status.
+      security:
+      - bearerAuth: []
+      x-permission-required: report.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: report_id
+        in: path
+        required: true
+        description: Report ID
+        schema:
+          type: string
+          format: uuid
+  /api/reports/{report_id}/issue:
+    post:
+      tags:
+      - Reports
+      summary: Issue report
+      description: Issue report only if required data, calculation, review, evidence, and approval gates are satisfied.
+      security:
+      - bearerAuth: []
+      x-permission-required: report.issue
+      x-audit-event-generated: report.issued
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: report_id
+        in: path
+        required: true
+        description: Report ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportIssueRequest'
+  /api/dashboard/kpis:
+    get:
+      tags:
+      - Dashboard
+      summary: Get dashboard KPIs
+      description: Return MVP KPI counts for management dashboard.
+      security:
+      - bearerAuth: []
+      x-permission-required: dashboard.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardKpiResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/work-orders:
+    get:
+      tags:
+      - Work Orders
+      summary: List internal work orders
+      description: List MVP internal work orders before SAP/Maximo integration.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Work Orders
+      summary: Create internal work order
+      description: Create internal work order fallback linked to decision/finding where applicable.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.create
+      x-audit-event-generated: internal_work_order.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderCreateRequest'
+  /api/work-orders/{work_order_id}:
+    patch:
+      tags:
+      - Work Orders
+      summary: Update internal work order
+      description: Update internal work order status/assignment.
+      security:
+      - bearerAuth: []
+      x-permission-required: work_order.update
+      x-audit-event-generated: internal_work_order.updated
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: work_order_id
+        in: path
+        required: true
+        description: Work order ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderCreateRequest'
+  /api/workflow-events:
+    get:
+      tags:
+      - Workflow Events
+      summary: List workflow events
+      description: List AIM workflow events sent to or received from n8n. Events are references, not final engineering data
+        storage.
+      security:
+      - bearerAuth: []
+      x-permission-required: workflow.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Workflow Events
+      summary: Create workflow event
+      description: Create an AIM workflow event for n8n orchestration. n8n may callback only through this controlled API.
+      security:
+      - bearerAuth: []
+      x-permission-required: workflow.manage
+      x-audit-event-generated: workflow_event.created
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowEventRequest'
+  /api/workflow-events/{workflow_event_id}/acknowledge:
+    post:
+      tags:
+      - Workflow Events
+      summary: Acknowledge workflow event
+      description: Record n8n acknowledgement/processing status without storing final engineering data in n8n.
+      security:
+      - bearerAuth: []
+      x-permission-required: workflow.manage
+      x-audit-event-generated: workflow_event.acknowledged
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: workflow_event_id
+        in: path
+        required: true
+        description: Workflow event ID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowEventRequest'
+  /api/audit-logs:
+    get:
+      tags:
+      - Audit
+      summary: List audit logs
+      description: Read immutable audit trail for critical actions.
+      security:
+      - bearerAuth: []
+      x-permission-required: audit.read
+      x-audit-event-generated: audit.read
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - name: entity_type
+        in: query
+        required: false
+        description: Entity type
+        schema:
+          type: string
+      - name: entity_id
+        in: query
+        required: false
+        description: Entity ID
+        schema:
+          type: string
+      - name: action_type
+        in: query
+        required: false
+        description: Action type
+        schema:
+          type: string
+  /api/error-logs:
+    get:
+      tags:
+      - Error Logs
+      summary: List error logs
+      description: List application/workflow errors.
+      security:
+      - bearerAuth: []
+      x-permission-required: error.read
+      x-audit-event-generated: none
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Error Logs
+      summary: Create error event
+      description: Create error log from AIM subsystem, n8n callback, AI provider, report renderer, or calculation engine.
+      security:
+      - bearerAuth: []
+      x-permission-required: error.create
+      x-audit-event-generated: error.logged
+      responses:
+        '201':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid request payload or parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user lacks required permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed or workflow gate blocked the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error. AIM must create error_logs record when applicable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorEventRequest'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+      - error
+      - request_id
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+              example: VALIDATION_FAILED
+            message:
+              type: string
+              example: Evidence link is required before approval.
+            details:
+              type: array
+              items:
+                type: object
+            audit_event_generated:
+              type: string
+              example: error.logged
+        request_id:
+          type: string
+          example: req_123456
+    StandardResponse:
+      type: object
+      required:
+      - success
+      - data
+      - audit_event_id
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          additionalProperties: true
+        audit_event_id:
+          type: string
+          format: uuid
+          nullable: true
+        workflow_event_id:
+          type: string
+          format: uuid
+          nullable: true
+        message:
+          type: string
+          example: Operation completed.
+    PagedResponse:
+      type: object
+      required:
+      - success
+      - data
+      - pagination
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            page_size:
+              type: integer
+            total:
+              type: integer
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      required:
+      - access_token
+      - token_type
+      - expires_in
+      - user
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        display_name:
+          type: string
+        user_status:
+          type: string
+          enum:
+          - active
+          - inactive
+          - locked
+          - invited
+        roles:
+          type: array
+          items:
+            type: string
+    CreateUserRequest:
+      type: object
+      required:
+      - email
+      - full_name
+      - role_codes
+      properties:
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        display_name:
+          type: string
+        role_codes:
+          type: array
+          items:
+            type: string
+    Role:
+      type: object
+      properties:
+        role_id:
+          type: string
+          format: uuid
+        role_code:
+          type: string
+        role_name:
+          type: string
+        description:
+          type: string
+        role_status:
+          type: string
+          enum:
+          - active
+          - inactive
+    RoleCreateRequest:
+      type: object
+      required:
+      - role_code
+      - role_name
+      properties:
+        role_code:
+          type: string
+        role_name:
+          type: string
+        description:
+          type: string
+        permission_codes:
+          type: array
+          items:
+            type: string
+    AssetCreateRequest:
+      type: object
+      required:
+      - asset_tag
+      - asset_type
+      - site_name
+      properties:
+        asset_tag:
+          type: string
+          example: T-02
+        asset_name:
+          type: string
+        asset_type:
+          type: string
+          enum:
+          - atmospheric_storage_tank
+        site_name:
+          type: string
+        area:
+          type: string
+        service_fluid:
+          type: string
+        design_code_reference:
+          type: string
+          enum:
+          - API 650
+          - unknown
+          - other
+        design_capacity_m3:
+          type: number
+          format: decimal
+        material:
+          type: string
+        construction_year:
+          type: integer
+        asset_status:
+          type: string
+          enum:
+          - active
+          - inactive
+          - retired
+          - under_review
+          default: active
+    Asset:
+      allOf:
+      - $ref: '#/components/schemas/AssetCreateRequest'
+      - type: object
+        properties:
+          asset_id:
+            type: string
+            format: uuid
+          created_at:
+            type: string
+            format: date-time
+          updated_at:
+            type: string
+            format: date-time
+          created_by:
+            type: string
+            format: uuid
+          updated_by:
+            type: string
+            format: uuid
+    ApprovalRequest:
+      type: object
+      required:
+      - approval_status
+      - review_comment
+      properties:
+        approval_status:
+          type: string
+          enum:
+          - approved
+          - rejected
+        review_comment:
+          type: string
+        reviewed_by:
+          type: string
+          format: uuid
+    EvidenceFileMetadataRequest:
+      type: object
+      required:
+      - storage_uri
+      - original_file_name
+      - file_type
+      - checksum_sha256
+      - file_size_bytes
+      - source_system
+      properties:
+        storage_uri:
+          type: string
+        original_file_name:
+          type: string
+        file_type:
+          type: string
+          enum:
+          - pdf
+          - image
+          - spreadsheet
+          - csv
+          - ndt_export
+          - drawing
+          - other
+        mime_type:
+          type: string
+        checksum_sha256:
+          type: string
+          minLength: 64
+          maxLength: 64
+        file_size_bytes:
+          type: integer
+          minimum: 1
+        source_system:
+          type: string
+          enum:
+          - AIM
+          - import
+          - n8n_notification
+          default: AIM
+    EvidenceFile:
+      allOf:
+      - $ref: '#/components/schemas/EvidenceFileMetadataRequest'
+      - type: object
+        properties:
+          evidence_file_id:
+            type: string
+            format: uuid
+          uploaded_by:
+            type: string
+            format: uuid
+          uploaded_at:
+            type: string
+            format: date-time
+          evidence_status:
+            type: string
+            enum:
+            - uploaded
+            - verified
+            - rejected
+            - archived
+    EvidenceLinkRequest:
+      type: object
+      required:
+      - evidence_file_id
+      - entity_type
+      - entity_id
+      - evidence_code
+      properties:
+        evidence_file_id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum:
+          - asset
+          - inspection
+          - finding
+          - extraction_field
+          - staging_record
+          - ndt_measurement
+          - thickness_reading
+          - calculation_input
+          - calculation_output
+          - integrity_decision
+          - report_version
+          - internal_work_order
+        entity_id:
+          type: string
+          format: uuid
+        page_no:
+          type: integer
+          minimum: 1
+        coordinate_ref:
+          type: string
+        evidence_code:
+          type: string
+        description:
+          type: string
+    EvidenceLink:
+      allOf:
+      - $ref: '#/components/schemas/EvidenceLinkRequest'
+      - type: object
+        properties:
+          evidence_link_id:
+            type: string
+            format: uuid
+          linked_by:
+            type: string
+            format: uuid
+          created_at:
+            type: string
+            format: date-time
+    InspectionCreateRequest:
+      type: object
+      required:
+      - asset_id
+      - inspection_code
+      - inspection_type
+      - inspection_start_date
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_code:
+          type: string
+        inspection_type:
+          type: string
+          enum:
+          - external
+          - internal
+          - UT_thickness
+          - API_653_review
+          - other
+        inspection_start_date:
+          type: string
+          format: date
+        inspection_end_date:
+          type: string
+          format: date
+        lead_inspector_id:
+          type: string
+          format: uuid
+        engineer_id:
+          type: string
+          format: uuid
+        report_due_date:
+          type: string
+          format: date
+    Inspection:
+      allOf:
+      - $ref: '#/components/schemas/InspectionCreateRequest'
+      - type: object
+        properties:
+          inspection_id:
+            type: string
+            format: uuid
+          inspection_status:
+            type: string
+            enum:
+            - draft
+            - in_progress
+            - submitted
+            - engineering_review
+            - approved
+            - rejected
+            - closed
+    ExtractionJobCreateRequest:
+      type: object
+      required:
+      - inspection_id
+      - evidence_file_id
+      - ai_model_name
+      - ai_model_version
+      properties:
+        inspection_id:
+          type: string
+          format: uuid
+        evidence_file_id:
+          type: string
+          format: uuid
+        ai_model_name:
+          type: string
+        ai_model_version:
+          type: string
+        extraction_scope:
+          type: array
+          items:
+            type: string
+            enum:
+            - asset
+            - inspection
+            - ndt_ut
+            - calculation_inputs
+            - findings
+    ExtractionJob:
+      allOf:
+      - $ref: '#/components/schemas/ExtractionJobCreateRequest'
+      - type: object
+        properties:
+          extraction_job_id:
+            type: string
+            format: uuid
+          job_status:
+            type: string
+            enum:
+            - queued
+            - running
+            - completed
+            - failed
+            - cancelled
+          submitted_by:
+            type: string
+            format: uuid
+    ExtractionFieldApprovalRequest:
+      type: object
+      required:
+      - review_status
+      - review_comment
+      properties:
+        review_status:
+          type: string
+          enum:
+          - accepted_to_staging
+          - rejected
+          - needs_review
+        review_comment:
+          type: string
+        corrected_value:
+          type: string
+        corrected_unit:
+          type: string
+          enum:
+          - mm
+          - m
+          - year
+          - date
+          - text
+          - percent
+          - none
+    StagingPromotionRequest:
+      type: object
+      required:
+      - staging_record_id
+      - target_table_name
+      - target_field_name
+      - approved_value
+      properties:
+        staging_record_id:
+          type: string
+          format: uuid
+        target_table_name:
+          type: string
+          enum:
+          - assets
+          - asset_components
+          - inspections
+          - inspection_findings
+          - ndt_measurements
+          - cml_points
+          - thickness_readings
+          - calculation_inputs
+        target_field_name:
+          type: string
+        approved_value:
+          type: string
+        approved_unit:
+          type: string
+        evidence_link_id:
+          type: string
+          format: uuid
+        promotion_comment:
+          type: string
+    NdtMeasurementCreateRequest:
+      type: object
+      required:
+      - inspection_id
+      - asset_id
+      - method_type
+      - measurement_date
+      properties:
+        inspection_id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+          format: uuid
+        component_id:
+          type: string
+          format: uuid
+        method_type:
+          type: string
+          enum:
+          - UT_THICKNESS
+          default: UT_THICKNESS
+        measurement_date:
+          type: string
+          format: date
+        technician_name:
+          type: string
+        device_id:
+          type: string
+        evidence_link_id:
+          type: string
+          format: uuid
+        readings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThicknessReadingInput'
+    ThicknessReadingInput:
+      type: object
+      required:
+      - component_id
+      - current_thickness_mm
+      - reading_date
+      - evidence_link_id
+      properties:
+        cml_point_id:
+          type: string
+          format: uuid
+        component_id:
+          type: string
+          format: uuid
+        course_no:
+          type: integer
+          minimum: 1
+        previous_thickness_mm:
+          type: number
+        current_thickness_mm:
+          type: number
+        minimum_required_thickness_mm:
+          type: number
+        reading_date:
+          type: string
+          format: date
+        evidence_link_id:
+          type: string
+          format: uuid
+        unit:
+          type: string
+          enum:
+          - mm
+          default: mm
+    CalculationRunRequest:
+      type: object
+      required:
+      - asset_id
+      - inspection_id
+      - formula_version_id
+      - calculation_type
+      - inputs
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_id:
+          type: string
+          format: uuid
+        formula_version_id:
+          type: string
+          format: uuid
+        calculation_type:
+          type: string
+          enum:
+          - corrosion_rate_remaining_life_mvp
+        calculation_basis:
+          type: string
+          example: AIM MVP formula registry only. Engineering review required before final use.
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalculationInputItem'
+    CalculationInputItem:
+      type: object
+      required:
+      - source_reading_id
+      - previous_thickness_mm
+      - current_thickness_mm
+      - minimum_required_thickness_mm
+      - years_between_inspections
+      - evidence_link_id
+      properties:
+        source_reading_id:
+          type: string
+          format: uuid
+        component_id:
+          type: string
+          format: uuid
+        course_no:
+          type: integer
+        previous_thickness_mm:
+          type: number
+        current_thickness_mm:
+          type: number
+        minimum_required_thickness_mm:
+          type: number
+        years_between_inspections:
+          type: number
+        evidence_link_id:
+          type: string
+          format: uuid
+    CalculationRun:
+      type: object
+      properties:
+        calculation_run_id:
+          type: string
+          format: uuid
+        run_status:
+          type: string
+          enum:
+          - draft
+          - validated
+          - run
+          - review_required
+          - approved
+          - rejected
+        disclaimer:
+          type: string
+          example: Engineering review required before final use.
+        outputs:
+          type: array
+          items:
+            type: object
+    CalculationApprovalRequest:
+      type: object
+      required:
+      - approval_status
+      - review_comment
+      properties:
+        approval_status:
+          type: string
+          enum:
+          - approved
+          - rejected
+        review_comment:
+          type: string
+        reviewed_output_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        evidence_link_id:
+          type: string
+          format: uuid
+    IntegrityDecisionCreateRequest:
+      type: object
+      required:
+      - asset_id
+      - inspection_id
+      - decision_status
+      - decision_summary
+      - decision_by
+      - evidence_link_id
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_id:
+          type: string
+          format: uuid
+        calculation_run_id:
+          type: string
+          format: uuid
+        decision_status:
+          type: string
+          enum:
+          - fit_for_service
+          - monitor
+          - repair_required
+          - restrict_service
+          - out_of_scope
+          - pending_review
+        decision_summary:
+          type: string
+        required_action:
+          type: string
+        decision_by:
+          type: string
+          format: uuid
+        evidence_link_id:
+          type: string
+          format: uuid
+    IntegrityDecision:
+      allOf:
+      - $ref: '#/components/schemas/IntegrityDecisionCreateRequest'
+      - type: object
+        properties:
+          decision_id:
+            type: string
+            format: uuid
+          approval_status:
+            type: string
+            enum:
+            - draft
+            - submitted
+            - approved
+            - rejected
+    ReportGenerateRequest:
+      type: object
+      required:
+      - asset_id
+      - inspection_id
+      - report_template_id
+      - prepared_by
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_id:
+          type: string
+          format: uuid
+        report_template_id:
+          type: string
+          format: uuid
+        prepared_by:
+          type: string
+          format: uuid
+        include_sections:
+          type: array
+          items:
+            type: string
+            enum:
+            - executive_summary
+            - asset_data
+            - inspection_scope
+            - evidence
+            - ndt_summary
+            - calculation
+            - integrity_decision
+            - work_orders
+    ReportIssueRequest:
+      type: object
+      required:
+      - report_id
+      - report_version_id
+      - approved_by
+      - issue_comment
+      properties:
+        report_id:
+          type: string
+          format: uuid
+        report_version_id:
+          type: string
+          format: uuid
+        approved_by:
+          type: string
+          format: uuid
+        issue_comment:
+          type: string
+        gate_confirmation:
+          type: object
+          required:
+          - required_data
+          - calculation
+          - review
+          - evidence
+          - approval
+          properties:
+            required_data:
+              type: boolean
+            calculation:
+              type: boolean
+            review:
+              type: boolean
+            evidence:
+              type: boolean
+            approval:
+              type: boolean
+    DashboardKpiResponse:
+      type: object
+      properties:
+        assets_total:
+          type: integer
+        inspections_open:
+          type: integer
+        staging_pending_review:
+          type: integer
+        calculations_pending_approval:
+          type: integer
+        reports_blocked:
+          type: integer
+        work_orders_open:
+          type: integer
+        last_refreshed_at:
+          type: string
+          format: date-time
+    WorkOrderCreateRequest:
+      type: object
+      required:
+      - asset_id
+      - work_order_code
+      - work_order_type
+      - priority
+      - description
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        inspection_id:
+          type: string
+          format: uuid
+        decision_id:
+          type: string
+          format: uuid
+        finding_id:
+          type: string
+          format: uuid
+        work_order_code:
+          type: string
+        work_order_type:
+          type: string
+          enum:
+          - repair
+          - reinspection
+          - followup_ut
+          - monitoring
+          - engineering_review
+          - other
+        priority:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - urgent
+        description:
+          type: string
+        assigned_to:
+          type: string
+          format: uuid
+        due_date:
+          type: string
+          format: date
+        external_cmms_reference:
+          type: string
+    WorkflowEventRequest:
+      type: object
+      required:
+      - source_system
+      - event_type
+      - entity_type
+      - entity_id
+      properties:
+        source_system:
+          type: string
+          enum:
+          - AIM
+          - n8n
+        event_type:
+          type: string
+          enum:
+          - approval_requested
+          - review_completed
+          - reminder_due
+          - report_issued
+          - work_order_created
+          - integration_failed
+          - audit_event
+        entity_type:
+          type: string
+          enum:
+          - inspection
+          - staging_record
+          - calculation_run
+          - integrity_decision
+          - report
+          - internal_work_order
+          - evidence_file
+        entity_id:
+          type: string
+          format: uuid
+        payload_json:
+          type: object
+          additionalProperties: true
+        n8n_execution_id:
+          type: string
+    ErrorEventRequest:
+      type: object
+      required:
+      - source_system
+      - severity
+      - error_code
+      - error_message
+      properties:
+        source_system:
+          type: string
+          enum:
+          - AIM
+          - n8n
+          - object_storage
+          - ai_provider
+          - report_renderer
+          - calculation_engine
+        severity:
+          type: string
+          enum:
+          - info
+          - warning
+          - error
+          - critical
+        error_code:
+          type: string
+        error_message:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        request_id:
+          type: string
+        diagnostics_json:
+          type: object
+          additionalProperties: true
+    AuditLog:
+      type: object
+      properties:
+        audit_log_id:
+          type: string
+          format: uuid
+        actor_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        action_type:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        before_json:
+          type: object
+        after_json:
+          type: object
+        reason:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+        ip_address:
+          type: string

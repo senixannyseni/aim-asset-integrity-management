@@ -1,0 +1,336 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aim.local/schemas/extraction_schema_tank_api653.json",
+  "title": "AIM Tank API 653 High-Level Extraction Schema",
+  "description": "AI extraction schema for atmospheric storage tank inspection reports. AI extracts and structures data only; output must go to extraction_fields and staging_records.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "extraction_job_id",
+    "asset_tag",
+    "report_number",
+    "inspection_date",
+    "extraction_fields"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "extraction_job_id": {
+      "type": "string"
+    },
+    "asset_tag": {
+      "type": "string"
+    },
+    "inspection_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "report_number": {
+      "type": "string"
+    },
+    "inspection_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "standard_reference_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "High-level standard/reference text only. Do not quote copyrighted clauses."
+    },
+    "tank": {
+      "type": "object",
+      "properties": {
+        "asset_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "service": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tank_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "atmospheric_storage_tank",
+            null
+          ]
+        },
+        "design_code_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "year_built": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "diameter_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "height_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shell_material": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "number_of_shell_courses": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "shell_course_summary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "course_no"
+        ],
+        "properties": {
+          "course_no": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "component": {
+            "type": "string",
+            "default": "shell"
+          },
+          "nominal_thickness_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "previous_thickness_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "current_thickness_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "minimum_required_thickness_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "measurement_method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cml_reference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "$ref": "#/$defs/sourceRef"
+          },
+          "confidence_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "field_status": {
+            "$ref": "#/$defs/fieldStatus"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "extraction_fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/extractedField"
+      }
+    }
+  },
+  "$defs": {
+    "fieldStatus": {
+      "type": "string",
+      "description": "AI may set ai_extracted, needs_review, invalid, or rejected_by_validation. Human reviewer may later update status through staging review endpoints.",
+      "enum": [
+        "ai_extracted",
+        "needs_review",
+        "invalid",
+        "rejected_by_validation"
+      ]
+    },
+    "sourceRef": {
+      "type": "object",
+      "required": [
+        "evidence_code",
+        "source_file_name"
+      ],
+      "properties": {
+        "evidence_code": {
+          "type": "string",
+          "pattern": "^EVD-[0-9]{4}-[0-9]{6}$"
+        },
+        "source_file_name": {
+          "type": "string"
+        },
+        "page_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Page number/range for PDF evidence when applicable."
+        },
+        "figure_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "table_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cell_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Spreadsheet cell/range when source is XLSX/CSV."
+        },
+        "bbox": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "extraction_note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "extractedField": {
+      "type": "object",
+      "required": [
+        "field_name",
+        "value",
+        "source",
+        "confidence_score",
+        "field_status"
+      ],
+      "properties": {
+        "field_name": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "normalized_value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "field_status": {
+          "$ref": "#/$defs/fieldStatus"
+        },
+        "validation_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "review_required": {
+          "type": "boolean"
+        },
+        "review_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

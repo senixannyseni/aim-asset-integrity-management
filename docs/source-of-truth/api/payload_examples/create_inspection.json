@@ -1,0 +1,10 @@
+{
+  "asset_id": "33333333-3333-4333-8333-333333333333",
+  "inspection_code": "INSP-T02-2026-001",
+  "inspection_type": "UT_thickness",
+  "inspection_start_date": "2026-05-01",
+  "inspection_end_date": "2026-05-05",
+  "lead_inspector_id": "77777777-7777-4777-8777-777777777777",
+  "engineer_id": "88888888-8888-4888-8888-888888888888",
+  "report_due_date": "2026-05-20"
+}
