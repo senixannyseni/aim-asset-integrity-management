@@ -407,3 +407,7 @@ Acceptance criteria:
 Gate: Tenant context must be visible to users without moving enforcement to the frontend. Tenant Admin Console must remain read/switch UX only, backend membership validation must remain authoritative, and AI/n8n/service actors cannot approve tenant UX/admin changes.
 
 Evidence: MT-S4-001 through MT-S4-012.
+
+## Enterprise Multi-Tenant Runtime Sprint 5 Evidence Lifecycle Gate
+
+Sprint 5 acceptance requires tenant-scoped evidence lifecycle policy records, backup/restore rehearsal scope records, tenant export-control review records, and regression proof that cross-tenant object keys are blocked. AI/n8n/service actors cannot approve Sprint 5 evidence lifecycle, backup/restore, or export-control gates.

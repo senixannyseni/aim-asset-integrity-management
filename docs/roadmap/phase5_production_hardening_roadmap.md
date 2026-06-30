@@ -217,3 +217,7 @@ Sprint 3 follows Sprint 2 by closing the route inventory gap. It adds a route re
 ## Enterprise Multi-Tenant Runtime Implementation Sprint 4 — Frontend Tenant UX and Tenant Admin Console
 
 Sprint 4 makes multi-tenant runtime visible and usable in the frontend through tenant context display, tenant selection, and a Tenant Admin Console. The frontend remains a user-experience layer while backend RBAC, tenant membership, route filtering, and object-boundary checks remain the authority.
+
+## Enterprise Multi-Tenant Runtime Sprint 5 Roadmap Addendum
+
+Sprint 5 adds tenant-scoped evidence lifecycle, backup/restore, and export controls. It prepares the platform for customer onboarding runtime by making tenant data retention, restore scope, and export execution reviewable and tenant-bound.
