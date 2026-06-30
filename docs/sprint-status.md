@@ -864,3 +864,12 @@ Scope: tenant schema foundation, tenant memberships, request tenant context reso
 **Boundary:** Not final customer production tenant certification; frontend tenant UX, tenant-scoped backup/restore/export controls, customer onboarding runtime, and final isolation certification remain future packages.
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence, approve full route expansion, approve tenant route exceptions, approve tenant isolation regression results, waive multi-tenant Sprint 3 evidence, or sign multi-tenant Sprint 3 closure.
+
+
+### Sprint 3 evidence-table completion hotfix
+
+**Status:** Forward-only evidence-table completion package prepared after Sprint 3 post-tag review.  
+**Migration:** `0031_enterprise_multitenant_sprint3_route_isolation_review_completion.sql`  
+**Scope:** Completes `tenant_route_isolation_reviews` coverage so the database-backed human review table mirrors all 30 entries in `TENANT_ROUTE_REGISTRY`.
+
+This hotfix does not rewrite already-tagged migrations 0028, 0029, or 0030 and does not change route behavior, tenant classification, object-storage behavior, or certification status. AI/n8n/service actors cannot approve review coverage completion or waive tenant isolation evidence.

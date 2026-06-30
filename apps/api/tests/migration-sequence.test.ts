@@ -40,6 +40,7 @@ describe('database migration sequence', () => {
       '0028_enterprise_multitenant_sprint1_tenant_context.sql',
       '0029_enterprise_multitenant_sprint2_route_filtering_object_boundary.sql',
       '0030_enterprise_multitenant_sprint3_route_expansion_regression_harness.sql',
+      '0031_enterprise_multitenant_sprint3_route_isolation_review_completion.sql',
     ]);
   });
 });

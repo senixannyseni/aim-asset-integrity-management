@@ -1137,3 +1137,10 @@ Enterprise Multi-Tenant Runtime Sprint 3 adds a complete route registry and tena
 Sprint 3 preserves the Sprint 2 asset/evidence/report runtime tenant boundary patterns, adds `tenant_route_isolation_reviews`, and introduces regression checks for complete route inventory coverage. Sprint 3 is still not final production tenant isolation certification; frontend tenant UX, tenant-scoped backup/restore/export operations, onboarding runtime, and final isolation certification remain future packages.
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence, approve full route expansion, approve tenant route exceptions, approve tenant isolation regression results, waive multi-tenant Sprint 3 evidence, or sign multi-tenant Sprint 3 closure. n8n remains orchestration-only. AIM remains the system of record.
+
+
+### Sprint 3 evidence-table completion hotfix
+
+A forward-only hotfix adds `0031_enterprise_multitenant_sprint3_route_isolation_review_completion.sql` so `tenant_route_isolation_reviews` mirrors every route currently listed in `TENANT_ROUTE_REGISTRY`. This closes the evidence-table advisory found after Sprint 3 review.
+
+This hotfix does not change route behavior, tenant classifications, object-storage boundaries, frontend tenant UX, billing/payment behavior, customer onboarding runtime, or tenant certification status. It also does not rewrite already-tagged migrations 0028, 0029, or 0030. AI/n8n/service actors cannot approve route review evidence completion or waive tenant isolation review coverage.
