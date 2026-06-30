@@ -10,6 +10,7 @@ type NavItem = {
   label: string;
   icon: string;
   match?: string[];
+  exact?: boolean;
 };
 
 type NavGroup = {
@@ -61,6 +62,9 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Admin & Release',
     items: [
       { href: '/admin-governance', label: 'Admin Governance', icon: '⚙' },
+      { href: '/data-dictionary', label: 'Data Dictionary', icon: '📚' },
+      { href: '/validation', label: 'Validation Overview', icon: '🧾', exact: true },
+      { href: '/validation/history', label: 'Validation History', icon: '🕘' },
       { href: '/security-monitoring', label: 'Security Monitoring', icon: '🔐' },
       { href: '/golive-readiness', label: 'Go-Live Readiness', icon: '✅' },
       { href: '/production-validation', label: 'Production Validation', icon: '🚀' },
@@ -92,6 +96,9 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/workflow-console': { title: 'Workflow Console', subtitle: 'n8n orchestration visibility through AIM workflow events' },
   '/audit-logs': { title: 'Audit Logs', subtitle: 'Read-only governance audit trail' },
   '/admin-governance': { title: 'Admin Governance', subtitle: 'Users, roles, configuration, and governance controls' },
+  '/data-dictionary': { title: 'Data Dictionary', subtitle: 'Controlled engineering field definitions, rules, and validation metadata' },
+  '/validation': { title: 'Validation Overview', subtitle: 'Deterministic data-quality validation and readiness checks' },
+  '/validation/history': { title: 'Validation History', subtitle: 'Read-only validation snapshots and field-level issue history' },
   '/security-monitoring': { title: 'Security Monitoring', subtitle: 'Security evidence, alert routing, and incident readiness' },
   '/golive-readiness': { title: 'Go-Live Readiness', subtitle: 'Hypercare, readiness, and production go-live gates' },
   '/production-validation': { title: 'Production Validation', subtitle: 'Deployment smoke test, backup, rollback, and signoff evidence' },
@@ -100,7 +107,7 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
 
 function isActive(pathname: string, item: NavItem): boolean {
   const candidates = item.match ?? [item.href];
-  return candidates.some((candidate) => pathname === candidate || (candidate !== '/' && pathname.startsWith(`${candidate}/`)));
+  return candidates.some((candidate) => pathname === candidate || (!item.exact && candidate !== '/' && pathname.startsWith(`${candidate}/`)));
 }
 
 function resolveMeta(pathname: string): { title: string; subtitle: string } {
