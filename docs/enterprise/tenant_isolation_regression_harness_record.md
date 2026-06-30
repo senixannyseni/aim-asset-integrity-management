@@ -21,3 +21,10 @@ The harness is not a substitute for database tests, production penetration testi
 ## Evidence Handling Restrictions
 
 Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, tenant credentials, customer PII, real customer data, tenant data, customer commercial terms, tenant billing details, payment processing data, full API 579, full API 581, or copied API/API-ASME formulas into commits, tests, logs, screenshots, pull requests, or ChatGPT/Codex prompts.
+
+
+## Evidence Table Completion
+
+Sprint 3 post-tag review found that runtime registry coverage was complete but the database-backed `tenant_route_isolation_reviews` seed table did not mirror every registry entry. The forward-only migration `0031_enterprise_multitenant_sprint3_route_isolation_review_completion.sql` completes that review evidence table without changing route behavior, tenant classifications, or object-storage boundaries.
+
+This completion migration does not rewrite already-tagged migrations 0028, 0029, or 0030. AI/n8n/service actors cannot approve route review evidence completion or waive tenant isolation review coverage.

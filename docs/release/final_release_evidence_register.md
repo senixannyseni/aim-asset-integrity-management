@@ -542,3 +542,13 @@ AI/n8n/service actors cannot accept multi-tenant Sprint 2 evidence or sign multi
 | MT-S3-012 | Human Sprint 3 signoff | `docs/operations/enterprise_multitenant_runtime_sprint3_route_expansion_regression_harness_runbook.md` |
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence or sign multi-tenant Sprint 3 closure.
+
+
+## Sprint 3 Route Isolation Review Evidence Completion
+
+| Evidence item | Source artifact | Owner | Status |
+|---|---|---|---|
+| Complete `tenant_route_isolation_reviews` seed coverage | `db/migrations/0031_enterprise_multitenant_sprint3_route_isolation_review_completion.sql` | Engineering / Security | Pending human review |
+| Registry-to-review-table parity regression | `apps/api/tests/enterprise-multitenant-runtime-sprint3-route-isolation-review-completion.test.ts` | Engineering | Pending human review |
+
+This is a forward-only evidence-table completion hotfix. It does not rewrite already-tagged migrations 0028, 0029, or 0030 and does not change route behavior, tenant classifications, object-storage boundaries, or final tenant certification status.
