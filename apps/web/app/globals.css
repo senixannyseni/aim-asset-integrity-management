@@ -1296,3 +1296,165 @@ body {
     display: none;
   }
 }
+
+
+/* Enterprise Multi-Tenant Runtime Sprint 4 — tenant UX/admin console */
+.aim-tenant-mini-card {
+  background: rgba(14, 124, 123, 0.13);
+  border: 1px solid rgba(94, 234, 212, 0.24);
+  border-radius: 12px;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.aim-tenant-mini-card__label,
+.aim-tenant-hero__label {
+  color: #99f6e4;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aim-tenant-mini-card__name {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.aim-tenant-mini-card__meta {
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.aim-tenant-mini-card__select {
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 11px;
+  padding: 7px 8px;
+  width: 100%;
+}
+
+.aim-tenant-mini-card__link {
+  color: #99f6e4;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.aim-topbar__pill--tenant {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aim-tenant-admin-page {
+  display: grid;
+  gap: 18px;
+}
+
+.aim-tenant-hero {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.aim-tenant-hero__card {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(14, 124, 123, 0.28);
+  border-radius: 16px;
+  display: grid;
+  gap: 5px;
+  min-width: 260px;
+  padding: 16px;
+}
+
+.aim-tenant-hero__card strong {
+  color: #0f766e;
+  font-size: 20px;
+}
+
+.aim-tenant-hero__card span:last-child {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.aim-tenant-list,
+.aim-control-list {
+  display: grid;
+  gap: 10px;
+}
+
+.aim-tenant-row {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.aim-tenant-row.is-active {
+  border-color: rgba(14, 124, 123, 0.6);
+  box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.08);
+}
+
+.aim-tenant-row p,
+.aim-control-list li,
+.aim-tenant-boundary-note span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 3px 0 0;
+}
+
+.aim-control-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.aim-control-list li {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.aim-control-list li::before {
+  content: '✓';
+  color: #0f766e;
+  font-weight: 900;
+  margin-right: 8px;
+}
+
+.aim-tenant-boundary-note {
+  background: rgba(14, 124, 123, 0.08);
+  border: 1px solid rgba(14, 124, 123, 0.2);
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+@media (max-width: 780px) {
+  .aim-tenant-hero,
+  .aim-tenant-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .aim-tenant-hero__card {
+    min-width: 0;
+  }
+}

@@ -552,3 +552,19 @@ AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence or sign multi
 | Registry-to-review-table parity regression | `apps/api/tests/enterprise-multitenant-runtime-sprint3-route-isolation-review-completion.test.ts` | Engineering | Pending human review |
 
 This is a forward-only evidence-table completion hotfix. It does not rewrite already-tagged migrations 0028, 0029, or 0030 and does not change route behavior, tenant classifications, object-storage boundaries, or final tenant certification status.
+
+
+## Enterprise Multi-Tenant Runtime Sprint 4 Frontend Tenant UX and Tenant Admin Console Mapping
+
+- MT-S4-001 — Tenant context visibility in AIM Shell.
+- MT-S4-002 — Tenant switcher header propagation.
+- MT-S4-003 — Tenant Admin Console read/switch UX.
+- MT-S4-004 — Tenant isolation health surfaced.
+- MT-S4-005 — API client sends tenant selection headers.
+- MT-S4-006 — No tenant creation or approval authority.
+- MT-S4-007 — Backend remains enforcement layer.
+- MT-S4-008 — AI/n8n/service actor tenant admin boundary.
+- MT-S4-009 — No historical migration rewrite.
+- MT-S4-010 — Tenant UX docs/runbook.
+- MT-S4-011 — Sprint 4 regression test.
+- MT-S4-012 — Release evidence sync.

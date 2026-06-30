@@ -212,3 +212,8 @@ Sprint 3 should continue broader route expansion and frontend tenant-switching r
 ## Enterprise Multi-Tenant Runtime Implementation Sprint 3 — Full Route Expansion and Tenant Isolation Regression Harness
 
 Sprint 3 follows Sprint 2 by closing the route inventory gap. It adds a route registry, tenant isolation regression harness, route exception register, review-table migration, and human-control evidence for route expansion. This prepares the product for frontend tenant UX, tenant-scoped evidence lifecycle operations, customer onboarding runtime, and final tenant isolation certification.
+
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 4 — Frontend Tenant UX and Tenant Admin Console
+
+Sprint 4 makes multi-tenant runtime visible and usable in the frontend through tenant context display, tenant selection, and a Tenant Admin Console. The frontend remains a user-experience layer while backend RBAC, tenant membership, route filtering, and object-boundary checks remain the authority.

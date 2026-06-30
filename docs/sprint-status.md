@@ -873,3 +873,12 @@ AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence, approve full
 **Scope:** Completes `tenant_route_isolation_reviews` coverage so the database-backed human review table mirrors all 30 entries in `TENANT_ROUTE_REGISTRY`.
 
 This hotfix does not rewrite already-tagged migrations 0028, 0029, or 0030 and does not change route behavior, tenant classification, object-storage behavior, or certification status. AI/n8n/service actors cannot approve review coverage completion or waive tenant isolation evidence.
+
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 4 — Frontend Tenant UX and Tenant Admin Console
+
+Status: implementation package prepared.
+
+Evidence IDs: MT-S4-001 through MT-S4-012.
+
+Sprint 4 adds tenant context visibility, tenant switcher UX, Tenant Admin Console read/switch workflow, isolation health display, and frontend tenant header propagation. It does not rewrite historical migrations and does not move tenant enforcement to the frontend.

@@ -1144,3 +1144,10 @@ AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence, approve full
 A forward-only hotfix adds `0031_enterprise_multitenant_sprint3_route_isolation_review_completion.sql` so `tenant_route_isolation_reviews` mirrors every route currently listed in `TENANT_ROUTE_REGISTRY`. This closes the evidence-table advisory found after Sprint 3 review.
 
 This hotfix does not change route behavior, tenant classifications, object-storage boundaries, frontend tenant UX, billing/payment behavior, customer onboarding runtime, or tenant certification status. It also does not rewrite already-tagged migrations 0028, 0029, or 0030. AI/n8n/service actors cannot approve route review evidence completion or waive tenant isolation review coverage.
+
+
+### Enterprise Multi-Tenant Runtime Implementation Sprint 4 — Frontend Tenant UX and Tenant Admin Console
+
+Enterprise Multi-Tenant Runtime Sprint 4 adds frontend tenant context visibility, a tenant switcher in the AIM Shell, a read/switch Tenant Admin Console, and frontend API header propagation for `x-aim-tenant-id` / `x-aim-tenant-slug`.
+
+Scope boundary: Sprint 4 does not create tenants, approve tenant memberships, certify tenant isolation readiness, or move enforcement to the frontend. Backend RBAC, tenant membership resolution, route filtering, and object-storage boundary checks remain authoritative. AI/n8n/service actors cannot accept multi-tenant Sprint 4 evidence or approve tenant UX/admin changes.

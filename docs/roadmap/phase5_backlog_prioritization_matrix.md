@@ -356,3 +356,12 @@ AI/n8n/service actors cannot approve tenant-scoped route rollout or waive multi-
 | Route exception register | P0 | Prepared | Auth, health, local demo, tenant control-plane, and global/system exceptions must be explicit. |
 | Historical SQL tenant predicate hardening | P1 | Future package | Registry makes remaining route-family work visible before final customer tenant certification. |
 | Frontend tenant UX and tenant admin console | P1 | Future package | Planned after Sprint 3 route regression baseline. |
+
+
+## Enterprise Multi-Tenant Runtime Sprint 4 Frontend Tenant UX Backlog Mapping
+
+Priority: High.
+
+Outcome: tenant context visibility, tenant switcher UX, Tenant Admin Console read/switch workflow, and frontend tenant header propagation are available before deeper customer onboarding and tenant lifecycle packages.
+
+Boundary: no tenant creation, no billing, no frontend-only enforcement, and no historical migration rewrite.
