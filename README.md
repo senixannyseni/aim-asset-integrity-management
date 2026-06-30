@@ -1129,3 +1129,11 @@ Enterprise Multi-Tenant Runtime Sprint 2 adds tenant-scoped route filtering help
 Sprint 2 is not full production multi-tenant certification. Remaining historical route expansion, frontend tenant switching, and tenant-specific operational policies remain future scope.
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 2 evidence, approve route-wide tenant filtering, approve tenant object-storage boundary readiness, approve tenant-scoped route rollout, waive multi-tenant Sprint 2 evidence, or sign multi-tenant Sprint 2 closure. n8n remains orchestration-only. AIM remains the system of record.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 3 — Full Route Expansion and Tenant Isolation Regression Harness
+
+Enterprise Multi-Tenant Runtime Sprint 3 adds a complete route registry and tenant isolation regression harness. It maps every implemented API route file into tenant-scoped, tenant control-plane, auth/session, global/system, local-demo, or public health categories so future route additions cannot bypass tenant review silently.
+
+Sprint 3 preserves the Sprint 2 asset/evidence/report runtime tenant boundary patterns, adds `tenant_route_isolation_reviews`, and introduces regression checks for complete route inventory coverage. Sprint 3 is still not final production tenant isolation certification; frontend tenant UX, tenant-scoped backup/restore/export operations, onboarding runtime, and final isolation certification remain future packages.
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 3 evidence, approve full route expansion, approve tenant route exceptions, approve tenant isolation regression results, waive multi-tenant Sprint 3 evidence, or sign multi-tenant Sprint 3 closure. n8n remains orchestration-only. AIM remains the system of record.
