@@ -1,0 +1,8 @@
+{
+  "approval_status": "approved",
+  "review_comment": "Deterministic MVP calculation output reviewed against validation workbook and evidence. Engineering review required before final use disclaimer retained.",
+  "reviewed_output_ids": [
+    "c2222222-2222-4222-8222-222222222222"
+  ],
+  "evidence_link_id": "e2222222-2222-4222-8222-222222222222"
+}

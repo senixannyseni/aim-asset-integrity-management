@@ -1,0 +1,9 @@
+{
+  "storage_uri": "s3://aim-evidence/site-a/T-02/ut-report.pdf",
+  "original_file_name": "ut-report.pdf",
+  "file_type": "pdf",
+  "mime_type": "application/pdf",
+  "checksum_sha256": "7d793037a0760186574b0282f2f435e711111111111111111111111111111111",
+  "file_size_bytes": 2457600,
+  "source_system": "AIM"
+}

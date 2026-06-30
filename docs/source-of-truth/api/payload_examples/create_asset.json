@@ -1,0 +1,13 @@
+{
+  "asset_tag": "T-02",
+  "asset_name": "Solar Storage Tank T-02",
+  "asset_type": "atmospheric_storage_tank",
+  "site_name": "Fuel Terminal A",
+  "area": "Tank Farm 1",
+  "service_fluid": "Solar",
+  "design_code_reference": "API 650",
+  "design_capacity_m3": 1000.0,
+  "material": "SA-283 Gr C",
+  "construction_year": 2010,
+  "asset_status": "active"
+}

@@ -1,0 +1,13 @@
+{
+  "source_system": "n8n",
+  "event_type": "approval_requested",
+  "entity_type": "calculation_run",
+  "entity_id": "b2222222-2222-4222-8222-222222222222",
+  "payload_json": {
+    "action": "request_review",
+    "target_role": "Lead Engineer",
+    "message": "Calculation run requires human engineering review.",
+    "aim_boundary_note": "n8n orchestrates notification only and does not store final engineering data."
+  },
+  "n8n_execution_id": "54231"
+}

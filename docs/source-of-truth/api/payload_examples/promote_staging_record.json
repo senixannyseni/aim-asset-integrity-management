@@ -1,0 +1,9 @@
+{
+  "staging_record_id": "b1111111-1111-4111-8111-111111111111",
+  "target_table_name": "thickness_readings",
+  "target_field_name": "current_thickness_mm",
+  "approved_value": "7.200",
+  "approved_unit": "mm",
+  "evidence_link_id": "e2222222-2222-4222-8222-222222222222",
+  "promotion_comment": "Engineer-approved staging value promoted by AIM service after review gate."
+}

@@ -1,0 +1,13 @@
+{
+  "report_id": "22222222-2222-4222-8222-222222222222",
+  "report_version_id": "33333333-3333-4333-8333-333333333334",
+  "approved_by": "99999999-9999-4999-8999-999999999999",
+  "issue_comment": "All required gates satisfied. Report issued by authorized approver.",
+  "gate_confirmation": {
+    "required_data": true,
+    "calculation": true,
+    "review": true,
+    "evidence": true,
+    "approval": true
+  }
+}

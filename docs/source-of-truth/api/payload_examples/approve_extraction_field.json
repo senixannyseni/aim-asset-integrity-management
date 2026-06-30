@@ -1,0 +1,6 @@
+{
+  "review_status": "accepted_to_staging",
+  "review_comment": "Extracted current thickness matches evidence page reference and can be staged for engineering review.",
+  "corrected_value": "7.200",
+  "corrected_unit": "mm"
+}
