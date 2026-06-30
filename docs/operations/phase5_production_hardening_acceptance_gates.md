@@ -381,3 +381,9 @@ Gate evidence: `MT-S1-001 through MT-S1-012`.
 Pass condition: tenant context runtime, tenant membership loading, tenant_id database foundation, and tenant RBAC controls are present, tested, and human-reviewed. Sprint 1 does not authorize production multi-tenant rollout until route-level tenant filters and production migration evidence are complete.
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 1 evidence or approve tenant isolation readiness.
+
+## Enterprise Multi-Tenant Runtime Sprint 2 Route Filtering and Object Storage Boundary Gate
+
+Sprint 2 is accepted only when MT-S2-001 through MT-S2-012 are present, regression-tested, and reviewed by named humans. The gate confirms tenant-scoped query helper behavior, high-risk asset/evidence/report route filtering evidence, tenant-prefixed object-storage keys, evidence upload-session tenant_id, report-export tenant_id, and residual route gaps for Sprint 3.
+
+AI/n8n/service actors cannot approve route-wide tenant filtering, tenant object-storage boundary readiness, tenant-scoped route rollout, or Sprint 2 closure.

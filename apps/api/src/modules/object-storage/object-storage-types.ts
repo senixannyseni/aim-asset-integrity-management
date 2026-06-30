@@ -38,7 +38,13 @@ export type SignedDownloadInput = {
   expiresInSeconds?: number;
 };
 
+export type TenantObjectKeyScope = {
+  tenantId: string;
+  tenantSlug: string;
+};
+
 export type EvidenceObjectKeyInput = {
+  tenant?: TenantObjectKeyScope;
   assetTagOrId: string;
   inspectionId?: string | null;
   evidenceCode: string;
@@ -46,6 +52,7 @@ export type EvidenceObjectKeyInput = {
 };
 
 export type ReportObjectKeyInput = {
+  tenant?: TenantObjectKeyScope;
   reportId: string;
   exportId: string;
   filename: string;

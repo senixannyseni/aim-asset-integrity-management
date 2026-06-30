@@ -202,3 +202,9 @@ This package follows the enterprise runtime backlog and prepares Sprint 1 runtim
 ## Enterprise Multi-Tenant Runtime Implementation Sprint 1 — Tenant Context and Database Isolation Foundation
 
 Sprint 1 begins runtime implementation by adding tenant context, tenant membership loading, tenant selection headers, tenant visibility endpoints, database tenant_id foundation columns, and tenant RBAC permission synchronization. Sprint 2 should implement tenant filters across route query/mutation paths and harden tenant-scoped object storage paths.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 2 — Route-Wide Tenant Filtering and Object Storage Tenant Boundary
+
+Sprint 2 expands Sprint 1 tenant context into runtime filtering and object-storage boundaries. It introduces tenant-scoped route helpers, high-risk asset/evidence/report route filtering evidence, tenant-prefixed evidence/report artifact keys, and migration support for tenant_id on evidence upload sessions and report exports.
+
+Sprint 3 should continue broader route expansion and frontend tenant-switching readiness.

@@ -335,3 +335,14 @@ AI/n8n/service actors cannot approve backlog priority, approve multi-tenant runt
 | MT-S1 tenant_id foundation columns and indexes | P0 | Added |
 | MT-S2 route-level tenant filters | P0 | Carry forward |
 | MT-S2 object-storage tenant path enforcement | P0 | Carry forward |
+
+## Enterprise Multi-Tenant Runtime Sprint 2 Route Filtering and Object Storage Boundary Backlog Mapping
+
+| Backlog item | Priority | Evidence |
+|---|---:|---|
+| Tenant-scoped route helper and high-risk route filtering | P0 | MT-S2-002 through MT-S2-004 |
+| Tenant object-storage prefix and boundary assertion | P0 | MT-S2-005 |
+| Evidence upload-session and report-export tenant_id boundary | P0 | MT-S2-006 through MT-S2-007 |
+| Residual historical route expansion for Sprint 3 | P1 | MT-S2-010 |
+
+AI/n8n/service actors cannot approve tenant-scoped route rollout or waive multi-tenant Sprint 2 evidence.

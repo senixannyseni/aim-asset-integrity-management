@@ -6,6 +6,8 @@ import { config } from '../config/env.js';
 import { objectStorageService, redactSignedUrl } from '../modules/object-storage/object-storage-service.js';
 import { buildEvidenceObjectKey, validateEvidenceObjectRequest } from '../modules/object-storage/evidence-storage.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest, appendTenantWhereClause, tenantScopeMetadata } from '../modules/tenancy/tenant-scope.js';
+import { assertTenantObjectKeyBoundary, buildTenantScopedObjectKey } from '../modules/tenancy/tenant-object-boundary.js';
 import {
   asDateString,
   asInteger,
@@ -566,6 +568,7 @@ async function buildEvidenceTraceabilityMatrix(params: {
 
 evidenceRouter.get('/evidence', requirePermission('evidence.read'), async (req, res, next) => {
   try {
+    const tenant = requireTenantContextFromRequest(req);
     const values: string[] = [];
     const filters = ['1 = 1'];
     const assetId = asString(req.query.asset_id);
@@ -581,9 +584,10 @@ evidenceRouter.get('/evidence', requirePermission('evidence.read'), async (req, 
       filters.push(`upper(coalesce(file_type, file_extension)) = $${values.length}`);
     }
 
+    const scoped = appendTenantWhereClause({ baseWhere: `where ${filters.join(' and ')}`, params: values, tenant });
     const result = await pool.query<DbRow>(
-      `select * from evidence_files where ${filters.join(' and ')} order by created_at desc`,
-      values
+      `select * from evidence_files ${scoped.clause} order by created_at desc`,
+      scoped.params
     );
 
     res.json({ data: result.rows.map(mapEvidence) });
@@ -621,7 +625,8 @@ evidenceRouter.get('/evidence/:evidenceId', requirePermission('evidence.read'), 
   }
 
   try {
-    const evidenceResult = await pool.query<DbRow>('select * from evidence_files where id = $1', [evidenceId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const evidenceResult = await pool.query<DbRow>('select * from evidence_files where id = $1 and tenant_id = $2', [evidenceId, tenant.tenantId]);
     const evidence = evidenceResult.rows[0];
     if (!evidence) {
       res.status(404).json({ error: { code: 'EVIDENCE_NOT_FOUND', message: 'Evidence file not found.' } });
@@ -655,7 +660,8 @@ async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evid
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const result = await client.query<DbRow>('select * from evidence_files where id = $1 for update', [evidenceId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const result = await client.query<DbRow>('select * from evidence_files where id = $1 and tenant_id = $2 for update', [evidenceId, tenant.tenantId]);
     const evidence = result.rows[0];
     if (!evidence) {
       await client.query('rollback');
@@ -667,8 +673,8 @@ async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evid
       await client.query(
         `update evidence_files
          set access_status = 'blocked', accessed_at = now(), updated_at = now()
-         where id = $1`,
-        [evidenceId]
+         where id = $1 and tenant_id = $2`,
+        [evidenceId, tenant.tenantId]
       );
       const auditLogId = await writeAudit(client, req, 'EVIDENCE_ACCESS_BLOCKED', 'evidence_file', evidenceId, null, {
         evidence_id: evidenceId,
@@ -697,6 +703,13 @@ async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evid
       return;
     }
 
+    try {
+      assertTenantObjectKeyBoundary(objectKey, tenant);
+    } catch {
+      await blockEvidenceAccess(403, 'TENANT_OBJECT_KEY_BOUNDARY_VIOLATION', 'Evidence object key is outside the selected tenant boundary.', { tenant_id: tenant.tenantId });
+      return;
+    }
+
     const exists = await objectStorageService.objectExists(objectKey);
     if (!exists) {
       await blockEvidenceAccess(409, 'EVIDENCE_OBJECT_NOT_FOUND', 'Evidence metadata exists but the object-storage file was not found.', { object_key: objectKey });
@@ -711,8 +724,8 @@ async function createEvidenceAccessResponse(req: Request, res: ApiResponse, evid
     await client.query(
       `update evidence_files
        set accessed_at = now(), access_status = $2, signed_url_expires_at = $3::timestamptz, updated_at = now()
-       where id = $1`,
-      [evidenceId, accessMode === 'download_open' ? 'download_opened' : 'signed_url_issued', signed.expiresAt]
+       where id = $1 and tenant_id = $4`,
+      [evidenceId, accessMode === 'download_open' ? 'download_opened' : 'signed_url_issued', signed.expiresAt, tenant.tenantId]
     );
     const auditLogId = await writeAudit(
       client,
@@ -809,6 +822,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
     return;
   }
 
+  const tenant = requireTenantContextFromRequest(req);
   const assetId = asString(body.asset_id);
   const filename = asString(body.filename ?? body.file_name);
   const mimeType = asString(body.mime_type);
@@ -853,7 +867,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const assetResult = await client.query<{ id: string; asset_tag: string | null }>('select id, asset_tag from assets where id = $1 and deleted_at is null', [assetId]);
+    const assetResult = await client.query<{ id: string; asset_tag: string | null }>('select id, asset_tag from assets where id = $1 and tenant_id = $2 and deleted_at is null', [assetId, tenant.tenantId]);
     const asset = assetResult.rows[0];
     if (!asset) {
       await client.query('rollback');
@@ -862,7 +876,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
     }
 
     if (inspectionId) {
-      const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2', [inspectionId, assetId]);
+      const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2 and tenant_id = $3', [inspectionId, assetId, tenant.tenantId]);
       if (inspectionResult.rowCount === 0) {
         await client.query('rollback');
         controlledError(res, 404, 'INSPECTION_NOT_FOUND', 'Inspection event not found for asset.');
@@ -875,7 +889,8 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
       assetTagOrId: String(asset.asset_tag ?? assetId),
       inspectionId,
       evidenceCode,
-      filename: safeFilename
+      filename: safeFilename,
+      tenant
     });
     const signedUpload = await objectStorageService.getSignedUploadUrl({
       objectKey,
@@ -887,6 +902,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
 
     const sessionResult = await client.query<DbRow>(
       `insert into evidence_upload_sessions(
+        tenant_id,
         asset_id,
         inspection_id,
         evidence_code,
@@ -901,9 +917,10 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
         requested_by,
         expires_at,
         metadata_json
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12::timestamptz, $13::jsonb)
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, $13::timestamptz, $14::jsonb)
       returning *`,
       [
+        tenant.tenantId,
         assetId,
         inspectionId,
         evidenceCode,
@@ -916,7 +933,7 @@ evidenceRouter.post('/evidence/upload-url', requirePermission('evidence.upload')
         objectKey,
         actorUserId(req),
         signedUpload.expiresAt,
-        JSON.stringify({ signed_url_redacted: redactSignedUrl(signedUpload.url), signed_url_query_not_logged: true, evidence_code_source: 'aim_backend_generated', checksum_required: true })
+        JSON.stringify({ signed_url_redacted: redactSignedUrl(signedUpload.url), signed_url_query_not_logged: true, evidence_code_source: 'aim_backend_generated', checksum_required: true, ...tenantScopeMetadata(tenant) })
       ]
     );
     const session = sessionResult.rows[0];
@@ -979,7 +996,8 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const sessionResult = await client.query<DbRow>('select * from evidence_upload_sessions where upload_session_id = $1 for update', [uploadSessionId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const sessionResult = await client.query<DbRow>('select * from evidence_upload_sessions where upload_session_id = $1 and tenant_id = $2 for update', [uploadSessionId, tenant.tenantId]);
     const session = sessionResult.rows[0];
     if (!session) {
       await client.query('rollback');
@@ -1065,6 +1083,7 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
     const completedPageOrSheetRef = asString(body.page_or_sheet_ref);
     const evidenceResult = await client.query<DbRow>(
       `insert into evidence_files(
+        tenant_id,
         evidence_code,
         asset_id,
         inspection_event_id,
@@ -1097,7 +1116,7 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
         upload_status,
         uploaded_at,
         completed_at
-      ) values ($1, $2, $3, $4, $4, 's3-compatible', $5, $6, $7, $8, $8, $9, $9, $10, $11, $11, $12, $12, $13, $14, $15, $16, $17, $18, $18, 'active', 'active', 'pending_scan', 'not_issued', 'verified', now(), now())
+      ) values ($1, $2, $3, $4, $5, $5, 's3-compatible', $6, $7, $8, $9, $9, $10, $10, $11, $12, $12, $13, $13, $14, $15, $16, $17, $18, $19, $19, 'active', 'active', 'pending_scan', 'not_issued', 'verified', now(), now())
       on conflict (checksum_sha256, object_storage_uri) do update set
         storage_bucket = excluded.storage_bucket,
         object_key = excluded.object_key,
@@ -1112,6 +1131,7 @@ evidenceRouter.post('/evidence/complete-upload', requirePermission('evidence.upl
         updated_at = now()
       returning *`,
       [
+        tenant.tenantId,
         String(session.evidence_code),
         String(session.asset_id),
         session.inspection_id ?? null,
@@ -1166,13 +1186,14 @@ evidenceRouter.post('/evidence/upload', requirePermission('evidence.upload'), as
     return;
   }
 
+  const tenant = requireTenantContextFromRequest(req);
   const client = await pool.connect();
   try {
     await client.query('begin');
     const assetId = asString(body.asset_id);
     if (!assetId) throw new Error('asset_id unexpectedly missing after validation.');
 
-    const assetResult = await client.query<DbRow>('select id, asset_tag from assets where id = $1 and deleted_at is null', [assetId]);
+    const assetResult = await client.query<DbRow>('select id, asset_tag from assets where id = $1 and tenant_id = $2 and deleted_at is null', [assetId, tenant.tenantId]);
     const asset = assetResult.rows[0];
     if (!asset) {
       await client.query('rollback');
@@ -1182,7 +1203,7 @@ evidenceRouter.post('/evidence/upload', requirePermission('evidence.upload'), as
 
     const inspectionEventId = asString(body.inspection_event_id) ?? null;
     if (inspectionEventId) {
-      const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2', [inspectionEventId, assetId]);
+      const inspectionResult = await client.query('select id from inspection_events where id = $1 and asset_id = $2 and tenant_id = $3', [inspectionEventId, assetId, tenant.tenantId]);
       if (inspectionResult.rowCount === 0) {
         await client.query('rollback');
         res.status(404).json({ error: { code: 'INSPECTION_NOT_FOUND', message: 'Inspection event not found for asset.' } });
@@ -1197,17 +1218,19 @@ evidenceRouter.post('/evidence/upload', requirePermission('evidence.upload'), as
     const inspectionDate = asDateString(body.inspection_date);
     if (!fileName || !fileType || !checksum || !inspectionDate) throw new Error('Evidence payload unexpectedly invalid after validation.');
 
-    const objectStoragePath = asString(body.object_storage_path) ?? buildEvidenceObjectPath({
+    const legacyRelativePath = asString(body.object_storage_path) ?? buildEvidenceObjectPath({
       assetTag: String(asset.asset_tag),
       inspectionId: inspectionEventId,
       evidenceCode,
       fileName
     });
+    const objectStoragePath = buildTenantScopedObjectKey(tenant, legacyRelativePath);
     const fileSizeBytes = asInteger(body.file_size_bytes) ?? 0;
     const mimeType = asString(body.mime_type) ?? mimeTypeFor(fileType);
 
     const result = await client.query<DbRow>(
       `insert into evidence_files(
+        tenant_id,
         evidence_code,
         asset_id,
         inspection_event_id,
@@ -1233,7 +1256,7 @@ evidenceRouter.post('/evidence/upload', requirePermission('evidence.upload'), as
         malware_scan_status,
         access_status,
         upload_status
-      ) values ($1, $2, $3, $4, $4, $5, $5, $6, $6, $7, $8, $9, $9, $10, $11, $12, $13, $14, $14, $15, 'active', 'metadata_only_pending_object_verification', 'pending_scan', 'blocked', 'pending')
+      ) values ($1, $2, $3, $4, $5, $5, $6, $6, $7, $7, $8, $9, $10, $10, $11, $12, $13, $14, $15, $15, $16, 'active', 'metadata_only_pending_object_verification', 'pending_scan', 'blocked', 'pending')
       on conflict (checksum_sha256, object_storage_uri) do update set
         method = excluded.method,
         component = excluded.component,
@@ -1245,6 +1268,7 @@ evidenceRouter.post('/evidence/upload', requirePermission('evidence.upload'), as
         updated_at = now()
       returning *`,
       [
+        tenant.tenantId,
         evidenceCode,
         assetId,
         inspectionEventId,
@@ -1313,7 +1337,8 @@ evidenceRouter.post('/evidence/:evidenceId/links', requirePermission('evidence.l
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const evidenceResult = await client.query<{ id: string; asset_id: string | null }>('select id, asset_id from evidence_files where id = $1', [evidenceId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const evidenceResult = await client.query<{ id: string; asset_id: string | null }>('select id, asset_id from evidence_files where id = $1 and tenant_id = $2', [evidenceId, tenant.tenantId]);
     const evidence = evidenceResult.rows[0];
     if (!evidence) {
       await client.query('rollback');
@@ -1381,7 +1406,8 @@ evidenceRouter.post('/evidence/:evidenceId/delete-request', requirePermission('e
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from evidence_files where id = $1 for update', [evidenceId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const beforeResult = await client.query<DbRow>('select * from evidence_files where id = $1 and tenant_id = $2 for update', [evidenceId, tenant.tenantId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -1391,8 +1417,8 @@ evidenceRouter.post('/evidence/:evidenceId/delete-request', requirePermission('e
     const result = await client.query<DbRow>(
       `update evidence_files
        set status = 'delete_requested', evidence_status = 'delete_requested', delete_requested_by = $2, delete_requested_at = now(), updated_at = now()
-       where id = $1 returning *`,
-      [evidenceId, actorUserId(req)]
+       where id = $1 and tenant_id = $3 returning *`,
+      [evidenceId, actorUserId(req), tenant.tenantId]
     );
     const updated = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'EVIDENCE_DELETE_REQUESTED', 'evidence_file', evidenceId, mapEvidence(before), mapEvidence(updated ?? {}), {
@@ -1417,7 +1443,8 @@ evidenceRouter.post('/evidence/:evidenceId/delete-approve', requirePermission('e
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const beforeResult = await client.query<DbRow>('select * from evidence_files where id = $1 for update', [evidenceId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const beforeResult = await client.query<DbRow>('select * from evidence_files where id = $1 and tenant_id = $2 for update', [evidenceId, tenant.tenantId]);
     const before = beforeResult.rows[0];
     if (!before) {
       await client.query('rollback');
@@ -1438,8 +1465,8 @@ evidenceRouter.post('/evidence/:evidenceId/delete-approve', requirePermission('e
     const result = await client.query<DbRow>(
       `update evidence_files
        set status = 'deleted', evidence_status = 'deleted', delete_approved_by = $2, delete_approved_at = now(), updated_at = now()
-       where id = $1 returning *`,
-      [evidenceId, actorUserId(req)]
+       where id = $1 and tenant_id = $3 returning *`,
+      [evidenceId, actorUserId(req), tenant.tenantId]
     );
     const updated = result.rows[0];
     const auditLogId = await writeAudit(client, req, 'EVIDENCE_DELETE_APPROVED', 'evidence_file', evidenceId, mapEvidence(before), mapEvidence(updated ?? {}), {
