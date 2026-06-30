@@ -94,7 +94,12 @@ const SERVICE_ONLY_ACTOR_ROLES = new Set(['ai_agent', 'n8n_service', 'integratio
 const HUMAN_ENGINEERING_REVIEW_ROLES = new Set(['engineer', 'lead_engineer', 'senior_engineer']);
 
 function isServiceOnlyActor(req: Request): boolean {
-  return actorRoles(req).some((role) => SERVICE_ONLY_ACTOR_ROLES.has(role));
+  const email = req.user?.email?.toLowerCase() ?? '';
+  return actorRoles(req).some((role) => SERVICE_ONLY_ACTOR_ROLES.has(role))
+    || email.includes('n8n')
+    || email.includes('ai-agent')
+    || email.includes('ai_agent')
+    || email.includes('service-account');
 }
 
 function hasHumanEngineeringReviewRole(req: Request): boolean {
