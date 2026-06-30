@@ -221,3 +221,7 @@ Sprint 4 makes multi-tenant runtime visible and usable in the frontend through t
 ## Enterprise Multi-Tenant Runtime Sprint 5 Roadmap Addendum
 
 Sprint 5 adds tenant-scoped evidence lifecycle, backup/restore, and export controls. It prepares the platform for customer onboarding runtime by making tenant data retention, restore scope, and export execution reviewable and tenant-bound.
+
+## Enterprise Multi-Tenant Runtime Sprint 6 Roadmap Note
+
+Sprint 6 adds tenant/customer onboarding runtime and support controls: onboarding plan foundation, readiness gates, tenant support SLA profiles, support escalation review, BAU handoff controls, and human-only customer activation boundaries. It prepares the program for MT Final Closure and enterprise tenant isolation certification.

@@ -576,3 +576,11 @@ This is a forward-only evidence-table completion hotfix. It does not rewrite alr
 - Migration evidence: `0032_enterprise_multitenant_sprint5_evidence_lifecycle_export_controls.sql`.
 - Table evidence: `tenant_evidence_lifecycle_policies`, `tenant_backup_restore_drills`, `tenant_export_control_reviews`.
 - Human boundary: AI/n8n/service actors cannot accept multi-tenant Sprint 5 evidence or approve tenant export, restore, backup, lifecycle deletion, or lifecycle policy closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 6 Customer Onboarding and Support Controls Mapping
+
+- MT-S6-001 through MT-S6-012 map tenant/customer onboarding, support SLA, support escalation, and BAU handoff readiness.
+- Runtime evidence: `tenant-onboarding-support.ts`.
+- Migration evidence: `0033_enterprise_multitenant_sprint6_customer_onboarding_support_controls.sql`.
+- Table evidence: `tenant_onboarding_plans`, `tenant_onboarding_readiness_gates`, `tenant_support_sla_profiles`, `tenant_support_escalation_reviews`.
+- Human boundary: AI/n8n/service actors cannot accept multi-tenant Sprint 6 evidence or approve tenant onboarding, customer activation, support SLA exception, support escalation closure, BAU handoff, or Sprint 6 closure.

@@ -6,7 +6,7 @@ const repoRoot = path.resolve(__dirname, '../../..');
 const migrationsDir = path.join(repoRoot, 'db', 'migrations');
 
 describe('database migration sequence', () => {
-  it('tracks all migrations required for a clean Enterprise multi-tenant Sprint 5 database setup', () => {
+  it('tracks all migrations required for a clean Enterprise multi-tenant Sprint 6 database setup', () => {
     const files = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql')).sort();
 
     expect(files).toEqual([
@@ -42,6 +42,7 @@ describe('database migration sequence', () => {
       '0030_enterprise_multitenant_sprint3_route_expansion_regression_harness.sql',
       '0031_enterprise_multitenant_sprint3_route_isolation_review_completion.sql',
       '0032_enterprise_multitenant_sprint5_evidence_lifecycle_export_controls.sql',
+      '0033_enterprise_multitenant_sprint6_customer_onboarding_support_controls.sql',
     ]);
   });
 });

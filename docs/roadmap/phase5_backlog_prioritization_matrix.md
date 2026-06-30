@@ -369,3 +369,15 @@ Boundary: no tenant creation, no billing, no frontend-only enforcement, and no h
 ## Enterprise Multi-Tenant Runtime Sprint 5 Evidence Lifecycle Backlog Mapping
 
 Priority: High. Sprint 5 closes evidence lifecycle and export-control foundations required before customer tenant onboarding runtime. Remaining follow-up items move to Sprint 6 customer onboarding runtime and final tenant isolation certification.
+
+## Enterprise Multi-Tenant Runtime Sprint 6 Customer Onboarding Backlog Mapping
+
+| Backlog item | Priority | Sprint 6 disposition |
+|---|---:|---|
+| Tenant/customer onboarding runtime | High | Added via `tenant_onboarding_plans` and helper module |
+| Tenant onboarding readiness gates | High | Added via `tenant_onboarding_readiness_gates` |
+| Tenant support SLA profile foundation | High | Added via `tenant_support_sla_profiles` |
+| Support escalation and BAU handoff controls | High | Added via `tenant_support_escalation_reviews` |
+| Human-only customer activation | High | Added via runtime blockers and DB service-actor constraints |
+| Billing/payment processing | Deferred | Explicitly out of scope |
+| Final tenant isolation certification | Deferred | MT Final Closure |
