@@ -504,3 +504,22 @@ Baseline dependency: Enterprise Runtime Hardening and Multi-Tenant Commercializa
 | MT-S1-012 | Human Sprint 1 signoff | Sprint 1 closure decision evidence |
 
 Enterprise Multi-Tenant Runtime Sprint 1 follows the Enterprise Multi-Tenant Runtime Sprint 0 Architecture and Guardrails Pack and precedes Sprint 2 route-level tenant filtering.
+
+## Enterprise Multi-Tenant Runtime Sprint 2 Route Filtering and Object Storage Boundary Mapping
+
+| Evidence ID | Evidence item | Source artifact |
+|---|---|---|
+| MT-S2-001 | Sprint 2 baseline | Enterprise Multi-Tenant Runtime Sprint 1 Tenant Context and Database Isolation Foundation |
+| MT-S2-002 | Tenant filter helper | `apps/api/src/modules/tenancy/tenant-scope.ts` |
+| MT-S2-003 | Asset route filtering | `apps/api/src/routes/assets.ts` |
+| MT-S2-004 | Evidence route filtering | `apps/api/src/routes/evidence.ts` |
+| MT-S2-005 | Object-storage tenant boundary | `apps/api/src/modules/tenancy/tenant-object-boundary.ts` |
+| MT-S2-006 | Evidence upload session boundary | `db/migrations/0029_enterprise_multitenant_sprint2_route_filtering_object_boundary.sql` |
+| MT-S2-007 | Report export boundary | `db/migrations/0029_enterprise_multitenant_sprint2_route_filtering_object_boundary.sql` |
+| MT-S2-008 | OpenAPI compatibility | No new production route paths introduced by Sprint 2 |
+| MT-S2-009 | Regression coverage | `apps/api/tests/enterprise-multitenant-runtime-sprint2-route-filtering-object-boundary.test.ts` |
+| MT-S2-010 | Residual route gap register | `docs/enterprise/multitenant_sprint2_rollout_risk_record.md` |
+| MT-S2-011 | Service actor boundary | `docs/enterprise/enterprise_multitenant_runtime_sprint2_route_filtering_object_boundary_pack.md` |
+| MT-S2-012 | Human Sprint 2 signoff | `docs/operations/enterprise_multitenant_runtime_sprint2_route_filtering_object_boundary_runbook.md` |
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 2 evidence or sign multi-tenant Sprint 2 closure.

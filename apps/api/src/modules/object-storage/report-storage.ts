@@ -1,11 +1,13 @@
 import { sanitizeFilename, sanitizeObjectKeyPart } from './object-storage-service.js';
+import { buildTenantScopedObjectKey } from '../tenancy/tenant-object-boundary.js';
 import type { ReportObjectKeyInput } from './object-storage-types.js';
 
 export function buildReportExportObjectKey(input: ReportObjectKeyInput): string {
   const reportPart = sanitizeObjectKeyPart(input.reportId, 'report');
   const exportPart = sanitizeObjectKeyPart(input.exportId, 'export');
   const filePart = sanitizeFilename(input.filename);
-  return `reports/${reportPart}/exports/${exportPart}/${filePart}`;
+  const relativeKey = `reports/${reportPart}/exports/${exportPart}/${filePart}`;
+  return input.tenant ? buildTenantScopedObjectKey(input.tenant, relativeKey) : relativeKey;
 }
 
 export function reportExportMimeType(exportType: string): string {

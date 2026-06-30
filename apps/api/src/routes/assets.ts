@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/client.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { appendTenantWhereClause, requireTenantContextFromRequest, tenantIdForInsert } from '../modules/tenancy/tenant-scope.js';
 import {
   asDateString,
   asInteger,
@@ -272,13 +273,13 @@ function mapShellCourse(row: DbRow): Record<string, unknown> {
   };
 }
 
-async function getAssetBundle(assetId: string): Promise<Record<string, unknown> | null> {
+async function getAssetBundle(assetId: string, tenantId: string): Promise<Record<string, unknown> | null> {
   const assetResult = await pool.query<DbRow>(
     `select a.*, coalesce(a.construction_year, tg.construction_year) as asset_construction_year
      from assets a
      left join tank_geometry tg on tg.asset_id = a.id
-     where a.id = $1 and a.deleted_at is null`,
-    [assetId]
+     where a.id = $1 and a.tenant_id = $2 and a.deleted_at is null`,
+    [assetId, tenantId]
   );
   const asset = assetResult.rows[0];
   if (!asset) return null;
@@ -301,14 +302,14 @@ async function getAssetBundle(assetId: string): Promise<Record<string, unknown> 
 }
 
 
-async function buildAssetIntegrityReadiness(client: PoolClient, assetId: string): Promise<Record<string, unknown> | null> {
+async function buildAssetIntegrityReadiness(client: PoolClient, assetId: string, tenantId: string): Promise<Record<string, unknown> | null> {
   const assetResult = await client.query<DbRow>(
     `select a.*, coalesce(a.construction_year, tg.construction_year) as asset_construction_year
        from assets a
        left join tank_geometry tg on tg.asset_id = a.id
-      where a.id = $1::uuid and a.deleted_at is null
+      where a.id = $1::uuid and a.tenant_id = $2::uuid and a.deleted_at is null
       limit 1`,
-    [assetId]
+    [assetId, tenantId]
   );
   const asset = assetResult.rows[0];
   if (!asset) return null;
@@ -544,6 +545,7 @@ assetsRouter.get('/materials', requirePermission('asset.read'), async (_req, res
 assetsRouter.get('/assets', requirePermission('asset.read'), async (req, res, next) => {
   try {
     const search = asString(req.query.search);
+    const tenant = requireTenantContextFromRequest(req);
     const values: string[] = [];
     let where = 'where a.deleted_at is null';
     if (search) {
@@ -551,13 +553,14 @@ assetsRouter.get('/assets', requirePermission('asset.read'), async (req, res, ne
       where += ` and (a.asset_tag ilike $${values.length} or a.asset_name ilike $${values.length} or a.facility ilike $${values.length})`;
     }
 
+    const scoped = appendTenantWhereClause({ baseWhere: where, alias: 'a', params: values, tenant });
     const result = await pool.query<DbRow>(
       `select a.*, coalesce(a.construction_year, tg.construction_year) as asset_construction_year
        from assets a
        left join tank_geometry tg on tg.asset_id = a.id
-       ${where}
+       ${scoped.clause}
        order by a.asset_tag asc`,
-      values
+      scoped.params
     );
 
     res.json({ data: result.rows.map(mapAsset) });
@@ -577,7 +580,8 @@ assetsRouter.get('/assets/:assetId/readiness', requirePermission('asset.read'), 
   try {
     const client = await pool.connect();
     try {
-      const readiness = await buildAssetIntegrityReadiness(client, assetId);
+      const tenant = requireTenantContextFromRequest(req);
+      const readiness = await buildAssetIntegrityReadiness(client, assetId, tenant.tenantId);
       if (!readiness) {
         controlledError(res, 404, 'ASSET_NOT_FOUND', 'Tank asset not found.');
         return;
@@ -606,6 +610,7 @@ assetsRouter.post('/assets', requirePermission('asset.create'), async (req, res,
     await client.query('begin');
     const result = await client.query<DbRow>(
       `insert into assets(
+        tenant_id,
         asset_tag,
         asset_name,
         asset_type,
@@ -624,9 +629,10 @@ assetsRouter.post('/assets', requirePermission('asset.create'), async (req, res,
         owner,
         operating_status,
         inspection_due_date
-      ) values ($1, $2, 'aboveground_storage_tank', $3, $4, $4, $5, 'draft', $6, $7, $8, $10, $8, $9, $10, $11, $12, $13)
+      ) values ($1, $2, $3, 'aboveground_storage_tank', $4, $5, $5, $6, 'draft', $7, $8, $9, $11, $9, $10, $11, $12, $13, $14)
       returning *`,
       [
+        tenantIdForInsert(req),
         asString(body.tank_tag),
         asString(body.asset_name),
         asString(body.facility),
@@ -673,7 +679,8 @@ assetsRouter.get('/assets/:assetId', requirePermission('asset.read'), async (req
       });
     }
 
-    const data = await getAssetBundle(assetId);
+    const tenant = requireTenantContextFromRequest(req);
+    const data = await getAssetBundle(assetId, tenant.tenantId);
 
     if (!data) {
       res.status(404).json({
@@ -719,8 +726,8 @@ assetsRouter.patch('/assets/:assetId', requirePermission('asset.update'), async 
     await client.query('begin');
 
     const beforeResult = await client.query<DbRow>(
-      'select * from assets where id = $1 and deleted_at is null',
-      [assetId]
+      'select * from assets where id = $1 and tenant_id = $2 and deleted_at is null',
+      [assetId, tenantIdForInsert(req)]
     );
 
     const before = beforeResult.rows[0];
@@ -755,7 +762,7 @@ assetsRouter.patch('/assets/:assetId', requirePermission('asset.update'), async 
         operating_status = $13,
         inspection_due_date = $14,
         updated_at = now()
-       where id = $1 and deleted_at is null
+       where id = $1 and tenant_id = $15 and deleted_at is null
        returning *`,
       [
         assetId,
@@ -771,7 +778,8 @@ assetsRouter.patch('/assets/:assetId', requirePermission('asset.update'), async 
         asString(body.code_edition),
         asString(body.owner),
         asString(body.operating_status),
-        asDateString(body.inspection_due_date)
+        asDateString(body.inspection_due_date),
+        tenantIdForInsert(req)
       ]
     );
 
@@ -823,8 +831,8 @@ assetsRouter.delete('/assets/:assetId', requirePermission('asset.delete'), async
     await client.query('begin');
 
     const beforeResult = await client.query<DbRow>(
-      'select * from assets where id = $1 and deleted_at is null',
-      [assetId]
+      'select * from assets where id = $1 and tenant_id = $2 and deleted_at is null',
+      [assetId, tenantIdForInsert(req)]
     );
 
     const before = beforeResult.rows[0];
@@ -842,9 +850,9 @@ assetsRouter.delete('/assets/:assetId', requirePermission('asset.delete'), async
 
     const result = await client.query<DbRow>(
       `update assets set status = 'retired', operating_status = 'retired', deleted_at = now(), deleted_by = $2, updated_at = now()
-       where id = $1 and deleted_at is null
+       where id = $1 and tenant_id = $3 and deleted_at is null
        returning *`,
-      [assetId, actorUserId(req)]
+      [assetId, actorUserId(req), tenantIdForInsert(req)]
     );
 
     const after = result.rows[0];
@@ -903,7 +911,7 @@ assetsRouter.put('/assets/:assetId/geometry', requirePermission('asset.update'),
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const assetExists = await client.query('select 1 from assets where id = $1 and deleted_at is null', [req.params.assetId]);
+    const assetExists = await client.query('select 1 from assets where id = $1 and tenant_id = $2 and deleted_at is null', [req.params.assetId, tenantIdForInsert(req)]);
     if ((assetExists.rowCount ?? 0) === 0) {
       await client.query('rollback');
       res.status(404).json({ error: { code: 'ASSET_NOT_FOUND', message: 'Tank asset not found.' } });

@@ -5,6 +5,8 @@ import { objectStorageService, redactSignedUrl, sha256Hex } from '../modules/obj
 import { buildReportExportObjectKey, reportExportMimeType } from '../modules/object-storage/report-storage.js';
 import { config } from '../config/env.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireTenantContextFromRequest, tenantScopeMetadata } from '../modules/tenancy/tenant-scope.js';
+import { assertTenantObjectKeyBoundary } from '../modules/tenancy/tenant-object-boundary.js';
 import { contentHash, renderConsultantReportText, renderDocxBase64, renderPdfBase64, type ReportDocument, type ReportSection } from '../modules/reporting/template-engine.js';
 
 export const reportsRouter = Router();
@@ -807,7 +809,8 @@ reportsRouter.post('/reports/:reportId/exports', requirePermission('report.expor
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const reportResult = await client.query<DbRow>('select * from reports where id = $1 for update', [reportId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const reportResult = await client.query<DbRow>('select * from reports where id = $1 and tenant_id = $2 for update', [reportId, tenant.tenantId]);
     const report = reportResult.rows[0];
     if (!report) {
       await client.query('rollback');
@@ -846,7 +849,7 @@ reportsRouter.post('/reports/:reportId/exports', requirePermission('report.expor
     const exportId = exportIdResult.rows[0]?.id;
     if (!exportId) throw new Error('Unable to allocate report export id.');
     const filename = filenameForReportExport(report, exportId, exportType);
-    const objectKey = buildReportExportObjectKey({ reportId, exportId, filename });
+    const objectKey = buildReportExportObjectKey({ reportId, exportId, filename, tenant });
     const mimeType = reportExportMimeType(exportType);
     const contentHashSha256 = sha256Hex(artifactBuffer);
 
@@ -863,6 +866,7 @@ reportsRouter.post('/reports/:reportId/exports', requirePermission('report.expor
 
     const exportResult = await client.query<DbRow>(
       `insert into report_exports(
+        tenant_id,
         id,
         report_id,
         export_format,
@@ -882,9 +886,10 @@ reportsRouter.post('/reports/:reportId/exports', requirePermission('report.expor
         file_size_bytes,
         mime_type,
         metadata_json
-      ) values ($1, $2, $3, 'generated', 's3-compatible', $4, $5, $5, $6, $6, $7, $8, now(), $8, now(), 'not_downloaded', $9, $10, $11::jsonb)
+      ) values ($1, $2, $3, $4, 'generated', 's3-compatible', $5, $6, $6, $7, $7, $8, $9, now(), $9, now(), 'not_downloaded', $10, $11, $12::jsonb)
       returning *`,
       [
+        tenant.tenantId,
         exportId,
         reportId,
         exportType,
@@ -895,7 +900,7 @@ reportsRouter.post('/reports/:reportId/exports', requirePermission('report.expor
         actorUserId(req),
         artifactBuffer.length,
         mimeType,
-        JSON.stringify({ object_storage_artifact: true, normal_api_base64_response: false })
+        JSON.stringify({ object_storage_artifact: true, normal_api_base64_response: false, ...tenantScopeMetadata(tenant) })
       ]
     );
     const created = exportResult.rows[0];
@@ -939,7 +944,8 @@ reportsRouter.get('/report-exports/:exportId/download-url', requirePermission('r
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const exportResult = await client.query<DbRow>('select * from report_exports where id = $1 for update', [exportId]);
+    const tenant = requireTenantContextFromRequest(req);
+    const exportResult = await client.query<DbRow>('select * from report_exports where id = $1 and tenant_id = $2 for update', [exportId, tenant.tenantId]);
     const reportExport = exportResult.rows[0];
     if (!reportExport) {
       await client.query('rollback');
@@ -950,6 +956,13 @@ reportsRouter.get('/report-exports/:exportId/download-url', requirePermission('r
     if (!objectKey) {
       await client.query('rollback');
       res.status(409).json({ error: { code: 'REPORT_EXPORT_OBJECT_KEY_MISSING', message: 'Report export object key is missing.' } });
+      return;
+    }
+    try {
+      assertTenantObjectKeyBoundary(objectKey, tenant);
+    } catch {
+      await client.query('rollback');
+      res.status(403).json({ error: { code: 'TENANT_OBJECT_KEY_BOUNDARY_VIOLATION', message: 'Report export object key is outside the selected tenant boundary.' } });
       return;
     }
     const exists = await objectStorageService.objectExists(objectKey);
@@ -963,7 +976,7 @@ reportsRouter.get('/report-exports/:exportId/download-url', requirePermission('r
       responseContentType: asString(reportExport.mime_type),
       expiresInSeconds: config.objectStorage.reportExportSignedUrlTtlSeconds
     });
-    await client.query('update report_exports set download_status = $2, downloaded_at = now() where id = $1', [exportId, 'signed_url_issued']);
+    await client.query('update report_exports set download_status = $2, downloaded_at = now() where id = $1 and tenant_id = $3', [exportId, 'signed_url_issued', tenant.tenantId]);
     const auditLogId = await writeAudit(client, req, 'REPORT_EXPORT_DOWNLOAD_URL_CREATED', 'report_export', exportId, null, { export_id: exportId, object_key: objectKey, expires_at: signed.expiresAt }, {
       signed_url_redacted: redactSignedUrl(signed.url),
       signed_url_query_not_logged: true,

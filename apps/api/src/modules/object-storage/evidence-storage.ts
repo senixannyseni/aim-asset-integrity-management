@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { config } from '../../config/env.js';
 import { sanitizeFilename, sanitizeObjectKeyPart } from './object-storage-service.js';
+import { buildTenantScopedObjectKey } from '../tenancy/tenant-object-boundary.js';
 import type { EvidenceObjectKeyInput } from './object-storage-types.js';
 
 export function normalizeExtension(filename: string): string {
@@ -31,5 +32,6 @@ export function buildEvidenceObjectKey(input: EvidenceObjectKeyInput): string {
   const inspectionPart = sanitizeObjectKeyPart(input.inspectionId ?? 'na', 'na');
   const evidencePart = sanitizeObjectKeyPart(input.evidenceCode, 'evidence');
   const filePart = sanitizeFilename(input.filename);
-  return `evidence/${assetPart}/${inspectionPart}/${evidencePart}/${filePart}`;
+  const relativeKey = `evidence/${assetPart}/${inspectionPart}/${evidencePart}/${filePart}`;
+  return input.tenant ? buildTenantScopedObjectKey(input.tenant, relativeKey) : relativeKey;
 }

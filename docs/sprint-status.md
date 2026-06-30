@@ -848,3 +848,10 @@ Status: Added as runtime foundation plus evidence-control baseline after Sprint 
 Evidence IDs: `MT-S1-001` through `MT-S1-012`.
 
 Scope: tenant schema foundation, tenant memberships, request tenant context resolution, tenant visibility routes, tenant_id foundation columns/indexes, tenant RBAC permissions, and Sprint 2 route-filter backlog. Production multi-tenant rollout remains gated by human review.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 2 — Route-Wide Tenant Filtering and Object Storage Tenant Boundary
+
+**Status:** Prepared / changed-files package  
+**Evidence IDs:** MT-S2-001 through MT-S2-012  
+**Scope:** Tenant filter helper, tenant object-storage boundary helper, tenant-prefixed evidence/report object keys, tenant_id migration for evidence upload sessions and report exports, and high-risk asset/evidence/report route filtering evidence.  
+**Boundary:** Not full production multi-tenant certification; remaining historical route expansion is tracked for Sprint 3.
