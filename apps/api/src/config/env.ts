@@ -205,9 +205,20 @@ export function loadConfig(env: EnvSource = process.env): AppConfig {
         'image/jpeg',
         'image/png',
         'text/csv',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/acad',
+        'application/x-acad',
+        'image/vnd.dwg',
+        'application/dxf',
+        'image/vnd.dxf',
+        'model/stl',
+        'application/sla',
+        'application/vnd.ms-pki.stl',
+        'application/zip',
+        'application/x-zip-compressed',
+        'application/octet-stream'
       ]),
-      allowedExtensions: csvEnv(env, 'EVIDENCE_ALLOWED_EXTENSIONS', ['.pdf', '.jpg', '.jpeg', '.png', '.csv', '.xlsx'])
+      allowedExtensions: csvEnv(env, 'EVIDENCE_ALLOWED_EXTENSIONS', ['.pdf', '.xlsx', '.csv', '.jpg', '.jpeg', '.png', '.dwg', '.dxf', '.stl', '.zip'])
     },
     n8n: {
       fileIntakeWebhookUrl: requiredForEnv(env, 'N8N_FILE_INTAKE_WEBHOOK_URL', appEnv, 'http://localhost:5678/webhook/aim-file-intake'),
