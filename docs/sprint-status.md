@@ -890,3 +890,13 @@ Status: packaged for implementation.
 Evidence: MT-S5-001 through MT-S5-012.
 
 Sprint 5 adds tenant-scoped evidence lifecycle policy, tenant backup/restore rehearsal scope, tenant export-control review, and regression coverage. AI/n8n/service actors cannot accept multi-tenant Sprint 5 evidence or approve tenant export, restore, backup, lifecycle deletion, or lifecycle policy closure.
+
+## Enterprise Multi-Tenant Runtime Sprint 6 — Customer/Tenant Onboarding Runtime and Support Controls
+
+Status: packaged for implementation.
+
+Evidence: MT-S6-001 through MT-S6-012.
+
+Sprint 6 adds tenant/customer onboarding runtime, onboarding readiness gates, support SLA profiles, support escalation review, and BAU handoff controls. It adds migration `0033_enterprise_multitenant_sprint6_customer_onboarding_support_controls.sql` without rewriting 0028, 0029, 0030, 0031, or 0032.
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 6 evidence or approve tenant onboarding, customer activation, support SLA exceptions, support escalation closure, BAU handoff, evidence waivers, or Sprint 6 closure.

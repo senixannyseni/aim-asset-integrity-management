@@ -1157,3 +1157,13 @@ Scope boundary: Sprint 4 does not create tenants, approve tenant memberships, ce
 Sprint 5 adds tenant-scoped evidence lifecycle, backup/restore, and export-control foundations. It adds `tenant-evidence-lifecycle.ts`, migration `0032_enterprise_multitenant_sprint5_evidence_lifecycle_export_controls.sql`, `tenant_evidence_lifecycle_policies`, `tenant_backup_restore_drills`, and `tenant_export_control_reviews`.
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 5 evidence and cannot approve tenant export, restore, backup, lifecycle deletion, or lifecycle policy closure. Sprint 5 uses a forward-only migration and does not rewrite already-tagged migrations 0028, 0029, 0030, or 0031.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 6 — Customer/Tenant Onboarding Runtime and Support Controls
+
+Status: implementation package prepared.
+
+Evidence IDs: MT-S6-001 through MT-S6-012.
+
+Sprint 6 adds the runtime foundation for tenant/customer onboarding plans, readiness gates, tenant support SLA profiles, support escalation review, and BAU handoff controls. It adds forward-only migration `0033_enterprise_multitenant_sprint6_customer_onboarding_support_controls.sql` and regression coverage in `apps/api/tests/enterprise-multitenant-runtime-sprint6-customer-onboarding-support-controls.test.ts`.
+
+Sprint 6 does not implement billing/payment processing, automatic tenant creation, external support-ticketing integration, or final enterprise tenant isolation certification. AI/n8n/service actors cannot accept multi-tenant Sprint 6 evidence, approve tenant onboarding, approve customer activation, approve support SLA exceptions, close support escalation, approve BAU handoff, waive customer onboarding evidence, or sign Sprint 6 closure.

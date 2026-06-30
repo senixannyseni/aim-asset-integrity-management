@@ -411,3 +411,11 @@ Evidence: MT-S4-001 through MT-S4-012.
 ## Enterprise Multi-Tenant Runtime Sprint 5 Evidence Lifecycle Gate
 
 Sprint 5 acceptance requires tenant-scoped evidence lifecycle policy records, backup/restore rehearsal scope records, tenant export-control review records, and regression proof that cross-tenant object keys are blocked. AI/n8n/service actors cannot approve Sprint 5 evidence lifecycle, backup/restore, or export-control gates.
+
+## Enterprise Multi-Tenant Runtime Sprint 6 Customer Onboarding Gate
+
+Sprint 6 acceptance requires tenant/customer onboarding plans, onboarding readiness gates, tenant support SLA profiles, support escalation review records, and proof that AI/n8n/service actors cannot approve customer activation or BAU handoff.
+
+Evidence: MT-S6-001 through MT-S6-012.
+
+The gate does not authorize final enterprise tenant isolation certification, billing/payment processing, external support-ticketing integration, or automatic tenant provisioning. AI/n8n/service actors cannot approve Sprint 6 customer onboarding, support SLA exception, support escalation closure, BAU handoff, evidence waiver, or closure gates.
