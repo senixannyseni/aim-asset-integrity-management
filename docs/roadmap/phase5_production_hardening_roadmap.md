@@ -225,3 +225,9 @@ Sprint 5 adds tenant-scoped evidence lifecycle, backup/restore, and export contr
 ## Enterprise Multi-Tenant Runtime Sprint 6 Roadmap Note
 
 Sprint 6 adds tenant/customer onboarding runtime and support controls: onboarding plan foundation, readiness gates, tenant support SLA profiles, support escalation review, BAU handoff controls, and human-only customer activation boundaries. It prepares the program for MT Final Closure and enterprise tenant isolation certification.
+
+## Enterprise Multi-Tenant Runtime Final Closure Roadmap Note
+
+MT Final Closure closes the enterprise multi-tenant runtime implementation track after Sprint 0 through Sprint 6. It consolidates tenant isolation certification, migration continuity, route registry/regression evidence, tenant object-storage/export/restore controls, frontend tenant UX boundaries, customer onboarding/support controls, residual risk ownership, and final go/no-go evidence.
+
+After MT Final Closure, remaining work moves from implementation-pack delivery to controlled customer pilot execution, customer-specific production evidence, billing/payment roadmap, external support-ticketing/CMMS integrations, and commercial rollout operations.

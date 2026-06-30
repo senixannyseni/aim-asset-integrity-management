@@ -584,3 +584,22 @@ This is a forward-only evidence-table completion hotfix. It does not rewrite alr
 - Migration evidence: `0033_enterprise_multitenant_sprint6_customer_onboarding_support_controls.sql`.
 - Table evidence: `tenant_onboarding_plans`, `tenant_onboarding_readiness_gates`, `tenant_support_sla_profiles`, `tenant_support_escalation_reviews`.
 - Human boundary: AI/n8n/service actors cannot accept multi-tenant Sprint 6 evidence or approve tenant onboarding, customer activation, support SLA exception, support escalation closure, BAU handoff, or Sprint 6 closure.
+
+## Enterprise Multi-Tenant Runtime Final Closure Certification and Go/No-Go Mapping
+
+| Evidence ID | Evidence item | Source document |
+|---|---|---|
+| MT-FC-001 | Final closure baseline | `docs/enterprise/enterprise_multitenant_runtime_final_closure_certification_go_no_go_pack.md` |
+| MT-FC-002 | Sprint 0 architecture reconciliation | Sprint 0 evidence pack |
+| MT-FC-003 | Sprint 1 tenant context reconciliation | Sprint 1 evidence pack and migration 0028 |
+| MT-FC-004 | Sprint 2 route/object boundary reconciliation | Sprint 2 evidence pack and migration 0029 |
+| MT-FC-005 | Sprint 3 route registry reconciliation | Sprint 3 evidence pack and migrations 0030/0031 |
+| MT-FC-006 | Sprint 4 frontend tenant UX reconciliation | Sprint 4 evidence pack |
+| MT-FC-007 | Sprint 5 lifecycle/export/restore reconciliation | Sprint 5 evidence pack and migration 0032 |
+| MT-FC-008 | Sprint 6 onboarding/support reconciliation | Sprint 6 evidence pack and migration 0033 |
+| MT-FC-009 | Tenant isolation certification matrix | `docs/enterprise/tenant_isolation_certification_matrix.md` |
+| MT-FC-010 | Residual risk and exception register | `docs/enterprise/multitenant_final_residual_risk_exception_register.md` |
+| MT-FC-011 | Final go/no-go decision record | `docs/enterprise/multitenant_runtime_final_go_no_go_decision_record.md` |
+| MT-FC-012 | Final closure runbook | `docs/operations/enterprise_multitenant_runtime_final_closure_runbook.md` |
+
+AI/n8n/service actors cannot accept multi-tenant final closure evidence, approve final certification, waive final evidence, or sign closure.
