@@ -1151,3 +1151,9 @@ This hotfix does not change route behavior, tenant classifications, object-stora
 Enterprise Multi-Tenant Runtime Sprint 4 adds frontend tenant context visibility, a tenant switcher in the AIM Shell, a read/switch Tenant Admin Console, and frontend API header propagation for `x-aim-tenant-id` / `x-aim-tenant-slug`.
 
 Scope boundary: Sprint 4 does not create tenants, approve tenant memberships, certify tenant isolation readiness, or move enforcement to the frontend. Backend RBAC, tenant membership resolution, route filtering, and object-storage boundary checks remain authoritative. AI/n8n/service actors cannot accept multi-tenant Sprint 4 evidence or approve tenant UX/admin changes.
+
+## Enterprise Multi-Tenant Runtime Implementation Sprint 5 — Tenant-Scoped Evidence Lifecycle, Backup/Restore, and Export Controls
+
+Sprint 5 adds tenant-scoped evidence lifecycle, backup/restore, and export-control foundations. It adds `tenant-evidence-lifecycle.ts`, migration `0032_enterprise_multitenant_sprint5_evidence_lifecycle_export_controls.sql`, `tenant_evidence_lifecycle_policies`, `tenant_backup_restore_drills`, and `tenant_export_control_reviews`.
+
+AI/n8n/service actors cannot accept multi-tenant Sprint 5 evidence and cannot approve tenant export, restore, backup, lifecycle deletion, or lifecycle policy closure. Sprint 5 uses a forward-only migration and does not rewrite already-tagged migrations 0028, 0029, 0030, or 0031.

@@ -882,3 +882,11 @@ Status: implementation package prepared.
 Evidence IDs: MT-S4-001 through MT-S4-012.
 
 Sprint 4 adds tenant context visibility, tenant switcher UX, Tenant Admin Console read/switch workflow, isolation health display, and frontend tenant header propagation. It does not rewrite historical migrations and does not move tenant enforcement to the frontend.
+
+## Enterprise Multi-Tenant Runtime Sprint 5 — Evidence Lifecycle, Backup/Restore, and Export Controls
+
+Status: packaged for implementation.
+
+Evidence: MT-S5-001 through MT-S5-012.
+
+Sprint 5 adds tenant-scoped evidence lifecycle policy, tenant backup/restore rehearsal scope, tenant export-control review, and regression coverage. AI/n8n/service actors cannot accept multi-tenant Sprint 5 evidence or approve tenant export, restore, backup, lifecycle deletion, or lifecycle policy closure.

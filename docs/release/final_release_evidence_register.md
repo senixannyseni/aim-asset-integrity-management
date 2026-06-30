@@ -568,3 +568,11 @@ This is a forward-only evidence-table completion hotfix. It does not rewrite alr
 - MT-S4-010 — Tenant UX docs/runbook.
 - MT-S4-011 — Sprint 4 regression test.
 - MT-S4-012 — Release evidence sync.
+
+## Enterprise Multi-Tenant Runtime Sprint 5 Evidence Lifecycle and Export Controls Mapping
+
+- MT-S5-001 through MT-S5-012 map tenant evidence lifecycle, backup/restore, and export-control readiness.
+- Runtime evidence: `tenant-evidence-lifecycle.ts`.
+- Migration evidence: `0032_enterprise_multitenant_sprint5_evidence_lifecycle_export_controls.sql`.
+- Table evidence: `tenant_evidence_lifecycle_policies`, `tenant_backup_restore_drills`, `tenant_export_control_reviews`.
+- Human boundary: AI/n8n/service actors cannot accept multi-tenant Sprint 5 evidence or approve tenant export, restore, backup, lifecycle deletion, or lifecycle policy closure.

@@ -365,3 +365,7 @@ Priority: High.
 Outcome: tenant context visibility, tenant switcher UX, Tenant Admin Console read/switch workflow, and frontend tenant header propagation are available before deeper customer onboarding and tenant lifecycle packages.
 
 Boundary: no tenant creation, no billing, no frontend-only enforcement, and no historical migration rewrite.
+
+## Enterprise Multi-Tenant Runtime Sprint 5 Evidence Lifecycle Backlog Mapping
+
+Priority: High. Sprint 5 closes evidence lifecycle and export-control foundations required before customer tenant onboarding runtime. Remaining follow-up items move to Sprint 6 customer onboarding runtime and final tenant isolation certification.
