@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { apiFetch, getAimAccessToken, logoutFromAim } from '../../lib/api-client';
 import { AIM_TENANT_SELECTION_EVENT, clearAimTenantSelection, getAimTenantSelection, setAimTenantSelection, tenantSelectionLabel } from '../../lib/tenant-session';
+import ThemeToggle from './ThemeToggle';
 
 type NavItem = {
   href: string;
@@ -539,6 +540,7 @@ export default function AimShell({ children }: { children: ReactNode }) {
             <span className="sr-only">Current page: {meta.title}. {meta.subtitle}</span>
           </div>
           <div className="aim-topbar__right">
+            <ThemeToggle />
             <Link href="/tenant-admin" className="aim-topbar__pill aim-topbar__pill--tenant" title="Open tenant admin" aria-label="Open tenant admin">
               🏢 {tenantStatus === 'ready' ? currentSelectionLabel : 'Tenant context'}
             </Link>
