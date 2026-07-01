@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:ci": "vitest run --coverage=false",
+    "test:live-db": "vitest run tests/source-truth-governance-live-db-smoke.test.ts",
     "db:migrate": "tsx scripts/run-migrations.ts",
     "db:seed": "tsx scripts/run-seeds.ts",
     "db:reset": "tsx scripts/db-reset.ts"

@@ -70,7 +70,7 @@ export default function WorkflowConsoleClient() {
     <main className="app-shell">
       <PageHeader
         eyebrow="RC3-G n8n workflow console"
-        title="Workflow Console"
+        title="n8n Workflow Console / Orchestration Visibility"
         description="Read-only AIM-side workflow visibility. Payloads, error diagnostics, retry metadata, and prohibited controls are in drawers."
         status={failedCount > 0 ? 'failed' : followUpCount > 0 ? 'pending_review' : 'closed'}
         actions={<><Link className="secondary-button" href="/dashboard">Dashboard</Link><Link className="secondary-button" href="/audit-logs">Audit Logs</Link><Link className="secondary-button" href="/work-orders">Work Orders</Link></>}

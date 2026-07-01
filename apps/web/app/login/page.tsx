@@ -1,18 +1,27 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { clearAimAccessToken, getAimAccessToken, loginToAim } from '../../lib/api-client';
+import { getAimAccessToken, loginToAim, logoutFromAim } from '../../lib/api-client';
+import { DEFAULT_AUTHENTICATED_PATH, safeNextPath } from '../../lib/auth-routing';
 
 function messageFromError(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'error' in error) {
     const payload = error as { error?: { message?: string; code?: string } };
-    return payload.error?.message ?? payload.error?.code ?? 'Login failed.';
+    const detail = payload.error?.message ?? payload.error?.code;
+    return detail ? `Sign in failed. ${detail}` : 'Sign in failed. Check your AIM email and password.';
   }
-  return error instanceof Error ? error.message : 'Login failed.';
+  return 'Sign in failed. Check your AIM email and password.';
+}
+
+function nextPathFromLocation(): string {
+  if (typeof window === 'undefined') return DEFAULT_AUTHENTICATED_PATH;
+  return safeNextPath(new URLSearchParams(window.location.search).get('next'));
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('engineer@aim.local');
   const [password, setPassword] = useState('ChangeMe123!');
   const [message, setMessage] = useState<string | null>(typeof window !== 'undefined' && getAimAccessToken() ? 'In-memory token is present for this browser session.' : null);
@@ -25,7 +34,9 @@ export default function LoginPage() {
     try {
       const payload = await loginToAim(email, password);
       const data = payload.data as { user?: { email?: string } } | undefined;
-      setMessage(`Logged in as ${String(data?.user?.email ?? email)}. Use the dashboard to continue the controlled AIM workflow.`);
+      const nextPath = nextPathFromLocation();
+      setMessage(`Logged in as ${String(data?.user?.email ?? email)}. Opening the controlled AIM workflow.`);
+      router.replace(nextPath);
     } catch (error) {
       setMessage(messageFromError(error));
     } finally {
@@ -33,8 +44,8 @@ export default function LoginPage() {
     }
   }
 
-  function logout() {
-    clearAimAccessToken();
+  async function logout() {
+    await logoutFromAim();
     setMessage('Browser-session access token cleared.');
   }
 
@@ -45,7 +56,7 @@ export default function LoginPage() {
           <div className="aim-login-logo">
             <div className="aim-login-logo__icon" aria-hidden="true">🛡</div>
             <div>
-              <div style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>AIM AI</div>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>AIM</div>
               <div style={{ color: '#99f6e4', fontSize: 10 }}>Asset Integrity Management</div>
             </div>
           </div>

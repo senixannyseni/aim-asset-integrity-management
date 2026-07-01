@@ -194,7 +194,7 @@ export default function EngineeringReviewClient() {
         <section className="panel">
           <div className="panel-heading">
             <h2>Approval Requests</h2>
-            <p>Only reviews with status <code>reviewed</code> can be submitted for final approval. AI agents cannot approve, reject, or override.</p>
+            <p>Only reviews with status <code>reviewed</code> can be submitted for final approval. Automated agents cannot approve, reject, or override.</p>
           </div>
           <div className="table-wrap">
             <table>

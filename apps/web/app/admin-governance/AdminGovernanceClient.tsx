@@ -124,8 +124,8 @@ export default function AdminGovernanceClient() {
     <main className="app-shell">
       <PageHeader
         eyebrow="RC3-E admin governance"
-        title="Admin Governance"
-        description="Review compact user, role, permission, and setting summaries. Full permission matrices, sensitive setting values, and audited changes are disclosed in drawers or dialogs."
+        title="Admin Governance Console"
+        description="Review compact user, role, permission, and setting summaries. This is not a direct database editor or n8n workflow console; full permission matrices, sensitive setting values, and audited changes are disclosed in drawers or dialogs."
         status={counts.blockedSettings > 0 ? 'pending_review' : 'approved'}
         actions={<><button className="primary-button" type="button" onClick={() => setRoleModalOpen(true)}>Assign Role</button><button className="secondary-button" type="button" onClick={() => setSettingModalOpen(true)}>Update Setting</button><Link className="secondary-button" href="/audit-logs">Audit Logs</Link></>}
       />

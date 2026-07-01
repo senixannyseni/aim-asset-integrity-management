@@ -21,7 +21,7 @@ type DashboardOverview = {
 const SECTION_TITLES: Record<string, string> = {
   asset_inspection_coverage: 'Asset & Inspection Coverage',
   evidence_readiness: 'Evidence Readiness',
-  ai_extraction_review_queue: 'AI Extraction Review Queue',
+  ai_extraction_review_queue: 'Photo Extraction Review Queue',
   staging_promotion_readiness: 'Staging Readiness',
   calculation_review_readiness: 'Calculation / Review Readiness',
   report_issue_readiness: 'Report Gate Readiness',
@@ -139,7 +139,7 @@ export default function GovernanceDashboardClient() {
           <Link className="aim-activity-row" href="/calculations"><span>🔢</span><span><strong>Calculation review readiness</strong><br /><small>Formula version, input evidence, warning, and approval gates</small></span></Link>
           <Link className="aim-activity-row" href="/evidence"><span>📁</span><span><strong>Evidence readiness</strong><br /><small>Evidence metadata, linkage, verification, and audit trail</small></span></Link>
           <Link className="aim-activity-row" href="/reports"><span>📄</span><span><strong>Report issue readiness</strong><br /><small>Report remains blocked until backend gates pass</small></span></Link>
-          <Link className="aim-activity-row" href="/reviews"><span>🤖</span><span><strong>AI staging review queue</strong><br /><small>AI output remains assistive and requires human review</small></span></Link>
+          <Link className="aim-activity-row" href="/reviews"><span>🤖</span><span><strong>Photo staging review queue</strong><br /><small>Extraction output remains assistive and requires human review</small></span></Link>
         </div>
 
         <div className="aim-panel">

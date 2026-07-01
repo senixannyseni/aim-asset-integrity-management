@@ -235,6 +235,8 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
     {!loading && !permissionDenied && !pageError && <>
       <section className="pd-kpi-grid" aria-label="NDT summary">
         <KpiCard title="Datasets" value={summary.total} helper="measurements in current view" />
+        <KpiCard title="Inspection Traceability Readiness" value={summary.total} helper="RC4-P adds measurement detail inspection traceability readiness" status="pending_review" />
+        <KpiCard title="Bulk Import" value="CSV / XLSX" helper="/api/v1/ndt/measurements/bulk-import" status="pending_review" />
         <KpiCard title="Critical" value={summary.critical} helper="critical records remain visible" status={summary.critical > 0 ? 'needs_review' : 'approved'} />
         <KpiCard title="Missing Evidence" value={summary.missingEvidence} helper="blocks approval where required" status={summary.missingEvidence > 0 ? 'blocked' : 'approved'} />
         <KpiCard title="Needs Review" value={summary.needsReview} helper="review/validation states" status={summary.needsReview > 0 ? 'pending_review' : 'approved'} />
@@ -244,7 +246,7 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
         <div className="panel-heading row-between">
           <div>
             <h2>NDT Measurements</h2>
-            <p>Stored measurements only. No API/ASME calculations are performed here.</p>
+            <p>Stored measurements only. No API/ASME calculations are performed here. Status badges display existing validation/reviewer values.</p>
           </div>
           <div className="action-row"><button className="secondary-button" type="button" onClick={exportCsv}>Export CSV</button></div>
         </div>

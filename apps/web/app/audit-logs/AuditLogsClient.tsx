@@ -108,8 +108,8 @@ export default function AuditLogsClient() {
     <main className="app-shell">
       <PageHeader
         eyebrow="RC3-D governance visibility"
-        title="Audit Logs"
-        description="Compact read-only audit timeline. Before/after values and raw metadata are available only in the detail drawer."
+        title="Audit Log Governance"
+        description="Read-only compact audit timeline. Before/after values and raw metadata are available only in the detail drawer."
         status="closed"
         actions={<><Link className="secondary-button" href="/dashboard">Dashboard</Link><Link className="secondary-button" href="/reports">Reports</Link></>}
       />

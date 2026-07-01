@@ -119,8 +119,9 @@ export default function IntegrityDecisionsClient() {
 
       <section className="pd-kpi-grid" aria-label="Decision summary">
         <KpiCard title="Decisions" value={counts.total} helper="human-created records" />
+        <KpiCard title="Decision Readiness" value={counts.total} helper="RC4-N adds detail-level decision readiness" status="pending_review" />
         <KpiCard title="Pending Review" value={counts.pending} helper="reviewer/approver action" status={counts.pending > 0 ? 'pending_review' : 'approved'} />
-        <KpiCard title="Evidence Gaps" value={counts.blocked} helper="approval-blocking where missing" status={counts.blocked > 0 ? 'blocked' : 'approved'} />
+        <KpiCard title="Evidence Gaps" value={counts.blocked} helper="INTEGRITY_DECISION_EVIDENCE_REQUIRED" status={counts.blocked > 0 ? 'blocked' : 'approved'} />
         <KpiCard title="Approved" value={counts.approved} helper="final decision state" status="approved" />
       </section>
 
@@ -143,7 +144,7 @@ export default function IntegrityDecisionsClient() {
             { header: 'Recommendation', render: (decision) => <StatusBadge status={decision.integrity_status} /> },
             { header: 'Review State', render: (decision) => <StatusBadge status={decision.decision_status} /> },
             { header: 'Evidence', render: (decision) => Number(decision.evidence_count ?? 0) > 0 ? <StatusBadge status="approved" label={`linked (${decision.evidence_count})`} /> : <StatusBadge status="blocked" label="missing" /> },
-            { header: 'Action', className: 'pd-cell-actions', render: (decision) => <span className="pd-compact-actions"><button className="secondary-button" type="button" onClick={() => setSelected(decision)}>View details</button><button className="primary-button" type="button" disabled={Number(decision.evidence_count ?? 0) === 0 || decision.decision_status === 'approved'} onClick={() => setActionTarget(decision)}>Approve</button></span> }
+            { header: 'Action', className: 'pd-cell-actions', render: (decision) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/integrity-decisions/${decision.integrity_decision_id}`}>Decision readiness</Link><button className="secondary-button" type="button" onClick={() => setSelected(decision)}>View details</button><button className="primary-button" type="button" disabled={Number(decision.evidence_count ?? 0) === 0 || decision.decision_status === 'approved'} onClick={() => setActionTarget(decision)}>Approve</button></span> }
           ]}
         />
       </section>

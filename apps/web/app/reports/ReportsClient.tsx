@@ -156,6 +156,7 @@ export default function ReportsClient() {
 
       <section className="pd-kpi-grid" aria-label="Report summary">
         <KpiCard title="Reports" value={summary.total} helper="generated records" />
+        <KpiCard title="Object Storage" value={summary.total} helper="object storage exports stay in detail workflow" status="pending_review" />
         <KpiCard title="Issue Ready" value={summary.ready} helper="backend gates appear passable" status={summary.ready > 0 ? 'approved' : 'pending_review'} />
         <KpiCard title="Blocked" value={summary.blocked} helper="missing approval/evidence gate" status={summary.blocked > 0 ? 'blocked' : 'approved'} />
         <KpiCard title="Issued" value={summary.issued} helper="locked formal reports" status="issued" />
@@ -180,7 +181,7 @@ export default function ReportsClient() {
             { header: 'Status', render: (report) => <StatusBadge status={report.report_status} label={report.report_status === 'draft' ? 'draft' : report.report_status} /> },
             { header: 'Gate Summary', render: (report) => <GateSummary {...gateCounts(report)} /> },
             { header: 'Issue Readiness', render: (report) => <StatusBadge status={canIssue(report) ? 'approved' : report.report_status === 'issued' ? 'issued' : 'blocked'} label={canIssue(report) ? 'approved' : report.report_status === 'issued' ? 'issued' : 'blocked'} /> },
-            { header: 'Primary Action', className: 'pd-cell-actions', render: (report) => <span className="pd-compact-actions"><button className="secondary-button" type="button" onClick={() => setSelected(report)}>View details</button><button className="primary-button" type="button" disabled={!canIssue(report)} onClick={() => setAction({ kind: 'issue', report })}>Issue</button></span> }
+            { header: 'Primary Action', className: 'pd-cell-actions', render: (report) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/reports/${report.report_id}`}>Detail</Link><button className="secondary-button" type="button" onClick={() => setSelected(report)}>View details</button><button className="primary-button" type="button" disabled={!canIssue(report)} onClick={() => setAction({ kind: 'issue', report })}>Issue</button></span> }
           ]}
         />
       </section>

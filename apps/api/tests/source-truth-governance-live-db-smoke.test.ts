@@ -58,6 +58,10 @@ const LIVE_SMOKE_ENV = {
   ].join(',')
 };
 
+// This test requires a migrated live PostgreSQL test database and is intentionally
+// opt-in so normal CI does not require a database service.
+const describeLiveDb = process.env.AIM_RUN_LIVE_DB_SMOKE === 'true' ? describe : describe.skip;
+
 let app: Express;
 let pool: Pool;
 let activeFixtures: FixtureIds[] = [];
@@ -449,6 +453,7 @@ async function seedReportFixture(ids: FixtureIds, options: {
   }
 }
 
+describeLiveDb('source-truth governance live DB smoke', () => {
 beforeAll(async () => {
   Object.assign(process.env, LIVE_SMOKE_ENV);
   const appModule = await import('../src/app.js');
@@ -722,4 +727,5 @@ describe('source-of-truth live DB evidence upload validator/config smoke', () =>
     expect(zipWithoutChecksum.some((issue) => issue.field === 'checksum')).toBe(true);
     expect(() => storage.validateEvidenceObjectRequest({ filename: 'controlled-live-db-bundle.zip', mimeType: 'application/zip', sizeBytes: 0 })).toThrow(/File size exceeds allowed limit/);
   });
+});
 });

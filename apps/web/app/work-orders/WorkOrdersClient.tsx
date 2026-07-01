@@ -124,6 +124,7 @@ export default function WorkOrdersClient() {
 
       <section className="pd-kpi-grid" aria-label="Work order summary">
         <KpiCard title="Work Orders" value={counts.total} helper="internal AIM records" />
+        <KpiCard title="Closure Readiness" value={counts.total} helper="RC4-L adds detail-level closure readiness before close" status="pending_review" />
         <KpiCard title="High Priority" value={counts.high} helper="visible operational risk" status={counts.high > 0 ? 'needs_review' : 'approved'} />
         <KpiCard title="Blocked" value={counts.blocked} helper="gate or execution blockers" status={counts.blocked > 0 ? 'blocked' : 'approved'} />
         <KpiCard title="Closed" value={counts.closed} helper="completed internal actions" status="closed" />
@@ -146,7 +147,7 @@ export default function WorkOrdersClient() {
             { header: 'Status', render: (order) => <StatusBadge status={order.status} /> },
             { header: 'Due Date', render: (order) => dateValue(order.due_date) },
             { header: 'Owner', render: (order) => order.assigned_role ?? 'engineer' },
-            { header: 'Action', className: 'pd-cell-actions', render: (order) => <span className="pd-compact-actions"><button className="secondary-button" type="button" onClick={() => setSelected(order)}>View details</button><button className="primary-button" type="button" disabled={order.status === 'closed'} onClick={() => setCloseTarget(order)}>Close</button></span> }
+            { header: 'Action', className: 'pd-cell-actions', render: (order) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/work-orders/${order.work_order_id}`}>Closure readiness</Link><button className="secondary-button" type="button" onClick={() => setSelected(order)}>View details</button><button className="primary-button" type="button" disabled={order.status === 'closed'} onClick={() => setCloseTarget(order)}>Close</button></span> }
           ]}
         />
       </section>
