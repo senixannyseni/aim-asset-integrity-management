@@ -19,8 +19,45 @@ type NavGroup = {
   items: NavItem[];
 };
 
+type NavIconKey =
+  | 'dashboard'
+  | 'assets'
+  | 'integrityWorkspace'
+  | 'inspections'
+  | 'findings'
+  | 'evidence'
+  | 'traceability'
+  | 'photoExtraction'
+  | 'photoReview'
+  | 'ndt'
+  | 'calculations'
+  | 'formulas'
+  | 'integrityDecision'
+  | 'ffs'
+  | 'rbi'
+  | 'reports'
+  | 'workOrders'
+  | 'workflow'
+  | 'audit'
+  | 'admin'
+  | 'tenant'
+  | 'dictionary'
+  | 'validation'
+  | 'history'
+  | 'security'
+  | 'goLive'
+  | 'production'
+  | 'closure';
+
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'aim.sidebarCollapsed';
 const SIDEBAR_GROUPS_STORAGE_KEY = 'aim.sidebarOpenGroups';
+const NAV_GROUP_ABBREVIATIONS: Record<string, string> = {
+  'Asset & Inspection': 'AS',
+  'Evidence & Document': 'EV',
+  Engineering: 'EN',
+  'Report & Action': 'RP',
+  'Admin & Release': 'AD'
+};
 
 type TenantMembershipView = {
   tenant_id: string;
@@ -134,6 +171,79 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/release-closure': { title: 'Release Closure', subtitle: 'Final release signoff and closure evidence' }
 };
 
+const NAV_ICON_PATHS: Record<NavIconKey, ReactNode> = {
+  dashboard: <><rect x="4" y="5" width="7" height="6" rx="1.5" /><rect x="13" y="5" width="7" height="14" rx="1.5" /><rect x="4" y="13" width="7" height="6" rx="1.5" /></>,
+  assets: <><path d="M4 20V9l8-4 8 4v11" /><path d="M8 20v-7h8v7" /><path d="M9 9h6" /></>,
+  integrityWorkspace: <><path d="M12 4l7 4v5c0 4-3 6-7 7-4-1-7-3-7-7V8l7-4z" /><path d="M9 12l2 2 4-5" /></>,
+  inspections: <><path d="M8 4h8v16H8z" /><path d="M10 8h4" /><path d="M10 12h4" /><path d="M10 16h3" /></>,
+  findings: <><path d="M12 4l8 16H4L12 4z" /><path d="M12 9v4" /><path d="M12 17h.01" /></>,
+  evidence: <><path d="M6 4h9l3 3v13H6z" /><path d="M14 4v4h4" /><path d="M9 12h6" /><path d="M9 16h4" /></>,
+  traceability: <><path d="M7 8l-4 4 4 4" /><path d="M17 8l4 4-4 4" /><path d="M4 12h16" /></>,
+  photoExtraction: <><path d="M5 8h3l1.5-2h5L16 8h3v10H5z" /><circle cx="12" cy="13" r="3" /></>,
+  photoReview: <><path d="M5 5h14v10H9l-4 4V5z" /><path d="M9 10h6" /><path d="M9 13h4" /></>,
+  ndt: <><path d="M4 16c4-4 12-4 16 0" /><path d="M7 13c3-3 7-3 10 0" /><path d="M10 10c1.2-1 2.8-1 4 0" /><path d="M12 18h.01" /></>,
+  calculations: <><rect x="7" y="4" width="10" height="16" rx="1.5" /><path d="M9 8h6" /><path d="M9 12h2" /><path d="M13 12h2" /><path d="M9 16h2" /><path d="M13 16h2" /></>,
+  formulas: <><path d="M5 7h14" /><path d="M8 17l3-10" /><path d="M13 17l3-10" /></>,
+  integrityDecision: <><path d="M12 4l7 4v5c0 4-3 6-7 7-4-1-7-3-7-7V8l7-4z" /><path d="M8.5 12.5l2.5 2.5 4.5-5" /></>,
+  ffs: <><path d="M9 4h6" /><path d="M10 4v5l-4 9h12l-4-9V4" /><path d="M8 15h8" /></>,
+  rbi: <><path d="M5 19V5" /><path d="M5 19h14" /><path d="M8 16l3-4 3 2 4-7" /></>,
+  reports: <><path d="M7 4h7l4 4v12H7z" /><path d="M14 4v5h4" /><path d="M9 13h6" /><path d="M9 17h4" /></>,
+  workOrders: <><path d="M14 5a4 4 0 0 0 5 5l-9 9H6v-4l9-9" /><path d="M8 17l2 2" /></>,
+  workflow: <><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" /></>,
+  audit: <><path d="M6 5h12v14H6z" /><path d="M9 9h6" /><path d="M9 13h6" /><path d="M9 17h3" /></>,
+  admin: <><path d="M12 4v16" /><path d="M5 8h14" /><path d="M7 14h10" /></>,
+  tenant: <><path d="M5 20V6h8v14" /><path d="M13 10h6v10" /><path d="M8 10h2" /><path d="M8 14h2" /><path d="M16 14h1" /></>,
+  dictionary: <><path d="M5 5h7a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H5z" /><path d="M19 5h-4v15" /></>,
+  validation: <><circle cx="12" cy="12" r="8" /><path d="M8.5 12.5l2.5 2.5 4.5-5" /></>,
+  history: <><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></>,
+  security: <><rect x="6" y="10" width="12" height="9" rx="1.5" /><path d="M9 10V8a3 3 0 0 1 6 0v2" /></>,
+  goLive: <><path d="M6 20V5" /><path d="M6 5h10l-2 3 2 3H6" /><path d="M9 16l2 2 4-5" /></>,
+  production: <><path d="M12 4v10" /><path d="M8 10l4 4 4-4" /><path d="M5 20h14" /></>,
+  closure: <><path d="M6 20V5h10l-2 3 2 3H6" /><path d="M9 16l2 2 4-5" /></>
+};
+
+function SidebarIcon({ name }: { name: NavIconKey }) {
+  return (
+    <svg className="aim-sidebar__icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {NAV_ICON_PATHS[name]}
+    </svg>
+  );
+}
+
+function navIconNameForHref(href: string): NavIconKey {
+  switch (href) {
+    case '/dashboard': return 'dashboard';
+    case '/assets': return 'assets';
+    case '/integrity-workspace': return 'integrityWorkspace';
+    case '/inspections': return 'inspections';
+    case '/findings': return 'findings';
+    case '/evidence': return 'evidence';
+    case '/evidence-traceability': return 'traceability';
+    case '/ai-extraction': return 'photoExtraction';
+    case '/reviews': return 'photoReview';
+    case '/ndt': return 'ndt';
+    case '/calculations': return 'calculations';
+    case '/formulas': return 'formulas';
+    case '/integrity-decisions': return 'integrityDecision';
+    case '/ffs': return 'ffs';
+    case '/rbi': return 'rbi';
+    case '/reports': return 'reports';
+    case '/work-orders': return 'workOrders';
+    case '/workflow-console': return 'workflow';
+    case '/audit-logs': return 'audit';
+    case '/admin-governance': return 'admin';
+    case '/tenant-admin': return 'tenant';
+    case '/data-dictionary': return 'dictionary';
+    case '/validation': return 'validation';
+    case '/validation/history': return 'history';
+    case '/security-monitoring': return 'security';
+    case '/golive-readiness': return 'goLive';
+    case '/production-validation': return 'production';
+    case '/release-closure': return 'closure';
+    default: return 'dashboard';
+  }
+}
+
 function isActive(pathname: string, item: NavItem): boolean {
   const candidates = item.match ?? [item.href];
   return candidates.some((candidate) => pathname === candidate || (!item.exact && candidate !== '/' && pathname.startsWith(`${candidate}/`)));
@@ -153,6 +263,8 @@ function navGroupKey(label: string): string {
 }
 
 function navGroupAbbrev(label: string): string {
+  const configured = NAV_GROUP_ABBREVIATIONS[label];
+  if (configured) return configured;
   return label
     .split(/[^A-Za-z0-9]+/)
     .filter(Boolean)
@@ -318,21 +430,36 @@ export default function AimShell({ children }: { children: ReactNode }) {
     <div className={sidebarCollapsed ? 'aim-shell-preview is-sidebar-collapsed' : 'aim-shell-preview'}>
       <aside className="aim-sidebar" aria-label="AIM module navigation" data-collapsed={sidebarCollapsed ? 'true' : 'false'}>
         <div className="aim-sidebar__head">
-          <div className="aim-sidebar__logo" aria-hidden="true">🛡</div>
+          {sidebarCollapsed ? (
+            <button
+              type="button"
+              className="aim-sidebar__logo aim-sidebar__logo--button"
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              onClick={toggleSidebarCollapsed}
+            >
+              <span className="aim-sidebar__logo-mark" aria-hidden="true">A</span>
+            </button>
+          ) : (
+            <div className="aim-sidebar__logo" aria-hidden="true">
+              <span className="aim-sidebar__logo-mark">A</span>
+            </div>
+          )}
           <div className="aim-sidebar__brand-block">
             <div className="aim-sidebar__brand">AIM</div>
             <div className="aim-sidebar__tagline">Asset Integrity Management</div>
           </div>
-          <button
-            type="button"
-            className="aim-sidebar__collapse"
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-pressed={sidebarCollapsed}
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            onClick={toggleSidebarCollapsed}
-          >
-            <span aria-hidden="true">{sidebarCollapsed ? '>' : '<'}</span>
-          </button>
+          {!sidebarCollapsed && (
+            <button
+              type="button"
+              className="aim-sidebar__collapse"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              onClick={toggleSidebarCollapsed}
+            >
+              <span aria-hidden="true">&lt;</span>
+            </button>
+          )}
         </div>
 
         <nav className="aim-sidebar__scroll">
@@ -362,7 +489,7 @@ export default function AimShell({ children }: { children: ReactNode }) {
                   const active = isActive(pathname, item);
                   return (
                     <Link key={item.href} href={item.href} title={item.label} aria-label={item.label} className={active ? 'aim-sidebar__link is-active' : 'aim-sidebar__link'}>
-                      <span className="aim-sidebar__icon" aria-hidden="true">{item.icon}</span>
+                      <span className="aim-sidebar__icon aim-sidebar__icon--mono" aria-hidden="true"><SidebarIcon name={navIconNameForHref(item.href)} /></span>
                       <span className="aim-sidebar__link-label">{item.label}</span>
                       {active && <span className="aim-sidebar__arrow" aria-hidden="true">›</span>}
                     </Link>
@@ -392,14 +519,14 @@ export default function AimShell({ children }: { children: ReactNode }) {
             <Link href="/tenant-admin" className="aim-tenant-mini-card__link">Open tenant admin</Link>
           </div>
           <div className="aim-sidebar__user-row">
-            <div className="aim-sidebar__avatar" aria-hidden="true">👤</div>
+            <div className="aim-sidebar__avatar" aria-hidden="true">U</div>
             <div>
               <div className="aim-sidebar__user">AIM User</div>
               <div className="aim-sidebar__role">{hasToken ? 'Authenticated session' : 'Local / demo session'}</div>
             </div>
           </div>
           <button type="button" className="aim-sidebar__logout" aria-label="Logout" title="Logout" onClick={logout}>
-            <span aria-hidden="true">⏻</span>
+            <span className="aim-sidebar__logout-icon" aria-hidden="true" />
             <span className="aim-sidebar__logout-label">Logout</span>
           </button>
           <div className="aim-sidebar__version">v0.1.0 MVP · AIM + n8n</div>
