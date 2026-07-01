@@ -101,10 +101,12 @@ describe('enterprise multi-tenant runtime final closure certification and go/no-
     expect(summary.tenantScopedRoutesWithoutBoundary).toEqual([]);
   });
 
-  it('does not add a final closure migration or rewrite historical migration scope', () => {
+  it('does not rewrite enterprise multi-tenant historical migration scope while allowing later feature migrations', () => {
     const migrationFiles = fs.readdirSync(path.join(repoRoot, 'db/migrations')).filter((file) => file.endsWith('.sql')).sort();
     expect(migrationFiles).toContain('0033_enterprise_multitenant_sprint6_customer_onboarding_support_controls.sql');
-    expect(migrationFiles.some((file) => file.startsWith('0034'))).toBe(false);
+    expect(migrationFiles.filter((file) => file.startsWith('0034'))).toEqual([
+      '0034_calculation_formula_library_runtime_bridge.sql',
+    ]);
     expect(migrationFiles.filter((file) => file.startsWith('0028')).length).toBe(1);
     expect(migrationFiles.filter((file) => file.startsWith('0029')).length).toBe(1);
     expect(migrationFiles.filter((file) => file.startsWith('0030')).length).toBe(1);

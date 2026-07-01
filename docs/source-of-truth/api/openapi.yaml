@@ -9,7 +9,7 @@ info:
     AIM backend APIs only. AI extraction output is staging-only and requires human
     engineering review before promotion. This contract documents implemented auth,
     AI extraction/staging, evidence governance, approval, and report issue gates;
-    it uses a governed boundary instead of API 579/API 581, CMMS, 3D processing, or invented API/API-ASME
+    it does not implement API 579/API 581, CMMS, 3D processing, or invented API/API-ASME
     formulas.
 servers:
 - url: http://localhost:4000
@@ -1149,14 +1149,14 @@ paths:
       - bearerAuth: []
   /api/v1/formulas/records/{recordId}/test-run:
     post:
-      summary: Run fixture formula test-case check without executing engineering
+      summary: Run placeholder formula test-case check without executing engineering
         formula
       x-permission-required: formula.test
       x-role-restriction: admin or senior_engineer
-      x-audit-event-generated: FORMULA_TEST_GUARDRAIL_RUN
+      x-audit-event-generated: FORMULA_TEST_PLACEHOLDER_RUN
       responses:
         '201':
-          description: Fixture test run recorded
+          description: Placeholder test run recorded
       security:
       - bearerAuth: []
   /api/v1/engineering/calculate:
@@ -1201,6 +1201,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - bearerAuth: []
+  /api/v1/engineering/calculations/formula-library/run:
+    post:
+      summary: Run controlled calculation formula-library fixture
+      description: Runs the explicit AIM MVP shell-thickness formula library chain using approved synchronized status_logic@1.0.0 metadata. The route persists calculation_runs, calculation_inputs, and calculation_outputs while preserving engineering review and final-use gates. It does not embed API/API-ASME clauses and does not use dynamic formula execution.
+      x-permission-required: calculation.run
+      x-audit-event-generated: calculation.formula_library_run_requested|calculation.completed|calculation.failed|calculation.warning_raised|calculation.final_use_blocked|FORMULA_LIBRARY_RUN_BLOCKED
+      x-source-of-truth-boundary: AIM is the system of record. Formula library calculation runs are persisted only by AIM backend services with explicit formula version snapshots and audit logs.
+      x-human-review-required: true
+      x-evidence-link-required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - asset_id
+              - formula_code
+              - formula_version
+              - inputs
+              properties:
+                asset_id:
+                  type: string
+                  format: uuid
+                inspection_event_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                formula_code:
+                  type: string
+                  enum:
+                  - status_logic
+                formula_version:
+                  type: string
+                  enum:
+                  - 1.0.0
+                formula_set:
+                  type: string
+                  enum:
+                  - shell_thickness_mvp_v1
+                inputs:
+                  type: object
+                  required:
+                  - previous_thickness_mm
+                  - current_thickness_mm
+                  - minimum_required_thickness_mm
+                  - years_between_inspections
+                  - reading_unit
+                  properties:
+                    previous_thickness_mm:
+                      type: number
+                      nullable: true
+                    current_thickness_mm:
+                      type: number
+                      nullable: true
+                    minimum_required_thickness_mm:
+                      type: number
+                      nullable: true
+                    years_between_inspections:
+                      type: number
+                      nullable: true
+                    reading_unit:
+                      type: string
+                      enum:
+                      - mm
+                      - inch
+                    evidence_code:
+                      type: string
+                      nullable: true
+                    evidence_file_id:
+                      type: string
+                      format: uuid
+                      nullable: true
+      responses:
+        '201':
+          description: Formula-library calculation completed and stored for engineering review
+        '422':
+          description: Formula-library calculation blocked by validation and stored with final-use blockers
+        '400':
+          description: Invalid request or approved synchronized formula version missing
       security:
       - bearerAuth: []
   /api/v1/engineering/calculations:
@@ -1455,7 +1537,7 @@ paths:
     get:
       summary: List RBI interface cases
       description: Lists API RP 580/581 governance interface cases. Quantitative API
-        RP 581 rules are requires approved governance before supplied through Formula Registry.
+        RP 581 rules are not implemented unless supplied through Formula Registry.
       x-permission-required: rbi.interface.read
       parameters:
       - in: query
@@ -1490,7 +1572,7 @@ paths:
       x-audit-event-generated: none
     post:
       summary: Manually create an RBI interface case
-      description: Creates a qualitative/semi-quantitative fixture RBI interface
+      description: Creates a qualitative/semi-quantitative placeholder RBI interface
         case from engineering review. Does not implement proprietary API RP 581 quantitative
         rules.
       x-permission-required: rbi.interface.create
@@ -1704,7 +1786,7 @@ paths:
       summary: Mark approved RBI case exported
       description: RC4-I senior-engineer/lead-engineer/admin export action. Export
         requires a previously approved RBI case and export permission. Export metadata
-        only; uses a governed boundary instead of quantitative API RP 581 calculations.
+        only; does not implement quantitative API RP 581 calculations.
       x-permission-required: rbi.interface.export
       x-audit-event-generated: RBI_CASE_EXPORTED
       parameters:
@@ -4425,7 +4507,7 @@ components:
           type: array
           items:
             type: object
-        input_requirements:
+        input_placeholders:
           type: object
           properties:
             consequence_of_failure:
@@ -4684,17 +4766,17 @@ components:
           type: string
           enum:
           - none
-          - controlled_guardrail
+          - controlled_placeholder
           - engineer_entered
           - json_logic
           - text_rule
         expression_body:
           type: string
-          description: Controlled fixture unless entered by an authorized engineer
+          description: Controlled placeholder unless entered by an authorized engineer
             from licensed sources or approved fixtures.
         formula_expression_source:
           type: string
-          description: Required source traceability label, e.g. licensed_engineer_entry_required
+          description: Required source traceability label, e.g. controlled_placeholder_manual_entry
             or licensed_engineer_entry reference.
         input_schema:
           type: object
@@ -4793,7 +4875,7 @@ components:
           - thickness_screening
           - corrosion_rate
           - remaining_life
-          - inspection_interval_review_required
+          - inspection_interval_placeholder
         calculation_request:
           type: object
           properties:
@@ -5686,7 +5768,7 @@ components:
           type: string
           nullable: true
           description: Must remain null/omitted in Phase 1.6. External CMMS integration
-            requires approved governance before use.
+            is not implemented.
         gate_checklist:
           type: array
           items:
