@@ -598,15 +598,33 @@ body {
 
 .aim-sidebar__logo {
   align-items: center;
-  background: var(--aim-teal);
+  background: transparent;
+  border: 1px solid rgba(226, 232, 240, 0.45);
   border-radius: 7px;
-  color: white;
+  color: #e2e8f0;
   display: flex;
   flex-shrink: 0;
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 900;
   height: 30px;
   justify-content: center;
   width: 30px;
+}
+
+.aim-sidebar__logo--button {
+  cursor: pointer;
+  padding: 0;
+}
+
+.aim-sidebar__logo--button:hover,
+.aim-sidebar__logo--button:focus-visible {
+  border-color: #ccfbf1;
+  color: #fff;
+  outline: none;
+}
+
+.aim-sidebar__logo-mark {
+  line-height: 1;
 }
 
 .aim-sidebar__brand-block {
@@ -749,10 +767,24 @@ body {
 }
 
 .aim-sidebar__icon {
+  align-items: center;
+  display: inline-flex;
   flex: 0 0 18px;
-  font-size: 14px;
+  height: 18px;
+  justify-content: center;
   opacity: 0.9;
-  text-align: center;
+  width: 18px;
+}
+
+.aim-sidebar__icon-svg {
+  display: block;
+  fill: none;
+  height: 17px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 17px;
 }
 
 .aim-sidebar__arrow {
@@ -782,12 +814,6 @@ body {
   display: none;
 }
 
-.aim-shell-preview.is-sidebar-collapsed .aim-sidebar__collapse {
-  flex-basis: 30px;
-  margin-left: 0;
-  width: 30px;
-}
-
 .aim-shell-preview.is-sidebar-collapsed .aim-sidebar__group-toggle {
   justify-content: center;
   padding: 8px 8px 4px;
@@ -810,7 +836,12 @@ body {
 
 .aim-shell-preview.is-sidebar-collapsed .aim-sidebar__icon {
   flex-basis: 28px;
-  font-size: 15px;
+  width: 28px;
+}
+
+.aim-shell-preview.is-sidebar-collapsed .aim-sidebar__icon-svg {
+  height: 18px;
+  width: 18px;
 }
 
 .aim-shell-preview.is-sidebar-collapsed .aim-sidebar__arrow {
@@ -874,6 +905,26 @@ body {
   justify-content: flex-start;
   padding: 6px 8px;
   width: 100%;
+}
+
+.aim-sidebar__logout-icon {
+  border: 1.6px solid currentColor;
+  border-radius: 50%;
+  display: inline-flex;
+  height: 14px;
+  position: relative;
+  width: 14px;
+}
+
+.aim-sidebar__logout-icon::before {
+  background: currentColor;
+  content: "";
+  height: 7px;
+  left: 50%;
+  position: absolute;
+  top: -3px;
+  transform: translateX(-50%);
+  width: 1.6px;
 }
 
 .aim-sidebar__logout:hover {

@@ -36,6 +36,9 @@ expectIncludes(shell, 'logoutFromAim', 'shared logout helper');
 expectIncludes(shell, "router.replace('/login')", 'logout login redirect');
 expectIncludes(shell, 'SIDEBAR_COLLAPSED_STORAGE_KEY', 'persisted whole-sidebar collapse');
 expectIncludes(shell, 'toggleSidebarCollapsed', 'whole-sidebar collapse toggle');
+expectIncludes(shell, 'NAV_ICON_PATHS', 'simplified monochrome sidebar icon system');
+expectIncludes(shell, 'SidebarIcon name={navIconNameForHref(item.href)}', 'sidebar icons rendered through monochrome SVG component');
+expectIncludes(shell, 'aim-sidebar__icon aim-sidebar__icon--mono', 'sidebar monochrome icon class');
 expectIncludes(shell, 'aim-sidebar__group-toggle', 'collapsible sidebar drawer headers');
 expectIncludes(shell, 'aria-expanded={groupOpen}', 'drawer header expanded state');
 expectIncludes(shell, 'title={item.label}', 'collapsed sidebar navigation tooltips');
@@ -45,6 +48,9 @@ expectIncludes(shell, 'activeGroupKey(pathname)', 'active route opens parent dra
 expectIncludes(shell, 'Photo Extraction', 'Photo Extraction sidebar label');
 expectIncludes(shell, 'Photo Field Review', 'Photo Field Review sidebar label');
 expectIncludes(shell, 'className="aim-sidebar__brand">AIM</div>', 'AIM sidebar brand');
+expectIncludes(shell, 'className="aim-sidebar__logo aim-sidebar__logo--button"', 'collapsed AIM logo expand control');
+expectIncludes(shell, 'aria-label="Expand sidebar"', 'collapsed logo expand accessible label');
+expectIncludes(shell, 'title="Expand sidebar"', 'collapsed logo expand title');
 
 expectIncludes(routing, "candidate.startsWith('//')", 'external next rejection');
 expectIncludes(routing, "candidate.includes('\\\\')", 'backslash next rejection');
@@ -72,6 +78,10 @@ for (const [label, text] of [
   if (text.includes(removedExtractionLabel) || text.includes(removedReviewLabel) || text.includes(removedBrandLabel)) {
     throw new Error(`auth-routing smoke test failed: removed user-facing AI label still appears in ${label}`);
   }
+}
+
+if (shell.includes("sidebarCollapsed ? '>'") || shell.includes("aria-label={sidebarCollapsed ? 'Expand sidebar'")) {
+  throw new Error('auth-routing smoke test failed: collapsed sidebar still exposes a separate expand button');
 }
 
 console.log('web: auth-routing and sidebar smoke test passed');
