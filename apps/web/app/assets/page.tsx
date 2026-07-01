@@ -256,6 +256,7 @@ export default function TankAssetRegisterPage() {
         <>
           <section className="pd-kpi-grid" aria-label="Asset register summary">
             <KpiCard title="Assets" value={summary.total} helper="registered tank records" />
+            <KpiCard title="Asset Integrity Package Readiness" value={summary.total} helper="open asset detail for readiness gates" status="pending_review" />
             <KpiCard title="Approved or Active" value={summary.approved} helper="safe status remains backend-owned" status="approved" />
             <KpiCard title="Needs Review" value={summary.needsReview} helper="draft, inactive, or non-approved states" status="needs_review" />
             <KpiCard title="Overdue Inspection" value={summary.dueSoon} helper="visible because it can block planning" status={summary.dueSoon > 0 ? 'blocked' : 'approved'} />

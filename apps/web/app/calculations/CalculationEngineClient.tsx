@@ -243,6 +243,7 @@ export default function CalculationEngineClient({ fixedAssetId, assetScoped = fa
 
       <section className="pd-kpi-grid" aria-label="Calculation summary">
         <KpiCard title="Runs" value={summary.total} helper={selectedAsset ? displayAsset(selectedAsset) : 'loaded context'} />
+        <KpiCard title="Formula readiness" value={formulaVersions.length} helper="RC4-O adds detail-level formula traceability readiness" status={formulaVersions.length > 0 ? 'approved' : 'blocked'} />
         <KpiCard title="Pending Review" value={summary.pending} helper="human engineering action" status={summary.pending > 0 ? 'pending_review' : 'approved'} />
         <KpiCard title="Blocked / Failed" value={summary.blocked} helper="validation or final-use blockers" status={summary.blocked > 0 ? 'blocked' : 'approved'} />
         <KpiCard title="Approved" value={summary.approved} helper="reviewed calculation runs" status="approved" />
@@ -284,6 +285,7 @@ export default function CalculationEngineClient({ fixedAssetId, assetScoped = fa
             id: 'overview',
             label: 'Overview',
             content: <form className="form-grid" onSubmit={runCalculation}>
+              <div className="notice wide-field"><strong>Formula readiness:</strong> Only approved executable formula_versions can be selected. Request payload preview is kept in the detail drawer.</div>
               <label><span>Asset</span><select value={assetId} onChange={(event) => { setAssetId(event.target.value); setSelectedNdtIds([]); void loadAll(event.target.value); }} disabled={assetScoped} required><option value="">Select asset</option>{assets.map((asset) => <option key={asset.asset_id} value={asset.asset_id}>{displayAsset(asset)}</option>)}</select></label>
               <label><span>Approved Formula Version</span><select value={formulaVersionId} onChange={(event) => setFormulaVersionId(event.target.value)} required><option value="">Select formula_version</option>{formulaVersions.map((formula) => <option key={formula.formula_version_id} value={formula.formula_version_id}>{displayFormula(formula)}</option>)}</select></label>
               <label><span>Calculation Type</span><select name="calculation_scope" defaultValue="thickness_screening"><option value="thickness_screening">Thickness screening</option><option value="corrosion_rate">Corrosion rate</option><option value="remaining_life">Remaining life</option></select></label>

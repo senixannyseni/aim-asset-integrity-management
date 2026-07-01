@@ -76,6 +76,7 @@ export default function InspectionsClient() {
 
     <section className="pd-kpi-grid" aria-label="Inspection summary">
       <KpiCard title="Inspections" value={inspections.length} helper="loaded packages" />
+      <KpiCard title="Inspection Package Readiness" value={inspections.length} helper="detail page shows readiness gates" status="pending_review" />
       <KpiCard title="Pending Review" value={pendingCount} helper="human action required" status="pending_review" />
       <KpiCard title="Approved" value={approvedCount} helper="review complete" status="approved" />
       <KpiCard title="Blocked or Rejected" value={blockedCount} helper="visible safety gate state" status={blockedCount > 0 ? 'blocked' : 'approved'} />

@@ -64,7 +64,7 @@ describe('RC3-F governance dashboard readiness overview', () => {
     expect(page).toContain('/api/v1/governance-dashboard/overview');
     expect(page).toContain('Read-only');
     expect(page).toContain('Evidence Readiness');
-    expect(page).toContain('AI Extraction Review Queue');
+    expect(page).toContain('Photo Extraction Review Queue');
     expect(page).toContain('Report Gate Readiness');
     expect(page).toContain('Work Order Follow-up');
     expect(page).not.toContain("method: 'POST'");

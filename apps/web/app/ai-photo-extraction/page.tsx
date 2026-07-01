@@ -47,16 +47,16 @@ export default function AiPhotoExtractionPage() {
   return (
     <main className="app-shell">
       <PageHeader
-        eyebrow="AI staging review"
-        title="AI Extraction Review"
-        description="AI output is staging/review data only. Field values, raw extraction output, source references, and validation flags are disclosed after selecting a job."
+        eyebrow="Photo staging review"
+        title="Photo Extraction Review"
+        description="Photo extraction output is staging/review data only. Field values, raw extraction output, source references, and validation flags are disclosed after selecting a job."
         status={summary.blocked > 0 ? 'blocked' : 'pending_review'}
-        actions={<><Link className="secondary-button" href="/evidence">Evidence Repository</Link><Link className="secondary-button" href="/reviews">AI Field Review</Link><Link className="secondary-button" href="/audit-logs">Audit Logs</Link></>}
+        actions={<><Link className="secondary-button" href="/evidence">Evidence Repository</Link><Link className="secondary-button" href="/reviews">Photo Field Review</Link><Link className="secondary-button" href="/audit-logs">Audit Logs</Link></>}
       />
 
-      <div className="aim-alert aim-alert--amber">AI extracted values are not final engineering data. Promotion and approval remain backend-gated human review actions.</div>
+      <div className="aim-alert aim-alert--amber">Photo extracted values are not final engineering data. Promotion and approval remain backend-gated human review actions.</div>
 
-      <section className="pd-kpi-grid" aria-label="AI extraction summary">
+      <section className="pd-kpi-grid" aria-label="Photo extraction summary">
         <KpiCard title="Extraction Jobs" value="3" helper="evidence packages processed" />
         <KpiCard title="Needs Review" value={summary.needsReview} helper="fields requiring human attention" status="needs_review" />
         <KpiCard title="Blocked" value={summary.blocked} helper="source or confidence gate failed" status={summary.blocked > 0 ? 'blocked' : 'approved'} />
@@ -75,7 +75,7 @@ export default function AiPhotoExtractionPage() {
           rows={reviewCards}
           getRowKey={(card) => card.id}
           emptyTitle="No extraction jobs"
-          emptyMessage="No AI extraction jobs found. Start from Evidence Room or create a new extraction job."
+          emptyMessage="No photo extraction jobs found. Start from Evidence Room or create a new extraction job."
           columns={[
             { header: 'Job', render: (card) => card.title },
             { header: 'Asset / Inspection', render: (card) => <span>{card.asset}<br /><span className="muted-text">{card.evidence}</span></span> },
@@ -89,7 +89,7 @@ export default function AiPhotoExtractionPage() {
 
       <DetailDrawer
         open={Boolean(selected)}
-        title={selected?.title ?? 'AI extraction details'}
+        title={selected?.title ?? 'Photo extraction details'}
         subtitle={selected ? `${selected.asset} / ${selected.evidence}` : undefined}
         status={selected?.status}
         onClose={() => setSelected(null)}
@@ -141,7 +141,7 @@ export default function AiPhotoExtractionPage() {
 
       <ActionModal
         open={Boolean(actionTarget)}
-        title={actionTarget ? `Review ${actionTarget.title}` : 'Review AI field'}
+        title={actionTarget ? `Review ${actionTarget.title}` : 'Review photo field'}
         subtitle="Approve, reject, or correct staging data. Backend remains authoritative for final promotion."
         status={actionTarget?.status}
         onClose={() => setActionTarget(null)}
