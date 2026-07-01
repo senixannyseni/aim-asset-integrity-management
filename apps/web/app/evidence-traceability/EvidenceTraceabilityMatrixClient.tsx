@@ -132,8 +132,8 @@ export default function EvidenceTraceabilityMatrixClient() {
           <p>Optional UUID filters narrow the read-only coverage view. Backend evidence gates remain authoritative.</p>
         </div>
         <form className="form-grid" onSubmit={applyFilters}>
-          <label><span>Asset ID</span><input value={assetId} onChange={(event) => setAssetId(event.target.value)} placeholder="optional asset UUID" /></label>
-          <label><span>Inspection Event ID</span><input value={inspectionEventId} onChange={(event) => setInspectionEventId(event.target.value)} placeholder="optional inspection UUID" /></label>
+          <label><span>Asset ID</span><input value={assetId} onChange={(event) => setAssetId(event.target.value)} /></label>
+          <label><span>Inspection Event ID</span><input value={inspectionEventId} onChange={(event) => setInspectionEventId(event.target.value)} /></label>
           <button className="primary-button" type="submit">Refresh Evidence Coverage</button>
         </form>
         {message && <div className="notice">{message}</div>}

@@ -7,6 +7,6 @@
   "component": "shell course 1",
   "location": "90 degree orientation, 2.5 m elevation",
   "page_or_sheet_ref": "p. 12 / table UT-01",
-  "checksum": "demo-sha256-checksum",
+  "checksum": "fixture-sha256-checksum",
   "file_size_bytes": 0
 }

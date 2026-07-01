@@ -15,7 +15,7 @@ This guide defines how AIM UAT defects are classified, triaged, fixed, retested,
 | cosmetic | visual/copy issue only | typo in training guide |
 | governance defect | control failure affecting source-of-truth rules | AI promoted final data, n8n direct DB access |
 | data defect | sample data or migration issue | seed missing formula version fixture |
-| test data issue | UAT data incomplete or wrong | evidence placeholder missing checksum |
+| test data issue | UAT data incomplete or wrong | evidence fixture missing checksum |
 | environment issue | infrastructure/configuration problem | object storage endpoint not configured |
 
 ## 3. Severity Rules

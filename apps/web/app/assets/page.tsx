@@ -296,7 +296,7 @@ export default function TankAssetRegisterPage() {
             <div className="search-row">
               <label className="wide-field">
                 <span>Search</span>
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tag, name, facility, fluid, owner, status" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} />
               </label>
             </div>
             {message && <div className="notice">{message}</div>}
@@ -356,17 +356,17 @@ export default function TankAssetRegisterPage() {
             label: 'Overview',
             content: (
               <form className="form-grid" onSubmit={createAsset}>
-                <label><span>Tank Tag</span><input name="tank_tag" defaultValue={defaultAssetValues.tank_tag} placeholder="TANK-T-02" required /></label>
-                <label><span>Asset Name</span><input name="asset_name" defaultValue={defaultAssetValues.asset_name} placeholder="Solar Storage Tank T-02" required /></label>
-                <label><span>Facility</span><input name="facility" defaultValue={defaultAssetValues.facility} placeholder="Fuel Terminal A" required /></label>
-                <label><span>Location</span><input name="location" defaultValue={defaultAssetValues.location} placeholder="Tank Farm 1" required /></label>
-                <label><span>Service Fluid</span><input name="service_fluid" defaultValue={defaultAssetValues.service_fluid} placeholder="Diesel / water / crude" required /></label>
+                <label><span>Tank Tag</span><input name="tank_tag" defaultValue={defaultAssetValues.tank_tag} required /></label>
+                <label><span>Asset Name</span><input name="asset_name" defaultValue={defaultAssetValues.asset_name} required /></label>
+                <label><span>Facility</span><input name="facility" defaultValue={defaultAssetValues.facility} required /></label>
+                <label><span>Location</span><input name="location" defaultValue={defaultAssetValues.location} required /></label>
+                <label><span>Service Fluid</span><input name="service_fluid" defaultValue={defaultAssetValues.service_fluid} required /></label>
                 <label><span>Tank Type</span><input name="tank_type" defaultValue={defaultAssetValues.tank_type} required /></label>
                 <label><span>Construction Year</span><input name="construction_year" type="number" min="1801" max={new Date().getFullYear() + 5} defaultValue={defaultAssetValues.construction_year} required /></label>
                 <label><span>Original Design Code</span><input name="original_design_code" defaultValue={defaultAssetValues.original_design_code} required /></label>
                 <label><span>Current Assessment Code</span><input name="current_assessment_code" defaultValue={defaultAssetValues.current_assessment_code} required /></label>
-                <label><span>Code Edition</span><input name="code_edition" defaultValue={defaultAssetValues.code_edition} placeholder="Engineer-entered edition/reference" required /></label>
-                <label><span>Owner</span><input name="owner" defaultValue={defaultAssetValues.owner} placeholder="Operations / client owner" required /></label>
+                <label><span>Code Edition</span><input name="code_edition" defaultValue={defaultAssetValues.code_edition} required /></label>
+                <label><span>Owner</span><input name="owner" defaultValue={defaultAssetValues.owner} required /></label>
                 <label><span>Operating Status</span><select name="operating_status" defaultValue={defaultAssetValues.operating_status} required>{operatingStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
                 <label><span>Inspection Due Date</span><input name="inspection_due_date" type="date" defaultValue={defaultAssetValues.inspection_due_date} required /></label>
                 <button className="primary-button wide-field" type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create Tank Asset'}</button>

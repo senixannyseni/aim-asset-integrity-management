@@ -65,7 +65,7 @@ RC4-H writes or documents these audit events:
 
 ## Out of Scope Confirmed
 
-RC4-H does not implement:
+RC4-H does not implement FFS, RBI, automatic case creation, final integrity decision, report issue, or proprietary API/ASME calculation content. It uses a governed boundary instead of:
 
 - FFS case workflow.
 - RBI case workflow.

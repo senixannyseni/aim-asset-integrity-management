@@ -63,16 +63,16 @@ describe('Phase 2.5 RC2 runtime and frontend closure', () => {
     });
   });
 
-  it('hardens frontend auth so demo headers are opt-in and bearer token is default', () => {
+  it('hardens frontend auth so development headers are opt-in and bearer token is default', () => {
     const client = readRepoFile('apps/web/lib/api-client.ts');
     const login = readRepoFile('apps/web/app/login/page.tsx');
 
-    expect(client).toContain('NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED');
+    expect(client).toContain('NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED');
     expect(client).toContain('Authorization');
     expect(client).toContain('Bearer');
     expect(client).toContain('payload?.data?.accessToken');
     expect(login).toContain('AIM Login');
-    expect(login).toContain('Demo headers are disabled unless NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true');
+    expect(login).toContain('Development header bypass is disabled unless NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED=true');
   });
 
   it('adds frontend workflow closure pages for integrity decisions, work orders, and report gates', () => {

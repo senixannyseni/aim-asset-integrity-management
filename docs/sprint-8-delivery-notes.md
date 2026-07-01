@@ -25,9 +25,9 @@ Implemented database migration:
 
 ## Engineering Boundary
 
-This sprint does not implement proprietary quantitative API RP 581 calculations.
+This sprint uses a governed boundary instead of proprietary quantitative API RP 581 calculations.
 
-RBI inputs are placeholders for:
+RBI inputs are fixtures for:
 
 - consequence of failure
 - probability of failure
@@ -47,7 +47,7 @@ RBI cases can be triggered by:
 
 ## Governance Rules
 
-- RBI interface records are qualitative/semi-quantitative placeholders unless approved Formula Registry rules are provided.
+- RBI interface records are qualitative/semi-quantitative fixtures unless approved Formula Registry rules are provided.
 - Risk summary must show calculation basis.
 - AI agents cannot approve, export, close, or finalize RBI cases.
 - Evidence links must belong to the same asset as the RBI case.

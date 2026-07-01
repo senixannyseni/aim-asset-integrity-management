@@ -109,13 +109,13 @@ on conflict (permission_code) do update set
   description = excluded.description;
 
 insert into users(email, full_name, password_hash, status) values
-  ('admin@aim.local', 'AIM Admin', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active'),
-  ('inspector@aim.local', 'Demo Inspector', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active'),
-  ('engineer@aim.local', 'Demo Engineer', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active'),
-  ('senior.engineer@aim.local', 'Demo Senior Engineer', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active'),
-  ('qa@aim.local', 'Demo QA QC', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active'),
-  ('client@aim.local', 'Demo Client Viewer', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active'),
-  ('ai.agent@aim.local', 'AIM AI Agent', '$2a$12$placeholderplaceholderplaceholderplaceholderplaceholder12', 'active')
+  ('admin@aim.local', 'AIM Admin', 'pbkdf2_sha256$310000$aimfoundationlocal01$756f3dabe720b7bed215c32b74599f2000bc3fe853d23c5f96462c769dfd2610', 'active'),
+  ('inspector@aim.local', 'AIM Inspector', 'pbkdf2_sha256$310000$aimfoundationlocal01$756f3dabe720b7bed215c32b74599f2000bc3fe853d23c5f96462c769dfd2610', 'active'),
+  ('engineer@aim.local', 'AIM Engineer', 'pbkdf2_sha256$310000$aimfoundationlocal01$756f3dabe720b7bed215c32b74599f2000bc3fe853d23c5f96462c769dfd2610', 'active'),
+  ('senior.engineer@aim.local', 'AIM Senior Engineer', 'pbkdf2_sha256$310000$aimfoundationlocal01$756f3dabe720b7bed215c32b74599f2000bc3fe853d23c5f96462c769dfd2610', 'active'),
+  ('qa@aim.local', 'AIM QA QC', 'pbkdf2_sha256$310000$aimfoundationlocal01$756f3dabe720b7bed215c32b74599f2000bc3fe853d23c5f96462c769dfd2610', 'active'),
+  ('client@aim.local', 'AIM Client Viewer', 'pbkdf2_sha256$310000$aimfoundationlocal01$756f3dabe720b7bed215c32b74599f2000bc3fe853d23c5f96462c769dfd2610', 'active'),
+  ('ai.agent@aim.local', 'AIM AI Agent', 'pbkdf2_sha256$310000$aimfoundationlocal01$756f3dabe720b7bed215c32b74599f2000bc3fe853d23c5f96462c769dfd2610', 'active')
 on conflict (email) do update set
   full_name = excluded.full_name,
   status = excluded.status;
@@ -394,7 +394,7 @@ on conflict do nothing;
 -- No ffs.approve, ffs.close, ndt.approve, formula.approve, calculation.approve, report.approve, report.issue, or integrity_decision.approve is assigned to ai_agent.
 
 insert into materials(material_code, material_name, material_specification, notes) values
-  ('AIM-DEMO-CS-001', 'Demo Carbon Steel', 'Demo material specification - not for engineering use', 'Seed material for local development only.')
+  ('AIM-REF-CS-001', 'Carbon Steel Reference', 'Reference material specification - engineering review required', 'Seed material for controlled local validation.')
 on conflict (material_code) do update set
   material_name = excluded.material_name,
   material_specification = excluded.material_specification,
@@ -422,12 +422,12 @@ insert into assets(
 )
 values (
   'TK-001',
-  'Demo Aboveground Storage Tank',
+  'Aboveground Storage Tank',
   'aboveground_storage_tank',
-  'Demo Facility',
+  'Tank Integrity Facility',
   'Tank Farm A',
   'Tank Farm A - East Bund',
-  'Water - demo only',
+  'Water - validation service',
   'draft',
   'aboveground_storage_tank',
   2010,
@@ -436,7 +436,7 @@ values (
   'API 650',
   'API 653',
   'User-supplied edition required',
-  'Demo Owner',
+  'Operations Owner',
   'in_service',
   current_date + interval '180 days'
 )
@@ -516,7 +516,7 @@ join (values
   (2, 10.000, 9.600, 7.000),
   (3, 8.000, 7.700, 6.000)
 ) as sc(course_no, nominal_thickness_mm, measured_min_thickness_mm, minimum_required_thickness_mm) on true
-where a.asset_tag = 'TK-001' and m.material_code = 'AIM-DEMO-CS-001'
+where a.asset_tag = 'TK-001' and m.material_code = 'AIM-REF-CS-001'
 on conflict (asset_id, course_no) do update set
   material_id = excluded.material_id,
   nominal_thickness_mm = excluded.nominal_thickness_mm,
@@ -545,18 +545,18 @@ insert into formula_registry(
   version,
   status
 ) values (
-  'MVP-CORROSION-RATE-PLACEHOLDER',
-  'MVP Corrosion Rate Placeholder - Not Executable',
+  'MVP-CORROSION-RATE-GUARDRAIL',
+  'MVP Corrosion Rate Guardrail - Not Executable',
   'Engineering Basis / User-approved formula registry required',
-  'N/A - placeholder only',
+  'N/A - guardrail entry only',
   'MVP Foundation',
   '{"previous_thickness_mm":"number","current_thickness_mm":"number","years_between_inspections":"number"}'::jsonb,
   '{"corrosion_rate_mm_y":"number"}'::jsonb,
   '{"thickness":"mm","time":"year"}'::jsonb,
   '["Formula is not executable until approved_active and populated from Engineering Basis or approved workbook."]'::jsonb,
-  'Placeholder only. No engineering formula implemented in this sprint.',
+  'Guardrail entry only. No engineering formula is activated by this guardrail entry.',
   null,
-  '0.0.0-placeholder',
+  '0.0.0-guardrail',
   'draft'
 )
 on conflict (formula_code, version) do update set

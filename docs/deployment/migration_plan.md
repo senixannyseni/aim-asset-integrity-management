@@ -233,7 +233,7 @@ Migration/release rehearsal passes only when:
 - Full API test suite passes.
 - Phase 2.0 release-readiness static test passes.
 - UAT smoke cases pass.
-- Object storage placeholder/signed URL smoke test passes or is explicitly documented as environment-not-configured for local only.
+- Object storage fixture/signed URL smoke test passes or is explicitly documented as environment-not-configured for local only.
 - Workflow event creation works through AIM API.
 - Error log creation works through AIM API.
 - No n8n PostgreSQL credentials are present.

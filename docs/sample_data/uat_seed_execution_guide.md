@@ -23,7 +23,7 @@ The seed is designed to preserve AIM governance:
 - AIM remains the system of record.
 - AI extraction output is represented only in `extraction_jobs`, `extraction_fields`, and `staging_records`.
 - Human review and manual override records are explicit.
-- Evidence files are metadata placeholders only; no real evidence binary is included.
+- Evidence files are metadata fixtures only; no real evidence binary is included.
 - Calculation records use an approved UAT fixture and retain `Engineering review required before final use.`
 - Report issue remains gate-controlled.
 - Internal work order fallback is represented inside AIM only.
@@ -65,7 +65,7 @@ The seed creates or updates synthetic records for:
 - UAT users and service users;
 - one atmospheric tank asset `AIM-UAT-T-001`;
 - one inspection `AIM-UAT-INS-001`;
-- evidence metadata placeholders `EVD-2026-900001` to `EVD-2026-900003`;
+- evidence metadata fixtures `EVD-2026-900001` to `EVD-2026-900003`;
 - evidence links for extraction, calculation input, decision support, report attachment, and work order support;
 - one extraction job `EXJ-UAT-000001`;
 - extraction fields covering high confidence, low confidence, missing evidence, unit mismatch, and corrected/manual override scenarios;
@@ -111,9 +111,9 @@ pnpm db:seed
 
 For manual cleanup, delete records in reverse dependency order and only in local/UAT databases. Do not run cleanup against production.
 
-## 9. Evidence Placeholder Warning
+## 9. Evidence Fixture Warning
 
-Evidence rows created by this seed are metadata placeholders. They use `uat-placeholder://...` URIs and do not point to real object storage files. UAT evidence preview/download tests should verify metadata, RBAC, signed URL behavior, and audit behavior using the configured local object storage stub or test harness.
+Evidence rows created by this seed are metadata fixtures. They use `uat-fixture://...` URIs and do not point to real object storage files. UAT evidence preview/download tests should verify metadata, RBAC, signed URL behavior, and audit behavior using the configured local object storage stub or test harness.
 
 ## 10. Acceptance Criteria
 

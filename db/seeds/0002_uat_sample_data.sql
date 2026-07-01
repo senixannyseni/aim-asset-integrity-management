@@ -11,18 +11,18 @@
 
 begin;
 
--- Synthetic UAT users and role assignments. Password hashes are non-login placeholder hashes only.
+-- Synthetic UAT users and role assignments. Password hashes are non-login non-login fixture hashes only.
 insert into users(id, email, full_name, password_hash, status, password_hash_algorithm)
 values
-  ('21000000-0000-4000-8000-000000000001', 'uat.admin@example.test', 'UAT Admin Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000002', 'uat.inspector@example.test', 'UAT Inspector Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000003', 'uat.engineer@example.test', 'UAT Engineer Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000004', 'uat.lead.engineer@example.test', 'UAT Lead Engineer Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000005', 'uat.approver@example.test', 'UAT Approver Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000006', 'uat.it.admin@example.test', 'UAT IT Admin Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000007', 'uat.management@example.test', 'UAT Management Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000008', 'uat.ai.agent@example.test', 'UAT AI Agent Service Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder'),
-  ('21000000-0000-4000-8000-000000000009', 'uat.n8n.service@example.test', 'UAT n8n Service Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_placeholder')
+  ('21000000-0000-4000-8000-000000000001', 'uat.admin@example.test', 'UAT Admin Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000002', 'uat.inspector@example.test', 'UAT Inspector Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000003', 'uat.engineer@example.test', 'UAT Engineer Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000004', 'uat.lead.engineer@example.test', 'UAT Lead Engineer Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000005', 'uat.approver@example.test', 'UAT Approver Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000006', 'uat.it.admin@example.test', 'UAT IT Admin Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000007', 'uat.management@example.test', 'UAT Management Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000008', 'uat.ai.agent@example.test', 'UAT AI Agent Service Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture'),
+  ('21000000-0000-4000-8000-000000000009', 'uat.n8n.service@example.test', 'UAT n8n Service Sample', 'uat_sample_hash_not_for_login', 'active', 'uat_controlled_fixture')
 on conflict (email) do update set
   full_name = excluded.full_name,
   status = excluded.status,
@@ -86,16 +86,16 @@ on conflict (inspection_code) do update set
   status = excluded.status,
   updated_at = now();
 
--- Evidence metadata placeholders only. Object paths are non-production local/UAT placeholders and do not represent real evidence files.
+-- Evidence metadata fixtures only. Object paths are non-production local/UAT fixtures and do not represent real evidence files.
 insert into evidence_files(
   id, evidence_code, asset_id, inspection_event_id, object_storage_uri, original_filename, file_extension, mime_type,
   file_size_bytes, checksum_sha256, method, component, inspection_date, page_figure_table_reference, uploaded_by,
   status, malware_scan_status, access_status
 )
 values
-  ('24000000-0000-4000-8000-000000000001', 'EVD-2026-900001', '22000000-0000-4000-8000-000000000001', '23000000-0000-4000-8000-000000000001', 'uat-placeholder://evidence/AIM-UAT-T-001/AIM-UAT-INS-001/EVD-2026-900001/inspection-report-placeholder.pdf', 'AIM-UAT-T-001_inspection_report_placeholder.pdf', '.pdf', 'application/pdf', 1024, 'uatsha256-inspection-report-placeholder-000000000000000000000000000001', 'EXTERNAL_VISUAL', 'SHELL', current_date, 'Page 1 Table UAT-1', '21000000-0000-4000-8000-000000000002', 'active', 'clean', 'not_issued'),
-  ('24000000-0000-4000-8000-000000000002', 'EVD-2026-900002', '22000000-0000-4000-8000-000000000001', '23000000-0000-4000-8000-000000000001', 'uat-placeholder://evidence/AIM-UAT-T-001/AIM-UAT-INS-001/EVD-2026-900002/ut-grid-placeholder.csv', 'AIM-UAT-T-001_ut_grid_placeholder.csv', '.csv', 'text/csv', 2048, 'uatsha256-ut-grid-placeholder-0000000000000000000000000000000002', 'UT_THICKNESS', 'SHELL_COURSE_1', current_date, 'CSV row 2 column current_thickness_mm', '21000000-0000-4000-8000-000000000002', 'active', 'clean', 'not_issued'),
-  ('24000000-0000-4000-8000-000000000003', 'EVD-2026-900003', '22000000-0000-4000-8000-000000000001', '23000000-0000-4000-8000-000000000001', 'uat-placeholder://evidence/AIM-UAT-T-001/AIM-UAT-INS-001/EVD-2026-900003/photo-placeholder.png', 'AIM-UAT-T-001_photo_placeholder.png', '.png', 'image/png', 3072, 'uatsha256-photo-placeholder-000000000000000000000000000000000003', 'PHOTO', 'SHELL', current_date, 'Photo UAT-1', '21000000-0000-4000-8000-000000000002', 'active', 'clean', 'not_issued')
+  ('24000000-0000-4000-8000-000000000001', 'EVD-2026-900001', '22000000-0000-4000-8000-000000000001', '23000000-0000-4000-8000-000000000001', 'uat-fixture://evidence/AIM-UAT-T-001/AIM-UAT-INS-001/EVD-2026-900001/inspection-report-fixture.pdf', 'AIM-UAT-T-001_inspection_report_fixture.pdf', '.pdf', 'application/pdf', 1024, 'uatsha256-inspection-report-fixture-000000000000000000000000000001', 'EXTERNAL_VISUAL', 'SHELL', current_date, 'Page 1 Table UAT-1', '21000000-0000-4000-8000-000000000002', 'active', 'clean', 'not_issued'),
+  ('24000000-0000-4000-8000-000000000002', 'EVD-2026-900002', '22000000-0000-4000-8000-000000000001', '23000000-0000-4000-8000-000000000001', 'uat-fixture://evidence/AIM-UAT-T-001/AIM-UAT-INS-001/EVD-2026-900002/ut-grid-fixture.csv', 'AIM-UAT-T-001_ut_grid_fixture.csv', '.csv', 'text/csv', 2048, 'uatsha256-ut-grid-fixture-0000000000000000000000000000000002', 'UT_THICKNESS', 'SHELL_COURSE_1', current_date, 'CSV row 2 column current_thickness_mm', '21000000-0000-4000-8000-000000000002', 'active', 'clean', 'not_issued'),
+  ('24000000-0000-4000-8000-000000000003', 'EVD-2026-900003', '22000000-0000-4000-8000-000000000001', '23000000-0000-4000-8000-000000000001', 'uat-fixture://evidence/AIM-UAT-T-001/AIM-UAT-INS-001/EVD-2026-900003/photo-fixture.png', 'AIM-UAT-T-001_photo_fixture.png', '.png', 'image/png', 3072, 'uatsha256-photo-fixture-000000000000000000000000000000000003', 'PHOTO', 'SHELL', current_date, 'Photo UAT-1', '21000000-0000-4000-8000-000000000002', 'active', 'clean', 'not_issued')
 on conflict (evidence_code) do update set
   object_storage_uri = excluded.object_storage_uri,
   original_filename = excluded.original_filename,
@@ -278,7 +278,7 @@ values (
   'shell',
   'general_thickness_governance',
   'universal_deterministic',
-  'controlled_placeholder',
+  'controlled_guardrail',
   'NO_STANDARD_FORMULA_TEXT_UAT_FIXTURE_ONLY',
   '{"inputs":["previous_thickness_mm","current_thickness_mm","years_between_inspections","minimum_required_thickness_mm"]}'::jsonb,
   '{"outputs":["corrosion_rate_mm_y","remaining_life_years","status","warnings"]}'::jsonb,
@@ -573,7 +573,7 @@ values
   ('40000000-0000-4000-8000-000000000002', '24000000-0000-4000-8000-000000000002', 'calculation_input', '33000000-0000-4000-8000-000000000001', 'calculation_input', '21000000-0000-4000-8000-000000000003'),
   ('40000000-0000-4000-8000-000000000003', '24000000-0000-4000-8000-000000000001', 'integrity_decision', '36000000-0000-4000-8000-000000000001', 'decision_support', '21000000-0000-4000-8000-000000000004'),
   ('40000000-0000-4000-8000-000000000004', '24000000-0000-4000-8000-000000000001', 'report', '38000000-0000-4000-8000-000000000001', 'report_attachment', '21000000-0000-4000-8000-000000000005'),
-  ('40000000-0000-4000-8000-000000000005', '24000000-0000-4000-8000-000000000003', 'internal_work_order', '41000000-0000-4000-8000-000000000001', 'work_order_closure_support_placeholder', '21000000-0000-4000-8000-000000000004')
+  ('40000000-0000-4000-8000-000000000005', '24000000-0000-4000-8000-000000000003', 'internal_work_order', '41000000-0000-4000-8000-000000000001', 'work_order_closure_support_fixture', '21000000-0000-4000-8000-000000000004')
 on conflict (evidence_file_id, linked_entity_type, linked_entity_id) do update set
   link_reason = excluded.link_reason,
   linked_by = excluded.linked_by;

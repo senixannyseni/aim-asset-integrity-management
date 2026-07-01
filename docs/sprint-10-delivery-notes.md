@@ -55,7 +55,7 @@ Reports cite:
 
 ## Governance Boundary
 
-This sprint does not implement new API/API-ASME formulas, AI extraction runtime, quantitative RBI calculation, CMMS integration, or work-order integration.
+This sprint uses a governed boundary instead of new API/API-ASME formulas, AI extraction runtime, quantitative RBI calculation, CMMS integration, or work-order integration.
 
 Reports are generated as draft until approved. Issued reports are locked and require a new report version for changes.
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hasPermission } from '../src/rbac/roles.js';
 import {
-  buildControlledPlaceholder,
+  buildControlledGuardrail,
   isFormulaUsableInProduction,
   nextFormulaVersion,
   validateFormulaPayload
@@ -15,9 +15,9 @@ describe('Formula Registry governance', () => {
     code_edition: 'User-supplied licensed edition',
     clause_reference: 'Manual reference only',
     formula_type: 'api_controlled',
-    expression_type: 'controlled_placeholder',
-    formula_expression_source: 'controlled_placeholder_manual_entry',
-    expression_body: buildControlledPlaceholder(),
+    expression_type: 'controlled_guardrail',
+    formula_expression_source: 'licensed_engineer_entry_required',
+    expression_body: buildControlledGuardrail(),
     input_schema: { thickness_mm: 'number' },
     output_schema: { status: 'string' },
     unit_rules: { thickness: 'mm' },
@@ -48,12 +48,12 @@ describe('Formula Registry governance', () => {
     expect(hasPermission(['qa_qc'], 'formula.read')).toBe(true);
   });
 
-  it('blocks API controlled formulas that include non-placeholder expression bodies', () => {
+  it('blocks API controlled formulas that include unauthorized expression bodies', () => {
     const issues = validateFormulaPayload({ ...basePayload, expression_body: 'copied or invented API formula' }, 'create');
     expect(issues.map((issue) => issue.field)).toContain('expression_body');
   });
 
-  it('allows controlled placeholder for API controlled formulas', () => {
+  it('allows controlled guardrail for API controlled formulas', () => {
     const issues = validateFormulaPayload(basePayload, 'create');
     expect(issues).toHaveLength(0);
   });

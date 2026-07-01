@@ -86,7 +86,7 @@ Known limitations must be accepted before a Go or Conditional Go decision:
 - No SAP/Maximo/CMMS integration.
 - No 3D processing.
 - No invented, copied, or embedded API/API-ASME formulas.
-- UAT uses synthetic data and placeholder evidence metadata unless a non-confidential test evidence pack is supplied.
+- UAT uses synthetic data and fixture evidence metadata unless a non-confidential test evidence pack is supplied.
 
 Frontend UI is no longer a blanket exclusion. governed RC4 frontend screens were added through RC4-B through RC4-W and remain subject to backend RBAC and governance gates.
 

@@ -29,7 +29,7 @@ This package is intentionally documentation/evidence-control only. It does not a
 
 ## 3. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, raw production incident payloads, vulnerability exploit details, or unreleased commercial terms into operations closure records. Use redacted placeholders and approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, raw production incident payloads, vulnerability exploit details, or unreleased commercial terms into operations closure records. Use redacted fixtures and approved secure evidence storage.
 
 ## 4. Required Human Review
 

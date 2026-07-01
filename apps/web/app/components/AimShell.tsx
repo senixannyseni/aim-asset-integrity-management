@@ -523,7 +523,7 @@ export default function AimShell({ children }: { children: ReactNode }) {
             <div className="aim-sidebar__avatar" aria-hidden="true">U</div>
             <div>
               <div className="aim-sidebar__user">AIM User</div>
-              <div className="aim-sidebar__role">{hasToken ? 'Authenticated session' : 'Local / demo session'}</div>
+              <div className="aim-sidebar__role">{hasToken ? 'Authenticated session' : 'Local validation session'}</div>
             </div>
           </div>
           <button type="button" className="aim-sidebar__logout" aria-label="Logout" title="Logout" onClick={logout}>

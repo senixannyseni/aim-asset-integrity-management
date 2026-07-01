@@ -83,7 +83,7 @@ Rollback must be initiated or strongly considered if any of the following occur 
 
 ## Out-of-Scope List
 
-RC3-J does not implement new AI extraction, AI staging promotion, NDT calculation, API 579/API 581/FFS/RBI calculation, report builder behavior, object-storage feature behavior, n8n execution/editor behavior, admin RBAC/settings behavior, audit mutation, direct database editing, frontend pages, backend APIs, migrations, or business logic.
+RC3-J uses a governed boundary instead of new AI extraction, AI staging promotion, NDT calculation, API 579/API 581/FFS/RBI calculation, report builder behavior, object-storage feature behavior, n8n execution/editor behavior, admin RBAC/settings behavior, audit mutation, direct database editing, frontend pages, backend APIs, migrations, or business logic.
 
 ## Formula Boundary Reminder
 

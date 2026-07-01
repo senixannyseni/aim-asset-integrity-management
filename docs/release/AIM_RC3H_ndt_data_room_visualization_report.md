@@ -55,4 +55,4 @@ pnpm --filter @aim/api test -- report-generation.test.ts
 
 ## Out-of-scope confirmation
 
-RC3-H does not implement API 579/API 581/FFS/RBI calculations, new engineering formulas, deterministic calculation engine changes, AI staging promotion changes, report builder changes, object-storage feature changes, external CMMS integration, hypercare dashboard, n8n workflow execution/editor, admin settings changes beyond permission synchronization, audit mutation, direct database editing, or AI/n8n/service final engineering decision automation.
+RC3-H uses a governed boundary instead of API 579/API 581/FFS/RBI calculations, new engineering formulas, deterministic calculation engine changes, AI staging promotion changes, report builder changes, object-storage feature changes, external CMMS integration, hypercare dashboard, n8n workflow execution/editor, admin settings changes beyond permission synchronization, audit mutation, direct database editing, or AI/n8n/service final engineering decision automation.

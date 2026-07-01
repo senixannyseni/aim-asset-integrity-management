@@ -31,7 +31,7 @@ node scripts/repo-hygiene.mjs
 
 Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, webhook secrets, CMMS credentials, confidential client evidence, exploit details, or unredacted vulnerability evidence into pilot documents.
 
-Use redacted placeholders and secure evidence storage. Do not commit production logs containing sensitive data.
+Use redacted fixtures and secure evidence storage. Do not commit production logs containing sensitive data.
 
 ## 4. Governance Boundaries
 

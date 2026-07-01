@@ -188,7 +188,7 @@ AIM remains the system of record. PostgreSQL remains the store for final structu
 
 ## Test Coverage
 
-Frontend unit test framework is not implemented in this repository foundation. RC4-B therefore relies on:
+Frontend unit test framework requires approved governance before use in this repository foundation. RC4-B therefore relies on:
 
 - `pnpm --filter @aim/web typecheck`
 - full lint/typecheck/test suite

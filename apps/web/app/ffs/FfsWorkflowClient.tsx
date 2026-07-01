@@ -178,7 +178,7 @@ export default function FfsWorkflowClient() {
             <p>Use a calculation run UUID or run_id that contains FFS trigger candidate warnings.</p>
             <label>
               <span>Calculation Run ID</span>
-              <input value={calculationRunId} onChange={(event) => setCalculationRunId(event.target.value)} placeholder="CALC-... or UUID" required />
+              <input value={calculationRunId} onChange={(event) => setCalculationRunId(event.target.value)} required />
             </label>
             <button className="secondary-button" type="submit">Create FFS Case(s) from Calculation</button>
           </form>

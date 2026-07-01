@@ -78,8 +78,8 @@ export default function LoginPage() {
       <section className="aim-login-right" aria-label="Login form">
         <div className="aim-login-card">
           <h2>AIM Login</h2>
-          <p>Sign in with your AIM account. Local demo seed uses the same password configured in the API seed.</p>
-          <p className="aim-login-security-note">Demo headers are disabled unless NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true.</p>
+          <p>Sign in with your AIM account. Local validation accounts use the password configured in the API seed.</p>
+          <p className="aim-login-security-note">Development header bypass is disabled unless NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED=true.</p>
 
           <form onSubmit={submit}>
             <label>
@@ -98,7 +98,7 @@ export default function LoginPage() {
 
           {message && <div className="aim-login-message">{message}</div>}
 
-          <div className="aim-login-demo" aria-label="Quick module links">
+          <div className="aim-login-quicklinks" aria-label="Quick module links">
             <Link href="/dashboard">Dashboard</Link>
             <Link href="/assets">Assets</Link>
             <Link href="/evidence">Evidence</Link>

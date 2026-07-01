@@ -2,7 +2,7 @@
 
 ## Objective
 
-Verify that the RBI workflow supports guided input, case detail review, calculation-warning trigger duplicate prevention, repeated-anomaly trigger from findings history, RBAC-aware actions, and placeholder risk visualization without implementing quantitative API RP 581 formulas.
+Verify that the RBI workflow supports guided input, case detail review, calculation-warning trigger duplicate prevention, repeated-anomaly trigger from findings history, RBAC-aware actions, and screening risk visualization without implementing quantitative API RP 581 formulas.
 
 ## Preconditions
 
@@ -46,8 +46,8 @@ Expected result: case is created with trigger source `finding_history`, trigger 
 ### RC4I-UAT-04 — RBI case detail page
 
 1. Open `/rbi/[caseId]` from the case table.
-2. Verify case summary, asset link, calculation link if applicable, risk drivers, risk category, recommended interval, evidence links, source findings, input placeholders, and audit link are visible.
-3. Verify the risk matrix is labelled placeholder/semi-quantitative and does not claim quantitative API RP 581 calculation.
+2. Verify case summary, asset link, calculation link if applicable, risk drivers, risk category, recommended interval, evidence links, source findings, input fixtures, and audit link are visible.
+3. Verify the risk matrix is labelled screening/semi-quantitative and does not claim quantitative API RP 581 calculation.
 
 Expected result: Detail page shows traceability and governance status without final engineering claims.
 

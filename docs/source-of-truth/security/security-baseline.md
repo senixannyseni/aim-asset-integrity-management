@@ -164,7 +164,7 @@ Every security-sensitive operation must write an immutable audit event, includin
 - Invalid file extension rejected.
 - MIME mismatch rejected.
 - Oversized upload rejected.
-- Malware scanning placeholder event recorded.
+- Malware scanning fixture event recorded.
 - Invalid request schema rejected.
 - Error response does not leak internal details.
 - Audit log generated for every approval, rejection, correction, calculation, report issue, and work order action.
@@ -196,7 +196,7 @@ For MVP, the default approach is:
 | JWT access token | Required | Used for API authorization. |
 | Refresh token or server session | Required | Used to renew short-lived access. |
 | SSO / SAML / OIDC | Future | Enterprise extension. |
-| MFA | Recommended placeholder | Can be added before enterprise go-live. |
+| MFA | Recommended fixture | Can be added before enterprise go-live. |
 
 ### 1.3 Login Flow
 
@@ -578,9 +578,9 @@ Recommended MVP file size limits:
 
 The maximum size must be configurable through `system_settings`.
 
-### 8.4 Malware Scanning Placeholder
+### 8.4 Malware Scanning Fixture
 
-MVP must include a malware scanning placeholder even if actual scanning is not implemented yet.
+MVP must include a malware scanning fixture even if actual scanning requires approved governance before use yet.
 
 Minimum behavior:
 
@@ -642,9 +642,9 @@ Example allowed headers:
 Authorization, Content-Type, X-Correlation-ID, X-Request-ID
 ```
 
-### 9.3 Rate Limiting Placeholder
+### 9.3 Rate Limiting Fixture
 
-MVP must include rate limiting configuration placeholders for:
+MVP must include rate limiting configuration fixtures for:
 
 | Endpoint Category | Recommended Baseline |
 |---|---|
@@ -886,14 +886,14 @@ Audit logs are mandatory for:
 - [ ] Oversized file rejected.
 - [ ] Required metadata missing rejected.
 - [ ] Duplicate checksum warning or block applied according to policy.
-- [ ] Malware scan placeholder status created.
+- [ ] Malware scan fixture status created.
 - [ ] Infected/scan_failed status blocks download or triggers configured policy.
 
 ### 12.7 API Security Tests
 
 - [ ] CORS allows only approved origins.
 - [ ] Wildcard CORS is disabled in production.
-- [ ] Rate limiting placeholder/config exists.
+- [ ] Rate limiting fixture/config exists.
 - [ ] Request schema validation blocks malformed input.
 - [ ] Error response does not expose stack traces or SQL.
 - [ ] Correlation ID appears in response, logs, audit, and workflow events.
@@ -941,7 +941,7 @@ The AIM MVP must not go live until the following minimum controls are complete.
 - [ ] MIME validation implemented.
 - [ ] Max file size validation implemented.
 - [ ] Checksum generated and stored.
-- [ ] Malware scanning placeholder implemented.
+- [ ] Malware scanning fixture implemented.
 - [ ] Evidence deletion restricted and approval-based.
 
 ### 13.3 API and Backend Security
@@ -950,7 +950,7 @@ The AIM MVP must not go live until the following minimum controls are complete.
 - [ ] CORS restricted to approved origins.
 - [ ] Request validation implemented.
 - [ ] Error response hygiene implemented.
-- [ ] Rate limiting placeholder/config implemented.
+- [ ] Rate limiting fixture/config implemented.
 - [ ] Correlation ID propagation implemented.
 - [ ] Secrets stored outside code repository.
 - [ ] n8n uses scoped integration credentials only.

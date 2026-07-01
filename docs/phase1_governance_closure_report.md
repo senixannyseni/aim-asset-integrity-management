@@ -23,7 +23,7 @@ The closure checks confirm that AIM remains the system of record, n8n remains or
 | 2. Add missing database migrations | Closed | Phase 1.2 migration `0013_source_truth_schema_closure.sql` added extraction, staging, manual override, data quality, integrity decision, review gate, work order, report version/export, workflow task, notification, system setting, calculation validation case, and formula version structures. Phase 1.5 and Phase 1.6 added calculation/report/work-order governance hardening in migrations `0015` and `0016`. |
 | 3. Implement AI extraction/staging backend flow | Closed | Phase 1.3 added extraction job creation, extracted field storage, staging records, confidence/validation rules, engineer approve/correct/reject, manual override with reason, and promotion after human review/evidence linkage. |
 | 4. Harden approval endpoints | Closed | Phase 1.1, 1.3, 1.5, and 1.6 enforce RBAC, segregation-of-duty checks, comments/reasons, and immutable audit events for approve/reject/correct/promote/issue/close paths. |
-| 5. Harden evidence governance | Closed | Phase 1.3 added signed URL access, evidence validation, malware scan placeholder status, access/download audit, and deletion blocking for linked evidence. |
+| 5. Harden evidence governance | Closed | Phase 1.3 added signed URL access, evidence validation, malware scan fixture status, access/download audit, and deletion blocking for linked evidence. |
 | 6. Harden calculation engine | Closed | Phase 1.5 requires explicit approved formula version, blocks silent/default formula selection, stores formula/input/output snapshots, includes warning/final-use blockers, writes calculation audit events, and includes the mandatory disclaimer: `Engineering review required before final use.` |
 | 7. Harden report issue gates | Closed | Phase 1.6 blocks report issue unless required data, evidence, calculation, review, integrity decision, report approval, workflow-error, and issuer-comment gates pass. Blocked attempts write audit/error/gate signals. |
 | 8. Add internal work order fallback | Closed | Phase 1.6 added internal work order create/update/close routes, source linkage to approved integrity decisions or issued report actions, closure requirements, evidence requirements when configured, and work-order audit events. |
@@ -53,7 +53,7 @@ The closure checks confirm that AIM remains the system of record, n8n remains or
 | Migrations vs ERD | Phase 1.7 static test checks all original Phase 1 source-of-truth table/entity names in migrations and `docs/erd_current.md`. |
 | Seed permissions | Phase 1.7 static test checks AI extraction/staging, evidence, calculation, report issue, work order, workflow/error, and audit permissions exist in role maps and seed SQL. |
 | AI extraction/staging boundary | Phase 1.7 static test checks staging-only flags, manual override, evidence reference, human review, and promotion controls. |
-| Evidence governance | Phase 1.7 static test checks signed URL, file validation, malware placeholder, access audit, linked-evidence deletion block, and downstream evidence gates. |
+| Evidence governance | Phase 1.7 static test checks signed URL, file validation, malware fixture, access audit, linked-evidence deletion block, and downstream evidence gates. |
 | Calculation governance | Phase 1.7 static test checks explicit formula version, approved/locked formula retrieval, snapshots, warnings/blockers, disclaimer, and validation workbook coverage. Phase 1.7 also adds final regression coverage for zero corrosion rate, negative corrosion rate, and missing previous thickness behavior. |
 | Report issue gates | Phase 1.7 static test checks all required gate names, human-only issue controls, comment requirement, and legacy error token compatibility. |
 | Work order fallback | Phase 1.7 static test checks internal work-order create/update/close routes, source gates, closure note/evidence controls, audit events, and no external CMMS execution. |
@@ -94,7 +94,7 @@ Local user validation must record the final authoritative pass/fail result.
 |---|---|
 | Full production security hardening | Outside Phase 1. Production still requires enterprise controls such as SSO/MFA hardening, SIEM/WAF integration, vulnerability scanning, backup/restore validation, and deployment runbook execution. |
 | External CMMS/SAP/Maximo integration | Out of scope. Internal work order fallback is implemented only as AIM-controlled MVP workflow. |
-| Full API 579/API 581 quantitative calculation | Out of scope. Existing FFS/RBI items are governance interfaces/placeholders only and do not implement quantitative standard formulas. |
+| Full API 579/API 581 quantitative calculation | Out of scope. Existing FFS/RBI items are governance interfaces/fixtures only and do not implement quantitative standard formulas. |
 | 3D processing | Out of scope. No 3D processing route/module is added by Phase 1 Closure. |
 | Frontend UI implementation | Out of scope for Phase 1 governance closure. |
 | Licensed engineering formula expansion | Out of scope. Formula execution remains limited to approved MVP fixtures/registry metadata and must not invent API/ASME formulas. |
@@ -111,7 +111,7 @@ The Phase 1 Governance Closure package confirms:
 - No 3D processing implementation was added.
 - No frontend UI implementation was added.
 - No invented API/ASME formulas were added.
-- Existing FFS/RBI references remain governance trigger/interface placeholders only, not quantitative engineering-standard implementations.
+- Existing FFS/RBI references remain governance trigger/interface fixtures only, not quantitative engineering-standard implementations.
 
 ---
 

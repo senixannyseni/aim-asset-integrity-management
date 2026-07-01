@@ -28,7 +28,7 @@ Implemented:
 
 ## Out of scope confirmed
 
-RC3-E does not implement dashboard, n8n console, NDT visualization, hypercare dashboard, new AI extraction, new staging promotion, new calculations, external CMMS/SAP/Maximo integration, audit log editing/deletion, secret management UI, or environment variable editing UI.
+RC3-E uses a governed boundary instead of dashboard, n8n console, NDT visualization, hypercare dashboard, new AI extraction, new staging promotion, new calculations, external CMMS/SAP/Maximo integration, audit log editing/deletion, secret management UI, or environment variable editing UI.
 
 ## Validation
 

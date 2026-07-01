@@ -1,6 +1,6 @@
 {
   "test_case_reference": "07_Calculation/validation_workbook.xlsx#TC-FORMULA-001",
   "input_snapshot": {
-    "note": "Placeholder test run only; no engineering expression is executed."
+    "note": "Fixture test run only; no engineering expression is executed."
   }
 }

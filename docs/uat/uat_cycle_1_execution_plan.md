@@ -13,7 +13,7 @@ The purpose is to confirm that the controlled MVP workflow can be exercised by a
 
 - AIM remains the system of record.
 - PostgreSQL stores final structured engineering data through AIM backend services only.
-- Object storage stores original evidence files; UAT may use metadata placeholders.
+- Object storage stores original evidence files; UAT may use metadata fixtures.
 - n8n is workflow orchestration only and must call AIM backend APIs only.
 - AI extraction output remains extraction/staging data until human review.
 - AI and n8n must not approve, promote, issue, close, or finalize engineering records.
@@ -30,7 +30,7 @@ Covered modules:
 |---|---|
 | auth/RBAC | Verify login, auth/me, permission boundaries, denied actions, and service-user restrictions. |
 | asset and inspection setup | Verify sample atmospheric storage tank asset and inspection workspace are usable for UAT. |
-| evidence metadata and linkage | Verify metadata registration, linkage, placeholder evidence handling, and evidence gate behavior. |
+| evidence metadata and linkage | Verify metadata registration, linkage, fixture evidence handling, and evidence gate behavior. |
 | AI extraction/staging review | Verify extraction and staging remain non-final until reviewed. |
 | manual override | Verify corrections require reason, reviewer, evidence reference, and audit trace. |
 | NDT/reviewed measurement path | Verify reviewed measurement path and evidence dependency where supported by current API. |
@@ -57,10 +57,10 @@ Out of scope for UAT Cycle 1:
 |---|---|
 | Environment | Local or isolated UAT environment only. |
 | Dataset | `db/seeds/0002_uat_sample_data.sql`, synthetic only. |
-| Evidence | Placeholder metadata only unless non-confidential test files are provided. |
+| Evidence | Fixture metadata only unless non-confidential test files are provided. |
 | Secrets | Managed via local/UAT environment variables only; never committed. |
 | n8n | Boundary validation uses AIM API workflow/error event records; no direct PostgreSQL access. |
-| Object storage | Non-production bucket or placeholder object storage metadata. |
+| Object storage | Non-production bucket or fixture object storage metadata. |
 | UAT evidence | Stored outside source control under the evidence package convention. |
 
 ## 4. Branch / Tag / Build Baseline
@@ -116,7 +116,7 @@ UAT Cycle 1 requires role-appropriate accounts for Admin, Inspector, Engineer, L
 
 ## 8. Required Synthetic UAT Data
 
-Required synthetic UAT data comes from the controlled UAT sample seed and its manifest. It must include the sample tank asset, inspection, evidence placeholders, evidence links, extraction/staging examples, manual override example, calculation fixture references, integrity decision precondition, report lifecycle precondition, internal work order sample, workflow event sample, error log sample, and audit log sample.
+Required synthetic UAT data comes from the controlled UAT sample seed and its manifest. It must include the sample tank asset, inspection, evidence fixtures, evidence links, extraction/staging examples, manual override example, calculation fixture references, integrity decision precondition, report lifecycle precondition, internal work order sample, workflow event sample, error log sample, and audit log sample.
 
 ## 9. Environment Prerequisites
 
@@ -152,7 +152,7 @@ Expected seed coverage:
 - synthetic role/account references;
 - one atmospheric storage tank asset;
 - one inspection;
-- placeholder evidence metadata;
+- fixture evidence metadata;
 - evidence links;
 - extraction job and extraction fields;
 - staging record and manual override scenario;

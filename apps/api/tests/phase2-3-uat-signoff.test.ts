@@ -177,7 +177,7 @@ describe('Phase 2.3 controlled UAT execution and release candidate sign-off pack
       'open defects accepted',
       'governance exceptions accepted',
       'comments',
-      'signature placeholder',
+      'signature field',
       'No one may sign off if unresolved blocker, critical, or governance defect remains unless formally accepted with documented risk and owner approval'
     ]);
     expectNoActualUatPassedClaim(docPath, doc);

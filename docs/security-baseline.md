@@ -95,7 +95,7 @@ Integrity decision approval requires direct evidence linkage. Report issue requi
 
 ## RC2 Frontend Auth Hardening Addendum
 
-Frontend API calls must use JWT bearer tokens by default. The supported login token path is `data.accessToken` from `/api/v1/auth/login`. The frontend demo headers `x-aim-demo-roles` and `x-aim-demo-email` are disabled unless `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true` is explicitly set for local development.
+Frontend API calls must use JWT bearer tokens by default. The supported login token path is `data.accessToken` from `/api/v1/auth/login`. The frontend demo headers `x-aim-demo-roles` and `x-aim-demo-email` are disabled unless `NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED=true` is explicitly set for local development.
 
 UAT/prod-like validation must not rely on demo headers. AI agents, n8n/service users, and other non-human actors must not approve or finalize engineering data, calculations, integrity decisions, issued reports, or work orders. n8n remains orchestration-only and must not write final engineering data directly to PostgreSQL.
 

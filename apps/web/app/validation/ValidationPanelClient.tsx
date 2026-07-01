@@ -43,7 +43,7 @@ const defaultPayload = JSON.stringify(
     validation_scope: 'final_approval',
     asset: {
       tank_tag: 'TK-001',
-      asset_name: 'Demo Tank',
+      asset_name: 'AIM Validation Tank',
       original_design_code: 'API 650',
       current_assessment_code: 'API 653'
     },
@@ -60,7 +60,7 @@ const defaultPayload = JSON.stringify(
     ],
     ndt_measurements: [
       {
-        measurement_id: 'demo-ndt-001',
+        measurement_id: 'validation-ndt-001',
         component: 'shell',
         measured_thickness: 10.5,
         measured_thickness_unit: 'mm',

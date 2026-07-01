@@ -7,7 +7,7 @@ import {
   asJsonArray,
   asJsonObject,
   asString,
-  buildControlledPlaceholder,
+  buildControlledGuardrail,
   isApiControlledFormula,
   isFormulaUsableInProduction,
   isPlainObject,
@@ -162,12 +162,12 @@ function mapFormula(row: DbRow): Record<string, unknown> {
 function payloadToFormulaValues(body: Record<string, unknown>, fallback: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
   const formulaType = asString(body.formula_type) ?? asString(fallback.formula_type) ?? 'universal_deterministic';
   const expressionBody = isApiControlledFormula(formulaType)
-    ? asString(body.expression_body) ?? asString(fallback.expression_body) ?? buildControlledPlaceholder()
+    ? asString(body.expression_body) ?? asString(fallback.expression_body) ?? buildControlledGuardrail()
     : asString(body.expression_body) ?? asString(fallback.expression_body) ?? null;
   const expressionSource =
     asString(body.formula_expression_source) ??
     asString(fallback.formula_expression_source) ??
-    (isApiControlledFormula(formulaType) ? 'controlled_placeholder_manual_entry' : 'engineer_entered_or_fixture');
+    (isApiControlledFormula(formulaType) ? 'licensed_engineer_entry_required' : 'engineer_entered_or_fixture');
 
   return {
     formula_id: asString(body.formula_id) ?? asString(fallback.formula_id) ?? asString(fallback.formula_code),
@@ -180,7 +180,7 @@ function payloadToFormulaValues(body: Record<string, unknown>, fallback: Partial
     component: asString(body.component) ?? asString(fallback.component) ?? null,
     damage_mechanism: asString(body.damage_mechanism) ?? asString(fallback.damage_mechanism) ?? null,
     formula_type: formulaType,
-    expression_type: asString(body.expression_type) ?? asString(fallback.expression_type) ?? 'controlled_placeholder',
+    expression_type: asString(body.expression_type) ?? asString(fallback.expression_type) ?? 'controlled_guardrail',
     expression_body: expressionBody,
     formula_expression_source: expressionSource,
     input_schema: isPlainObject(body.input_schema) ? body.input_schema : fallback.input_schema ?? fallback.inputs_schema ?? {},
@@ -848,11 +848,11 @@ formulasRouter.post('/formulas/records/:recordId/test-run', requirePermission('f
       return;
     }
     const runCode = `FTR-${Date.now()}`;
-    const message = 'Formula test runner placeholder only. No engineering expression was executed.';
+    const message = 'Formula governance test record created. No engineering expression was executed.';
     const insert = await client.query<{ id: string }>(
       `insert into formula_test_runs(
         formula_record_id, run_code, test_case_reference, input_snapshot_json, output_snapshot_json, result_status, message, run_by
-      ) values ($1, $2, $3, $4::jsonb, '{}'::jsonb, 'placeholder', $5, $6)
+      ) values ($1, $2, $3, $4::jsonb, '{}'::jsonb, 'not_executed', $5, $6)
       returning id`,
       [
         recordId,
@@ -867,10 +867,10 @@ formulasRouter.post('/formulas/records/:recordId/test-run', requirePermission('f
       test_run_id: insert.rows[0]?.id,
       run_code: runCode,
       formula_record_id: recordId,
-      result_status: 'placeholder',
+      result_status: 'not_executed',
       message
     };
-    const auditLogId = await writeAudit(client, req, 'FORMULA_TEST_PLACEHOLDER_RUN', 'formula_registry', recordId, null, result, {
+    const auditLogId = await writeAudit(client, req, 'FORMULA_TEST_GUARDRAIL_RUN', 'formula_registry', recordId, null, result, {
       module: 'formula_registry'
     });
     await client.query('commit');

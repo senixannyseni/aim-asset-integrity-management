@@ -64,7 +64,7 @@
 | UAT traceability matrix approved. | UAT Lead / Lead Engineer | Approved `docs/uat/uat_traceability_matrix.md`. |  |
 | UAT sample data prepared. | UAT Lead / Developer | `docs/sample_data/sample_dataset_manifest.md`. |  |
 | UAT roles assigned. | IT Admin | user/role seed or admin record. |  |
-| UAT evidence placeholders prepared. | UAT Lead / Inspector | synthetic evidence list. |  |
+| UAT evidence fixtures prepared. | UAT Lead / Inspector | synthetic evidence list. |  |
 | UAT pass/fail template available. | UAT Lead | script format with pass/fail fields. |  |
 | Defect triage owner assigned. | Product Owner | triage roster. |  |
 | Critical UAT cases executed. | UAT Lead | completed UAT evidence. |  |

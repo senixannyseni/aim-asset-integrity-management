@@ -5,7 +5,7 @@
 
 ## 1. Evidence Safety Reminder
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, or confidential client evidence into this record. Use placeholders such as `<redacted>` and store sensitive proof in the approved secure evidence location.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, or confidential client evidence into this record. Use fixtures such as `<redacted>` and store sensitive proof in the approved secure evidence location.
 
 ## 2. Environment Identification
 

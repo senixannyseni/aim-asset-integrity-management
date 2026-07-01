@@ -8,7 +8,7 @@
 
 Sprint 1 introduces the first runtime foundation for tenant context and database isolation. It adds tenant context resolution, tenant membership loading, tenant-aware request selection, an AIM-side tenant context endpoint, and a database migration for tenant records and tenant_id foundation columns.
 
-This package remains deliberately scoped. It does not complete all tenant-scoped route filtering, does not enable self-service tenants, does not implement billing/payment processing, does not automate customer onboarding, and does not approve production multi-tenant rollout.
+This package remains deliberately scoped. It does not complete all tenant-scoped route filtering, does not enable self-service tenants, uses a governed boundary instead of billing/payment processing, does not automate customer onboarding, and does not approve production multi-tenant rollout.
 
 ## 2. Evidence and Runtime Foundation
 
@@ -41,7 +41,7 @@ n8n remains orchestration-only. AIM remains the system of record.
 
 ## 4. Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, tenant credentials, customer PII, real customer data, tenant data, customer commercial terms, contract redlines, invoice/payment details, tenant billing details, payment processing data, partner contract terms, confidential sales pipeline data, database connection strings with passwords, private keys, or copied API/API-ASME formulas into Sprint 1 records. This Sprint 1 package does not implement full API 579, full API 581, or copied API/API-ASME formulas.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, tenant credentials, customer PII, real customer data, tenant data, customer commercial terms, contract redlines, invoice/payment details, tenant billing details, payment processing data, partner contract terms, confidential sales pipeline data, database connection strings with passwords, private keys, or copied API/API-ASME formulas into Sprint 1 records. This Sprint 1 package uses a governed boundary instead of full API 579, full API 581, or copied API/API-ASME formulas.
 
 ## 5. Completion Rule
 

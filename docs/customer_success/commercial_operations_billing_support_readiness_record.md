@@ -15,7 +15,7 @@
 
 ## 2. Commercial Operations Boundary
 
-Commercial operations readiness records account ownership, customer communications, support model, legal/commercial dependencies, and renewal process ownership. It does not implement tenant billing, payment processing, pricing engine, invoice workflow, contract execution, or production customer data migration.
+Commercial operations readiness records account ownership, customer communications, support model, legal/commercial dependencies, and renewal process ownership. It uses a governed boundary instead of tenant billing, payment processing, pricing engine, invoice workflow, contract execution, or production customer data migration.
 
 | Commercial area | Boundary | Owner | Status |
 |---|---|---|---|

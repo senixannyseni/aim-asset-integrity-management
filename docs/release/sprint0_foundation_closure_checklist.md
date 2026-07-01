@@ -28,7 +28,7 @@ No new API routes, frontend routes, database tables, engineering formulas, or go
 | Demo users were seeded. | Confirmed | `db/seeds/0001_foundation_seed.sql` |
 | Sample tank asset was seeded. | Confirmed | `db/seeds/0001_foundation_seed.sql` |
 | Sample shell courses were seeded. | Confirmed | `db/seeds/0001_foundation_seed.sql` |
-| Placeholder formula registry record was seeded. | Confirmed | `MVP-CORROSION-RATE-PLACEHOLDER` in `db/seeds/0001_foundation_seed.sql` |
+| Fixture formula registry record was seeded. | Confirmed | `MVP-CORROSION-RATE-GUARDRAIL` in `db/seeds/0001_foundation_seed.sql` |
 | Health endpoints exist. | Confirmed | `GET /health`, `GET /health/db` in `apps/api/src/routes/health.ts` |
 | Database connectivity check exists. | Confirmed | `checkDatabaseConnection()` in `apps/api/src/db/client.ts` |
 | CI-ready test commands exist. | Confirmed | `pnpm lint`, `pnpm typecheck`, `pnpm test`, package-level test scripts |
@@ -91,7 +91,7 @@ These service-actor identifiers are documented because they are present in the r
 
 Seed behavior was reviewed for RC4-A:
 
-- Core role, permission, user, role-permission, asset, shell-course, and placeholder formula seed records use conflict-safe inserts or stable keys where practical.
+- Core role, permission, user, role-permission, asset, shell-course, and fixture formula seed records use conflict-safe inserts or stable keys where practical.
 - `db/seeds/0001_foundation_seed.sql` intentionally writes a `FOUNDATION_SEED_EXECUTED` audit trail entry on each seed execution. This is harmless append-only evidence that the seed was run and is preserved by design.
 - `db/seeds/0002_uat_sample_data.sql` uses fixed synthetic UAT identifiers and conflict-safe updates for UAT fixtures and audit examples.
 - Repeated seed execution should not destructively reset controlled engineering data.

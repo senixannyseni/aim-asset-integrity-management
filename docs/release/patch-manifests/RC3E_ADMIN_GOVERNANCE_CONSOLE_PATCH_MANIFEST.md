@@ -24,4 +24,4 @@ Package: RC3-E — Admin Governance Console / RBAC & System Settings Visibility
 
 ## Scope controls
 
-This patch implements RBAC-controlled admin governance visibility and safe role/setting controls only. It does not implement dashboard, n8n console, NDT visualization, hypercare dashboard, secret management UI, environment variable editing UI, audit log mutation, external CMMS integration, or new calculation/AI/object-storage features.
+This patch implements RBAC-controlled admin governance visibility and safe role/setting controls only. It uses a governed boundary instead of dashboard, n8n console, NDT visualization, hypercare dashboard, secret management UI, environment variable editing UI, audit log mutation, external CMMS integration, or new calculation/AI/object-storage features.

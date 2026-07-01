@@ -5,7 +5,7 @@ Use PASS / FAIL / N/A and attach evidence file references.
 | Control | Expected Result | PASS / FAIL | Evidence |
 |---|---|---|---|
 | JWT login uses `$login.data.accessToken` | Bearer token is available and used |  |  |
-| Demo headers disabled by default | No demo headers unless local flag enabled |  |  |
+| Development headers disabled by default | No demo headers unless local flag enabled |  |  |
 | AI cannot approve extraction/calculation/integrity/report/work order actions | 403 denial |  |  |
 | n8n remains orchestration-only | No direct PostgreSQL write by n8n |  |  |
 | NDT invalid `manual_uat` extraction_source | Controlled 400 validation |  |  |

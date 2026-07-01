@@ -24,7 +24,7 @@ Adds `db/migrations/0024_workflow_console_visibility.sql` to synchronize the rea
 
 ## Out of scope confirmation
 
-RC3-G does not implement n8n workflow execution, retry, builder/editor, credential management, webhook secret editing, direct PostgreSQL writes, NDT visualization, hypercare dashboard, new AI features, new object-storage features, new report builder features, new calculation logic, API 579/API 581 calculations, external CMMS integration, direct database editing, audit mutation, admin setting/RBAC changes beyond permission synchronization, or AI/n8n/service approval/final engineering decision automation.
+RC3-G uses a governed boundary instead of n8n workflow execution, retry, builder/editor, credential management, webhook secret editing, direct PostgreSQL writes, NDT visualization, hypercare dashboard, new AI features, new object-storage features, new report builder features, new calculation logic, API 579/API 581 calculations, external CMMS integration, direct database editing, audit mutation, admin setting/RBAC changes beyond permission synchronization, or AI/n8n/service approval/final engineering decision automation.
 
 ## Validation target
 

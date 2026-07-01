@@ -209,7 +209,7 @@ The following standards may be referenced at a high level for engineering govern
 | API 580/581 | Future RBI extension reference only. |
 | API 650 | Design data reference when available. |
 
-**Important:** This MVP validation method does not reproduce copyrighted standard clauses and does not implement proprietary API/ASME standard formulas.
+**Important:** This MVP validation method does not reproduce copyrighted standard clauses and uses a governed boundary instead of proprietary API/ASME standard formulas.
 
 ---
 

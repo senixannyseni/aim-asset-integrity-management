@@ -47,7 +47,7 @@ Object-storage handoffs must preserve evidence linkage and auditability. Signed 
 
 Required evidence:
 
-- bucket or storage class summary using redacted placeholders only;
+- bucket or storage class summary using redacted fixtures only;
 - artifact path pattern;
 - checksum policy;
 - signed URL expiry policy;

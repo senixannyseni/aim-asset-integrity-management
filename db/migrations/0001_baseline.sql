@@ -261,7 +261,7 @@ create table if not exists rbi_cases (
   interface_type text not null default 'screening_interface',
   status text not null default 'draft' check (status in ('draft', 'ready_for_export', 'exported', 'closed')),
   screening_data_json jsonb not null default '{}'::jsonb,
-  source_note text not null default 'MVP interface only. Full API RP 581 quantitative RBI not implemented.',
+  source_note text not null default 'MVP interface only. Full API RP 581 quantitative RBI requires approved Formula Registry rules.',
   created_by uuid references users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

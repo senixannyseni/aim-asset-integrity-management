@@ -387,7 +387,7 @@ The MVP formula list defines formula categories only. The exact mathematical exp
 
 1. The MVP is intended to support atmospheric storage tank inspection data management and controlled calculation workflows.
 2. The MVP does not replace professional engineering judgment.
-3. The MVP does not implement full API 653, API 579, API 580, API 581, or API 650 compliance logic.
+3. The MVP uses a governed boundary instead of full API 653, API 579, API 580, API 581, or API 650 compliance logic.
 4. All final engineering data must be reviewed by an Engineer or Lead Engineer before promotion from staging.
 5. All final integrity decisions must be reviewed and approved according to the configured approval authority.
 6. Formulas and thresholds are controlled configuration items and must be versioned.

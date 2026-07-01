@@ -13,7 +13,7 @@ Do not capture tokens, credentials, database connection strings, production obje
 | SMK-001 | API health | `GET /api/health` or health route used by current API | API returns healthy status | Terminal/API client output |  |  |
 | SMK-002 | Login / auth/me | `POST /api/auth/login`, then `GET /api/auth/me` using local/UAT credentials from environment variables | Login succeeds and current user/role is returned | API response with sensitive values redacted |  |  |
 | SMK-003 | RBAC denied request | Attempt an action using a role without permission | API returns forbidden/unauthorized without changing state | API response and audit/error reference if applicable |  |  |
-| SMK-004 | Evidence metadata registration | `POST /api/evidence-files` or current evidence metadata route | Evidence metadata record created for UAT placeholder only | API response showing evidence ID/code |  |  |
+| SMK-004 | Evidence metadata registration | `POST /api/evidence-files` or current evidence metadata route | Evidence metadata record created for UAT fixture only | API response showing evidence ID/code |  |  |
 | SMK-005 | Evidence link | `POST /api/evidence-links` | Evidence link created to UAT entity | API response or SQL result |  |  |
 | SMK-006 | Extraction job | `POST /api/extraction-jobs` or current route | Extraction job created; output remains staging/review only | API response or query result |  |  |
 | SMK-007 | Staging review | Review/approve/correct/reject staging field using current staging route | Human review action recorded; manual override required for correction | API response and audit reference |  |  |

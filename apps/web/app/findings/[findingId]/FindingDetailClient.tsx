@@ -195,7 +195,7 @@ export default function FindingDetailClient({ findingId }: FindingDetailClientPr
         <div className="panel-heading"><h2>Closure panel</h2><p>Only authorized human roles may close findings. AI/n8n/service actors are blocked. Critical findings require evidence linkage.</p></div>
         <form className="form-grid" onSubmit={closeFinding}>
           <label><span>Next status</span><select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}><option value="closed">closed</option><option value="resolved">resolved</option></select></label>
-          <label className="full-width"><span>Closure reason</span><textarea value={closureReason} onChange={(event) => setClosureReason(event.target.value)} rows={3} placeholder="Required. Explain why this finding can be closed/resolved." /></label>
+          <label className="full-width"><span>Closure reason</span><textarea value={closureReason} onChange={(event) => setClosureReason(event.target.value)} rows={3} /></label>
           <button className="primary-button" type="submit">Submit closure request</button>
         </form>
       </section>

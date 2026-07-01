@@ -94,7 +94,7 @@ The manifest defines synthetic-only UAT data for:
 - users/roles,
 - atmospheric storage tank asset,
 - inspection,
-- evidence metadata placeholders,
+- evidence metadata fixtures,
 - evidence links,
 - extraction job and fields,
 - staging record,
@@ -180,7 +180,7 @@ Coverage includes practical instructions for:
 |---|---|---|
 | Auth/RBAC | Covered | Login, logout, refresh/me, unauthenticated/unauthorized blocks, demo auth boundary. |
 | Asset/inspection setup | Covered | Asset and inspection create/retrieve workflow. |
-| Evidence governance | Covered | Evidence metadata, validation, signed URL, audit, deletion block, malware placeholder. |
+| Evidence governance | Covered | Evidence metadata, validation, signed URL, audit, deletion block, malware fixture. |
 | AI extraction/staging | Covered | Extraction job, staging-only output, confidence/validation flags, AI action block. |
 | Human review/manual override | Covered | Approve/correct/reject/promote with evidence and reason. |
 | NDT/reviewed data path | Partial/Covered by current API capability | Script verifies evidence/review requirement where current route supports it. |
@@ -275,7 +275,7 @@ pnpm db:seed
 
 ## 12. Explicit Out-of-Scope Confirmation
 
-Phase 2.0 does not implement:
+Phase 2.0 uses a governed boundary instead of:
 
 - full API 579 implementation,
 - full API 581 implementation,
@@ -286,7 +286,7 @@ Phase 2.0 does not implement:
 - production security hardening such as SSO, SIEM, WAF, DLP, or penetration remediation,
 - real client dataset import.
 
-Mentions of these topics are only boundary rules, out-of-scope confirmations, placeholders, or future items.
+Mentions of these topics are only boundary rules, out-of-scope confirmations, fixtures, or future items.
 
 ## 13. Recommended Next Sprint
 

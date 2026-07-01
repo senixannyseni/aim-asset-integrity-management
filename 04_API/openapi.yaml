@@ -9,7 +9,7 @@ info:
     AIM backend APIs only. AI extraction output is staging-only and requires human
     engineering review before promotion. This contract documents implemented auth,
     AI extraction/staging, evidence governance, approval, and report issue gates;
-    it does not implement API 579/API 581, CMMS, 3D processing, or invented API/API-ASME
+    it uses a governed boundary instead of API 579/API 581, CMMS, 3D processing, or invented API/API-ASME
     formulas.
 servers:
 - url: http://localhost:4000
@@ -1149,14 +1149,14 @@ paths:
       - bearerAuth: []
   /api/v1/formulas/records/{recordId}/test-run:
     post:
-      summary: Run placeholder formula test-case check without executing engineering
+      summary: Run fixture formula test-case check without executing engineering
         formula
       x-permission-required: formula.test
       x-role-restriction: admin or senior_engineer
-      x-audit-event-generated: FORMULA_TEST_PLACEHOLDER_RUN
+      x-audit-event-generated: FORMULA_TEST_GUARDRAIL_RUN
       responses:
         '201':
-          description: Placeholder test run recorded
+          description: Fixture test run recorded
       security:
       - bearerAuth: []
   /api/v1/engineering/calculate:
@@ -1455,7 +1455,7 @@ paths:
     get:
       summary: List RBI interface cases
       description: Lists API RP 580/581 governance interface cases. Quantitative API
-        RP 581 rules are not implemented unless supplied through Formula Registry.
+        RP 581 rules are requires approved governance before supplied through Formula Registry.
       x-permission-required: rbi.interface.read
       parameters:
       - in: query
@@ -1490,7 +1490,7 @@ paths:
       x-audit-event-generated: none
     post:
       summary: Manually create an RBI interface case
-      description: Creates a qualitative/semi-quantitative placeholder RBI interface
+      description: Creates a qualitative/semi-quantitative fixture RBI interface
         case from engineering review. Does not implement proprietary API RP 581 quantitative
         rules.
       x-permission-required: rbi.interface.create
@@ -1704,7 +1704,7 @@ paths:
       summary: Mark approved RBI case exported
       description: RC4-I senior-engineer/lead-engineer/admin export action. Export
         requires a previously approved RBI case and export permission. Export metadata
-        only; does not implement quantitative API RP 581 calculations.
+        only; uses a governed boundary instead of quantitative API RP 581 calculations.
       x-permission-required: rbi.interface.export
       x-audit-event-generated: RBI_CASE_EXPORTED
       parameters:
@@ -4425,7 +4425,7 @@ components:
           type: array
           items:
             type: object
-        input_placeholders:
+        input_requirements:
           type: object
           properties:
             consequence_of_failure:
@@ -4684,17 +4684,17 @@ components:
           type: string
           enum:
           - none
-          - controlled_placeholder
+          - controlled_guardrail
           - engineer_entered
           - json_logic
           - text_rule
         expression_body:
           type: string
-          description: Controlled placeholder unless entered by an authorized engineer
+          description: Controlled fixture unless entered by an authorized engineer
             from licensed sources or approved fixtures.
         formula_expression_source:
           type: string
-          description: Required source traceability label, e.g. controlled_placeholder_manual_entry
+          description: Required source traceability label, e.g. licensed_engineer_entry_required
             or licensed_engineer_entry reference.
         input_schema:
           type: object
@@ -4793,7 +4793,7 @@ components:
           - thickness_screening
           - corrosion_rate
           - remaining_life
-          - inspection_interval_placeholder
+          - inspection_interval_review_required
         calculation_request:
           type: object
           properties:
@@ -5686,7 +5686,7 @@ components:
           type: string
           nullable: true
           description: Must remain null/omitted in Phase 1.6. External CMMS integration
-            is not implemented.
+            requires approved governance before use.
         gate_checklist:
           type: array
           items:

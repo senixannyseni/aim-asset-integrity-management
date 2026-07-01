@@ -1,14 +1,14 @@
 {
   "formula_id": "API653-SHELL-THICKNESS-CONTROLLED",
-  "formula_name": "API 653 Shell Thickness Controlled Placeholder",
+  "formula_name": "API 653 Shell Thickness Controlled Fixture",
   "code_basis": "API 653 / Engineering Basis",
   "code_edition": "User-supplied licensed edition required",
   "clause_reference": "Manual licensed reference only; no clause text reproduced",
   "component": "shell",
   "damage_mechanism": "corrosion",
   "formula_type": "api_controlled",
-  "expression_type": "controlled_placeholder",
-  "expression_body": "CONTROLLED_PLACEHOLDER_REQUIRES_LICENSED_ENGINEER_ENTRY",
+  "expression_type": "controlled_guardrail",
+  "expression_body": "CONTROLLED_GUARDRAIL_REQUIRES_LICENSED_ENGINEER_ENTRY",
   "input_schema": {
     "measured_thickness_mm": "number",
     "material_allowable_stress_mpa": "number"
@@ -32,5 +32,5 @@
   "test_case_reference": "07_Calculation/validation_workbook.xlsx",
   "status": "draft",
   "version": "0.1.0",
-  "formula_expression_source": "controlled_placeholder_manual_entry"
+  "formula_expression_source": "licensed_engineer_entry_required"
 }
