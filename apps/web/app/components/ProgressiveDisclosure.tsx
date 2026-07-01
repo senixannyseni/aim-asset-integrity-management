@@ -75,17 +75,19 @@ export function PageHeader({
   status?: string | null;
   actions?: ReactNode;
 }) {
+  const hasVisibleControls = Boolean(status || actions);
+
   return (
-    <header className="page-header pd-page-header">
-      <div>
-        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-        <h1>{title}</h1>
-        <p>{description}</p>
-      </div>
-      <div className="pd-page-header__actions">
-        {status && <StatusBadge status={status} />}
-        {actions}
-      </div>
+    <header className={hasVisibleControls ? 'page-header pd-page-header pd-page-header--minimal' : 'pd-page-header pd-page-header--sr-only'}>
+      {eyebrow && <p className="sr-only">{eyebrow}</p>}
+      <h1 className="sr-only">{title}</h1>
+      <p className="sr-only">{description}</p>
+      {hasVisibleControls && (
+        <div className="pd-page-header__actions" aria-label={`${title} page controls`}>
+          {status && <StatusBadge status={status} />}
+          {actions}
+        </div>
+      )}
     </header>
   );
 }

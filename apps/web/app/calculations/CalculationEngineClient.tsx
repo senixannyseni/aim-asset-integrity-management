@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { CompactDataTable, DetailDrawer, DetailGrid, GateSummary, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type AssetOption = { asset_id: string; tank_tag?: string | null; asset_name?: string | null; facility?: string | null; location?: string | null };
@@ -47,6 +48,16 @@ type CalculationRun = {
   formula_version_snapshot?: Record<string, unknown> | null;
 };
 type CalculationEngineClientProps = { fixedAssetId?: string; assetScoped?: boolean };
+
+const CALCULATION_BRANCHES: ModuleBranchItem[] = [
+  { id: 'runs', label: 'Runs', description: 'Calculation runs', icon: 'RU' },
+  { id: 'input_evidence', label: 'Inputs', description: 'Evidence and NDT inputs', icon: 'IE' },
+  { id: 'formula', label: 'Formula', description: 'Approved formulas', icon: 'FV' },
+  { id: 'warnings', label: 'Warnings', description: 'Blocked or failed', icon: 'WA' },
+  { id: 'review', label: 'Review', description: 'Human review', icon: 'RV' },
+  { id: 'output', label: 'Output', description: 'Result summary', icon: 'OS' },
+  { id: 'audit', label: 'Audit', description: 'Calculation trail', icon: 'AU' }
+];
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -123,6 +134,15 @@ export default function CalculationEngineClient({ fixedAssetId, assetScoped = fa
     const approved = assetRuns.filter((run) => String(run.review_status ?? run.final_use_status ?? '').toLowerCase().includes('approved')).length;
     return { total: assetRuns.length, blocked, pending, approved };
   }, [assetRuns]);
+  const activeBranch = useActiveModuleBranch(CALCULATION_BRANCHES, 'runs');
+  const branchRuns = useMemo(() => assetRuns.filter((run) => {
+    const statusText = String(run.final_use_status ?? run.validation_status ?? run.run_status ?? run.status ?? '').toLowerCase();
+    const reviewText = String(run.review_status ?? '').toLowerCase();
+    if (activeBranch === 'warnings') return ['blocked', 'failed', 'rejected'].some((token) => statusText.includes(token));
+    if (activeBranch === 'review') return reviewText.includes('review') || reviewText.includes('pending');
+    if (activeBranch === 'output') return Boolean(run.output_summary);
+    return true;
+  }), [activeBranch, assetRuns]);
 
   async function loadAll(assetOverride?: string) {
     const targetAssetId = assetOverride ?? fixedAssetId ?? assetId;
@@ -230,6 +250,14 @@ export default function CalculationEngineClient({ fixedAssetId, assetScoped = fa
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={CALCULATION_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'runs' ? summary.total : branch.id === 'warnings' ? summary.blocked : branch.id === 'review' ? summary.pending : branch.id === 'formula' ? formulaVersions.length : branch.id === 'input_evidence' ? evidence.length + ndtMeasurements.length : undefined,
+          status: branch.id === 'warnings' && summary.blocked > 0 ? 'blocked' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="RC4-G guided calculation"
         title={assetScoped ? 'Asset Calculation Workspace' : 'Calculation Workbook'}
@@ -258,8 +286,11 @@ export default function CalculationEngineClient({ fixedAssetId, assetScoped = fa
           {assetId && <Link className="secondary-button" href={`/assets/${assetId}/validation`}>Validation readiness</Link>}
         </div>
         {!assetScoped && <label className="wide-field"><span>Asset</span><select value={assetId} onChange={(event) => { setAssetId(event.target.value); setSelectedNdtIds([]); void loadAll(event.target.value); }}><option value="">All loaded assets</option>{assets.map((asset) => <option key={asset.asset_id} value={asset.asset_id}>{displayAsset(asset)}</option>)}</select></label>}
+        {activeBranch === 'input_evidence' && <div className="notice"><strong>Input evidence:</strong> {evidence.length} evidence option(s) and {ndtMeasurements.length} NDT measurement(s) are available for focused calculation requests.</div>}
+        {activeBranch === 'formula' && <div className="notice"><strong>Formula Version:</strong> {formulaVersions.length} approved executable formula version(s) are available. Formula details remain in the Formula Registry and run drawers.</div>}
+        {activeBranch === 'audit' && <div className="notice"><strong>Audit:</strong> Open a run detail drawer or audit logs to inspect immutable calculation events.</div>}
         <CompactDataTable
-          rows={assetRuns}
+          rows={branchRuns}
           getRowKey={(run) => run.calculation_run_id}
           emptyTitle="No calculation runs"
           emptyMessage="No calculation runs found for this context."
@@ -269,7 +300,7 @@ export default function CalculationEngineClient({ fixedAssetId, assetScoped = fa
             { header: 'Status', render: (run) => <StatusBadge status={run.run_status ?? run.status} /> },
             { header: 'Result Summary', render: (run) => run.output_summary ? `${Object.keys(run.output_summary).length} fields` : '-' },
             { header: 'Warnings', render: (run) => <StatusBadge status={String(run.final_use_status ?? run.validation_status ?? '').includes('block') ? 'blocked' : 'pending_review'} label={run.final_use_status ?? run.validation_status ?? 'requires_review'} /> },
-            { header: 'Action', className: 'pd-cell-actions', render: (run) => <button className="secondary-button" type="button" onClick={() => setSelectedRun(run)}>View details</button> }
+            { header: 'Action', className: 'pd-cell-actions', render: (run) => <button className="secondary-button" type="button" onClick={() => setSelectedRun(run)}>Details</button> }
           ]}
         />
       </section>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { ActionModal, CompactDataTable, DetailDrawer, DetailGrid, GateSummary, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type ReportRecord = { report_id: string; report_code?: string; report_status?: string };
@@ -22,6 +23,16 @@ type WorkOrder = {
   source_entity_id?: string | null;
   description?: string | null;
 };
+
+const WORK_ORDER_BRANCHES: ModuleBranchItem[] = [
+  { id: 'open', label: 'Open', description: 'Active actions', icon: 'OP' },
+  { id: 'overdue', label: 'Overdue', description: 'Past due dates', icon: 'OD' },
+  { id: 'findings', label: 'Findings', description: 'Finding source', icon: 'FI' },
+  { id: 'decisions', label: 'Decisions', description: 'Decision source', icon: 'DE' },
+  { id: 'closed', label: 'Closed', description: 'Completed orders', icon: 'CL' },
+  { id: 'evidence', label: 'Evidence', description: 'Closure evidence', icon: 'EV' },
+  { id: 'audit', label: 'Audit', description: 'Work-order trail', icon: 'AU' }
+];
 
 function messageFromPayload(payload: Record<string, unknown>): string {
   const error = payload.error as { message?: string; code?: string } | undefined;
@@ -65,8 +76,20 @@ export default function WorkOrdersClient() {
     const blocked = orders.filter((order) => order.status === 'blocked' || order.gate_status === 'blocked').length;
     const closed = orders.filter((order) => order.status === 'closed').length;
     const high = orders.filter((order) => order.priority === 'high').length;
-    return { total: orders.length, blocked, closed, high };
+    const overdue = orders.filter((order) => order.due_date && new Date(order.due_date).getTime() < Date.now() && order.status !== 'closed').length;
+    return { total: orders.length, blocked, closed, high, overdue };
   }, [orders]);
+  const activeBranch = useActiveModuleBranch(WORK_ORDER_BRANCHES, 'open');
+  const branchOrders = useMemo(() => orders.filter((order) => {
+    const source = String(order.source_entity_type ?? '').toLowerCase();
+    if (activeBranch === 'overdue') return Boolean(order.due_date && new Date(order.due_date).getTime() < Date.now() && order.status !== 'closed');
+    if (activeBranch === 'findings') return source.includes('finding');
+    if (activeBranch === 'decisions') return source.includes('decision');
+    if (activeBranch === 'closed') return order.status === 'closed';
+    if (activeBranch === 'evidence') return String(order.gate_status ?? '').toLowerCase().includes('evidence') || order.status !== 'closed';
+    if (activeBranch === 'audit') return true;
+    return order.status !== 'closed';
+  }), [activeBranch, orders]);
 
   async function createOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,6 +135,14 @@ export default function WorkOrdersClient() {
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={WORK_ORDER_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'open' ? counts.total - counts.closed : branch.id === 'overdue' ? counts.overdue : branch.id === 'closed' ? counts.closed : undefined,
+          status: branch.id === 'overdue' && counts.overdue > 0 ? 'blocked' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="Internal CMMS fallback"
         title="Work Orders"
@@ -136,7 +167,7 @@ export default function WorkOrdersClient() {
           <p>External CMMS references remain out of MVP scope. Drawer shows source and closure details.</p>
         </div>
         <CompactDataTable
-          rows={orders}
+          rows={branchOrders}
           getRowKey={(order) => order.work_order_id}
           emptyTitle="No work orders"
           emptyMessage="Create an internal work order from an action-required decision or finding."
@@ -147,7 +178,7 @@ export default function WorkOrdersClient() {
             { header: 'Status', render: (order) => <StatusBadge status={order.status} /> },
             { header: 'Due Date', render: (order) => dateValue(order.due_date) },
             { header: 'Owner', render: (order) => order.assigned_role ?? 'engineer' },
-            { header: 'Action', className: 'pd-cell-actions', render: (order) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/work-orders/${order.work_order_id}`}>Closure readiness</Link><button className="secondary-button" type="button" onClick={() => setSelected(order)}>View details</button><button className="primary-button" type="button" disabled={order.status === 'closed'} onClick={() => setCloseTarget(order)}>Close</button></span> }
+            { header: 'Action', className: 'pd-cell-actions', render: (order) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/work-orders/${order.work_order_id}`}>Closure readiness</Link><button className="secondary-button" type="button" onClick={() => setSelected(order)}>Details</button><button className="primary-button" type="button" disabled={order.status === 'closed'} onClick={() => setCloseTarget(order)}>Close</button></span> }
           ]}
         />
       </section>

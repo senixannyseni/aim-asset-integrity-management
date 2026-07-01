@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { CompactDataTable, DetailDrawer, DetailGrid, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type AuditLogEntry = {
@@ -24,6 +25,15 @@ type AuditLogEntry = {
   read_only?: boolean;
 };
 type Pagination = { page: number; limit: number; total_count: number; has_next_page: boolean };
+
+const AUDIT_BRANCHES: ModuleBranchItem[] = [
+  { id: 'timeline', label: 'Timeline', description: 'Latest events', icon: 'TL' },
+  { id: 'entity', label: 'Entity', description: 'Entity-specific', icon: 'EA' },
+  { id: 'users', label: 'User', description: 'Human actors', icon: 'UA' },
+  { id: 'approvals', label: 'Approval', description: 'Review approvals', icon: 'AP' },
+  { id: 'security', label: 'Security', description: 'Auth and access', icon: 'SE' },
+  { id: 'raw', label: 'Metadata', description: 'Drawer-only values', icon: 'RM' }
+];
 
 function fieldValue(form: HTMLFormElement, name: string): string {
   const value = new FormData(form).get(name);
@@ -48,6 +58,15 @@ export default function AuditLogsClient() {
     }
     return params.toString();
   }, [filters, page]);
+  const activeBranch = useActiveModuleBranch(AUDIT_BRANCHES, 'timeline');
+  const branchEntries = useMemo(() => entries.filter((entry) => {
+    const event = String(entry.event_type ?? '').toLowerCase();
+    if (activeBranch === 'entity') return Boolean(entry.entity_type || entry.entity_id);
+    if (activeBranch === 'users') return Boolean(entry.actor_user_id || entry.actor_email || entry.actor_full_name);
+    if (activeBranch === 'approvals') return event.includes('approval') || event.includes('review');
+    if (activeBranch === 'security') return event.includes('auth') || event.includes('login') || event.includes('security') || event.includes('permission');
+    return true;
+  }), [activeBranch, entries]);
 
   async function loadAuditLogs() {
     setLoading(true);
@@ -106,6 +125,14 @@ export default function AuditLogsClient() {
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={AUDIT_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'timeline' || branch.id === 'raw' ? entries.length : undefined,
+          status: branch.id === 'raw' ? 'drawer' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="RC3-D governance visibility"
         title="Audit Log Governance"
@@ -146,7 +173,7 @@ export default function AuditLogsClient() {
         </div>
         {loading ? <p className="muted-text">Loading audit logs...</p> : (
           <CompactDataTable
-            rows={entries}
+            rows={branchEntries}
             getRowKey={(entry) => entry.audit_log_id}
             emptyTitle="No audit logs"
             emptyMessage="No audit logs matched the filters."

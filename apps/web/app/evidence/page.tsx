@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { CompactDataTable, DetailDrawer, DetailGrid, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type ValidationIssue = { field: string; message: string; severity?: string };
@@ -52,6 +53,14 @@ type UploadUrlResponse = { data?: { upload_session_id?: string; upload_url?: str
 type CompleteUploadResponse = { data?: EvidenceFile; auditLogId?: string } & ApiErrorPayload;
 
 const MAX_CLIENT_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+const EVIDENCE_BRANCHES: ModuleBranchItem[] = [
+  { id: 'all', label: 'All', description: 'Repository list', icon: 'AL' },
+  { id: 'pending', label: 'Pending', description: 'Scan or review needed', icon: 'PV' },
+  { id: 'linked', label: 'Linked', description: 'Asset or inspection linked', icon: 'LE' },
+  { id: 'unlinked', label: 'Unlinked', description: 'Missing traceability', icon: 'UE' },
+  { id: 'rejected', label: 'Rejected', description: 'Blocked or rejected', icon: 'RJ' },
+  { id: 'access_history', label: 'History', description: 'Audit access events', icon: 'AH' }
+];
 const supportedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.csv', '.xlsx', '.dwg', '.dxf', '.stl', '.zip'];
 const fallbackMimeByExtension: Record<string, string> = {
   '.pdf': 'application/pdf',
@@ -198,6 +207,19 @@ function EvidenceRepositoryPageClient() {
     const pendingScan = evidenceFiles.filter((evidence) => !evidence.malware_scan_status || String(evidence.malware_scan_status).toLowerCase().includes('pending')).length;
     return { total: evidenceFiles.length, blocked, verified, pendingScan };
   }, [evidenceFiles]);
+  const activeBranch = useActiveModuleBranch(EVIDENCE_BRANCHES, 'all');
+  const branchEvidence = useMemo(() => {
+    return visibleEvidence.filter((evidence) => {
+      const statusText = String(evidence.status ?? evidence.evidence_status ?? evidence.upload_status ?? '').toLowerCase();
+      const scanText = String(evidence.malware_scan_status ?? '').toLowerCase();
+      const linked = Boolean(evidence.asset_id || evidence.inspection_event_id || evidence.inspection_id);
+      if (activeBranch === 'pending') return scanText.includes('pending') || statusText.includes('pending') || !evidence.malware_scan_status;
+      if (activeBranch === 'linked') return linked;
+      if (activeBranch === 'unlinked') return !linked;
+      if (activeBranch === 'rejected') return isBlockedEvidence(evidence) || statusText.includes('reject');
+      return true;
+    });
+  }, [activeBranch, visibleEvidence]);
 
   async function loadPageData(assetId = assetFilter) {
     setLoading(true);
@@ -414,6 +436,14 @@ function EvidenceRepositoryPageClient() {
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={EVIDENCE_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'all' ? evidenceSummary.total : branch.id === 'pending' ? evidenceSummary.pendingScan : branch.id === 'rejected' ? evidenceSummary.blocked : undefined,
+          status: branch.id === 'rejected' && evidenceSummary.blocked > 0 ? 'blocked' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="RC4-C"
         title="Evidence Repository"
@@ -434,12 +464,12 @@ function EvidenceRepositoryPageClient() {
 
       {!permissionDenied && !pageError && (
         <>
-          <section className="pd-kpi-grid" aria-label="Evidence summary">
+          {activeBranch !== 'access_history' && <section className="pd-kpi-grid" aria-label="Evidence summary">
             <KpiCard title="Evidence Files" value={evidenceSummary.total} helper="metadata records" />
-            <KpiCard title="Verified / Complete" value={evidenceSummary.verified} helper="backend-owned state" status="approved" />
+            <KpiCard title="Verified / Complete" value={evidenceSummary.verified} helper="backend controlled" status="approved" />
             <KpiCard title="Pending Scan" value={evidenceSummary.pendingScan} helper="requires access follow-up" status="pending_review" />
             <KpiCard title="Blocked" value={evidenceSummary.blocked} helper="safety-critical access state" status={evidenceSummary.blocked > 0 ? 'blocked' : 'approved'} />
-          </section>
+          </section>}
 
           <section className="panel wide-panel">
             <div className="panel-heading row-between">
@@ -458,9 +488,14 @@ function EvidenceRepositoryPageClient() {
             <ErrorList issues={errors} />
             {loading ? (
               <StatusPanel type="loading" title="Loading evidence" message="Loading evidence metadata from AIM." />
+            ) : activeBranch === 'access_history' ? (
+              <div className="module-branch-panel">
+                <p className="muted-text">Access history is intentionally routed through immutable audit logs. Evidence object keys and signed URLs are not displayed in the page body.</p>
+                <Link className="secondary-button" href="/audit-logs?entity_type=evidence_file">Open evidence access audit</Link>
+              </div>
             ) : (
               <CompactDataTable
-                rows={visibleEvidence}
+                rows={branchEvidence}
                 getRowKey={(evidence) => evidence.evidence_id}
                 emptyTitle="No evidence"
                 emptyMessage="No evidence records match the current filters."
@@ -471,7 +506,7 @@ function EvidenceRepositoryPageClient() {
                   { header: 'Status', render: (evidence) => <span><StatusBadge status={isBlockedEvidence(evidence) ? 'blocked' : evidence.status ?? evidence.upload_status} /><br /><StatusBadge status={evidence.malware_scan_status ?? 'pending_review'} /></span> },
                   { header: 'Linked Entity', render: (evidence) => <span>{displayValue(evidence.asset_id)}<br /><span className="muted-text">{displayValue(evidence.inspection_event_id ?? evidence.inspection_id)}</span></span> },
                   { header: 'Uploaded', render: (evidence) => dateValue(evidence.uploaded_at ?? evidence.created_at) },
-                  { header: 'Action', className: 'pd-cell-actions', render: (evidence) => <button className="secondary-button" type="button" onClick={() => setSelectedEvidence(evidence)}>View details</button> }
+                  { header: 'Action', className: 'pd-cell-actions', render: (evidence) => <button className="secondary-button" type="button" onClick={() => setSelectedEvidence(evidence)}>Details</button> }
                 ]}
               />
             )}

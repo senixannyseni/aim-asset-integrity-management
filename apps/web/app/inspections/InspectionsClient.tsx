@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { CompactDataTable, DetailDrawer, DetailGrid, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type InspectionEvent = {
@@ -20,6 +21,17 @@ type InspectionEvent = {
 };
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } };
+
+const INSPECTION_BRANCHES: ModuleBranchItem[] = [
+  { id: 'overview', label: 'Overview', description: 'Inspection list', icon: 'OV' },
+  { id: 'scope', label: 'Scope', description: 'Inspection scope', icon: 'SC' },
+  { id: 'evidence', label: 'Evidence', description: 'Evidence package', icon: 'EV' },
+  { id: 'findings', label: 'Findings', description: 'Anomalies', icon: 'FI' },
+  { id: 'ndt', label: 'NDT', description: 'Measurement links', icon: 'ND' },
+  { id: 'readiness', label: 'Gates', ariaLabel: 'Inspection Package Readiness', description: 'RC4-Q gates', icon: 'RD' },
+  { id: 'review', label: 'Review', description: 'Human review', icon: 'RV' },
+  { id: 'audit', label: 'Audit', description: 'Audit trail', icon: 'AU' }
+];
 
 function displayValue(value: unknown, fallback = '-'): string {
   return value === null || value === undefined || value === '' ? fallback : String(value);
@@ -64,8 +76,18 @@ export default function InspectionsClient() {
   const pendingCount = inspections.filter((inspection) => ['pending_review', 'in_review', 'needs_review'].includes(String(inspection.status ?? '').toLowerCase())).length;
   const approvedCount = inspections.filter((inspection) => String(inspection.status ?? '').toLowerCase() === 'approved').length;
   const blockedCount = inspections.filter((inspection) => ['blocked', 'rejected', 'failed'].includes(String(inspection.status ?? '').toLowerCase())).length;
+  const activeBranch = useActiveModuleBranch(INSPECTION_BRANCHES);
+  const showInspectionRegister = activeBranch === 'overview' || activeBranch === 'readiness';
 
   return <main className="app-shell">
+    <ModuleBranchNav
+      items={INSPECTION_BRANCHES.map((branch) => ({
+        ...branch,
+        count: branch.id === 'overview' || branch.id === 'readiness' ? inspections.length : undefined,
+        status: branch.id === 'readiness' && blockedCount > 0 ? 'blocked' : undefined
+      }))}
+      activeId={activeBranch}
+    />
     <PageHeader
       eyebrow="RC4-Q"
       title="Inspection Packages"
@@ -74,15 +96,15 @@ export default function InspectionsClient() {
       actions={<><Link className="secondary-button" href="/evidence-traceability">Evidence Traceability</Link><Link className="secondary-button" href="/ndt">NDT Measurements</Link></>}
     />
 
-    <section className="pd-kpi-grid" aria-label="Inspection summary">
+    {showInspectionRegister && <section className="pd-kpi-grid" aria-label="Inspection summary">
       <KpiCard title="Inspections" value={inspections.length} helper="loaded packages" />
       <KpiCard title="Inspection Package Readiness" value={inspections.length} helper="detail page shows readiness gates" status="pending_review" />
       <KpiCard title="Pending Review" value={pendingCount} helper="human action required" status="pending_review" />
       <KpiCard title="Approved" value={approvedCount} helper="review complete" status="approved" />
       <KpiCard title="Blocked or Rejected" value={blockedCount} helper="visible safety gate state" status={blockedCount > 0 ? 'blocked' : 'approved'} />
-    </section>
+    </section>}
 
-    <section className="panel">
+    {showInspectionRegister && <section className="panel">
       <div className="panel-heading row-between">
         <div>
           <h2>Inspection Event List</h2>
@@ -104,11 +126,32 @@ export default function InspectionsClient() {
             { header: 'Status', render: (inspection) => <StatusBadge status={inspection.status} /> },
             { header: 'Due / Date', render: (inspection) => dateValue(inspection.inspection_date) },
             { header: 'Assigned Role', render: (inspection) => displayValue(inspection.inspection_type, 'inspection') },
-            { header: 'Next Action', className: 'pd-cell-actions', render: (inspection) => <button className="secondary-button" type="button" onClick={() => setSelectedInspection(inspection)}>View details</button> }
+            { header: 'Next Action', className: 'pd-cell-actions', render: (inspection) => <button className="secondary-button" type="button" onClick={() => setSelectedInspection(inspection)}>Details</button> }
           ]}
         />
       )}
-    </section>
+    </section>}
+
+    {!showInspectionRegister && (
+      <section className="panel">
+        <div className="panel-heading">
+          <h2>{INSPECTION_BRANCHES.find((branch) => branch.id === activeBranch)?.label}</h2>
+          <p>Branch view for inspection packages. Open the linked workspace or inspection detail for technical scope, evidence, findings, NDT measurements, review state, and audit trail.</p>
+        </div>
+        <CompactDataTable
+          rows={inspections}
+          getRowKey={(inspection) => inspection.inspection_event_id}
+          emptyTitle="No inspection events"
+          emptyMessage="No inspections found."
+          columns={[
+            { header: 'Inspection', render: (inspection) => <Link href={`/inspections/${inspection.inspection_event_id}`}>{displayValue(inspection.inspection_code, inspection.inspection_event_id)}</Link> },
+            { header: 'Asset', render: (inspection) => displayValue(inspection.asset_tag ?? inspection.asset_name ?? inspection.asset_id) },
+            { header: 'Status', render: (inspection) => <StatusBadge status={inspection.status} /> },
+            { header: 'Next Action', className: 'pd-cell-actions', render: (inspection) => <span className="pd-compact-actions"><Link className="secondary-button" href={activeBranch === 'evidence' ? `/evidence?inspection_event_id=${inspection.inspection_event_id}` : activeBranch === 'findings' ? `/findings?inspection_event_id=${inspection.inspection_event_id}` : activeBranch === 'ndt' ? `/ndt?inspection_event_id=${inspection.inspection_event_id}` : activeBranch === 'audit' ? `/audit-logs?entity_type=inspection_event&entity_id=${inspection.inspection_event_id}` : `/inspections/${inspection.inspection_event_id}`}>Open</Link><button className="secondary-button" type="button" onClick={() => setSelectedInspection(inspection)}>Details</button></span> }
+          ]}
+        />
+      </section>
+    )}
 
     <DetailDrawer
       open={Boolean(selectedInspection)}
