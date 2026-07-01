@@ -1,0 +1,630 @@
+{
+  "library_id": "aim_api653_mvp_shell_thickness_library",
+  "library_name": "AIM API 653 MVP Shell Thickness Calculation Library",
+  "library_scope": "Atmospheric storage tank, shell course UT thickness MVP calculation fixture.",
+  "standard_boundary": "References API 653 as high-level governance context only. Does not reproduce copyrighted API/ASME clauses or proprietary formulas.",
+  "default_status": "under_review",
+  "production_enablement_rule": "Set formula_versions.approved_status='approved' and production_enabled=true only after Engineer/Lead Engineer review and Approver sign-off.",
+  "formula_versions": [
+    {
+      "formula_version_id": "f6530000-0000-4000-8000-000000000101",
+      "formula_code": "corrosion_rate",
+      "formula_name": "MVP Shell Thickness Corrosion Rate",
+      "version_no": "1.0.0",
+      "formula_type": "mvp_fixture",
+      "standard_context": [
+        "API 653 high-level storage tank inspection governance"
+      ],
+      "source_type": "approved_fixture_required",
+      "source_reference": "07_Calculation/calculation_validation_method.md#5.1 and 07_Calculation/validation_workbook.xlsx!Manual_Calculation",
+      "expression_ref": "AIM_ENGINE_BUILTIN:CORROSION_RATE_MVP_V1",
+      "expression_text_for_engine_fixture": "(previous_thickness_mm - current_thickness_mm) / years_between_inspections",
+      "asset_type_allowed": [
+        "atmospheric_storage_tank"
+      ],
+      "component_type_allowed": [
+        "shell_course"
+      ],
+      "status_for_seed": "under_review",
+      "production_enabled": false,
+      "effective_from": null,
+      "retired_at": null,
+      "review_required_before_production": true,
+      "input_schema": [
+        {
+          "key": "previous_thickness_mm",
+          "label": "Previous thickness",
+          "type": "number",
+          "unit": "mm",
+          "required": true,
+          "source_table": "thickness_readings",
+          "evidence_required": true,
+          "validation": [
+            "must_be_numeric",
+            "must_be_gt_0"
+          ]
+        },
+        {
+          "key": "current_thickness_mm",
+          "label": "Current thickness",
+          "type": "number",
+          "unit": "mm",
+          "required": true,
+          "source_table": "thickness_readings",
+          "evidence_required": true,
+          "validation": [
+            "must_be_numeric",
+            "must_be_gt_0"
+          ]
+        },
+        {
+          "key": "years_between_inspections",
+          "label": "Years between inspections",
+          "type": "number",
+          "unit": "year",
+          "required": true,
+          "source_table": "thickness_readings",
+          "evidence_required": false,
+          "validation": [
+            "must_be_numeric",
+            "must_be_gt_0"
+          ]
+        },
+        {
+          "key": "reading_unit",
+          "label": "Thickness unit",
+          "type": "string",
+          "unit": null,
+          "required": true,
+          "allowed_values": [
+            "mm"
+          ],
+          "validation": [
+            "must_equal_mm_for_mvp"
+          ]
+        },
+        {
+          "key": "evidence_code",
+          "label": "Evidence code",
+          "type": "string",
+          "required": true,
+          "source_table": "evidence_links",
+          "validation": [
+            "must_exist",
+            "must_link_to_input"
+          ]
+        }
+      ],
+      "output_schema": [
+        {
+          "key": "corrosion_rate_mm_y",
+          "label": "Corrosion rate",
+          "type": "number_or_null",
+          "unit": "mm/year"
+        },
+        {
+          "key": "warning_code",
+          "label": "Warning code",
+          "type": "string_or_null"
+        },
+        {
+          "key": "calculation_status",
+          "label": "Calculation status",
+          "type": "string",
+          "allowed_values": [
+            "OK",
+            "INCOMPLETE_INPUT",
+            "UNIT_REVIEW_REQUIRED",
+            "BLOCKED_MISSING_EVIDENCE",
+            "DATA_REVIEW_REQUIRED",
+            "FAILED"
+          ]
+        },
+        {
+          "key": "formula_version_used",
+          "label": "Formula version used",
+          "type": "string"
+        },
+        {
+          "key": "disclaimer",
+          "label": "Disclaimer",
+          "type": "string",
+          "fixed_value": "Engineering review required before final use."
+        }
+      ],
+      "validation_rules": [
+        "Block if missing previous_thickness_mm, current_thickness_mm, or years_between_inspections.",
+        "Block if years_between_inspections <= 0.",
+        "Block official use if evidence_code is missing.",
+        "Block final use if reading_unit is not mm.",
+        "If corrosion_rate_mm_y < 0, return DATA_REVIEW_REQUIRED and require engineer review."
+      ],
+      "approval_workflow": {
+        "drafted_by_role": "Lead Engineer",
+        "reviewed_by_role": "Engineer or Lead Engineer",
+        "approved_by_role": "Approver or authorized Lead Engineer",
+        "approval_status_allowed": [
+          "draft",
+          "under_review",
+          "approved",
+          "retired",
+          "rejected"
+        ],
+        "immutability_rule": "After approved, do not edit this version; create a new version."
+      }
+    },
+    {
+      "formula_version_id": "f6530000-0000-4000-8000-000000000102",
+      "formula_code": "remaining_life",
+      "formula_name": "MVP Shell Thickness Remaining Life",
+      "version_no": "1.0.0",
+      "formula_type": "mvp_fixture",
+      "standard_context": [
+        "API 653 high-level storage tank inspection governance"
+      ],
+      "source_type": "approved_fixture_required",
+      "source_reference": "07_Calculation/calculation_validation_method.md#5.2 and 07_Calculation/validation_workbook.xlsx!Manual_Calculation",
+      "expression_ref": "AIM_ENGINE_BUILTIN:REMAINING_LIFE_MVP_V1",
+      "expression_text_for_engine_fixture": "(current_thickness_mm - minimum_required_thickness_mm) / corrosion_rate_mm_y",
+      "asset_type_allowed": [
+        "atmospheric_storage_tank"
+      ],
+      "component_type_allowed": [
+        "shell_course"
+      ],
+      "status_for_seed": "under_review",
+      "production_enabled": false,
+      "effective_from": null,
+      "retired_at": null,
+      "review_required_before_production": true,
+      "input_schema": [
+        {
+          "key": "current_thickness_mm",
+          "label": "Current thickness",
+          "type": "number",
+          "unit": "mm",
+          "required": true,
+          "source_table": "thickness_readings",
+          "evidence_required": true,
+          "validation": [
+            "must_be_numeric",
+            "must_be_gt_0"
+          ]
+        },
+        {
+          "key": "minimum_required_thickness_mm",
+          "label": "Minimum required thickness",
+          "type": "number",
+          "unit": "mm",
+          "required": true,
+          "source_table": "thickness_readings",
+          "evidence_required": true,
+          "validation": [
+            "must_be_numeric",
+            "must_be_gt_0",
+            "engineer_approved_source_required"
+          ]
+        },
+        {
+          "key": "corrosion_rate_mm_y",
+          "label": "Corrosion rate",
+          "type": "number",
+          "unit": "mm/year",
+          "required": true,
+          "source_table": "calculation_outputs",
+          "evidence_required": true,
+          "validation": [
+            "must_be_numeric"
+          ]
+        },
+        {
+          "key": "reading_unit",
+          "label": "Thickness unit",
+          "type": "string",
+          "required": true,
+          "allowed_values": [
+            "mm"
+          ],
+          "validation": [
+            "must_equal_mm_for_mvp"
+          ]
+        },
+        {
+          "key": "evidence_code",
+          "label": "Evidence code",
+          "type": "string",
+          "required": true,
+          "source_table": "evidence_links",
+          "validation": [
+            "must_exist",
+            "must_link_to_input"
+          ]
+        }
+      ],
+      "output_schema": [
+        {
+          "key": "remaining_life_y",
+          "label": "Remaining life",
+          "type": "number_or_na",
+          "unit": "year"
+        },
+        {
+          "key": "warning_code",
+          "label": "Warning code",
+          "type": "string_or_null"
+        },
+        {
+          "key": "calculation_status",
+          "label": "Calculation status",
+          "type": "string",
+          "allowed_values": [
+            "OK",
+            "N_A_ZERO_RATE",
+            "N_A_NEGATIVE_RATE",
+            "BELOW_MIN_REVIEW",
+            "INCOMPLETE_INPUT",
+            "UNIT_REVIEW_REQUIRED",
+            "BLOCKED_MISSING_EVIDENCE",
+            "FAILED"
+          ]
+        },
+        {
+          "key": "formula_version_used",
+          "label": "Formula version used",
+          "type": "string"
+        },
+        {
+          "key": "disclaimer",
+          "label": "Disclaimer",
+          "type": "string",
+          "fixed_value": "Engineering review required before final use."
+        }
+      ],
+      "validation_rules": [
+        "Calculate only when corrosion_rate_mm_y > 0.",
+        "If corrosion_rate_mm_y = 0, return N/A and OK_ZERO_RATE_REVIEW style warning.",
+        "If corrosion_rate_mm_y < 0, return N/A and DATA_REVIEW_REQUIRED.",
+        "If current_thickness_mm < minimum_required_thickness_mm, flag BELOW_MIN_REVIEW.",
+        "Block official use if evidence_code is missing or unit is not mm."
+      ],
+      "approval_workflow": {
+        "drafted_by_role": "Lead Engineer",
+        "reviewed_by_role": "Engineer or Lead Engineer",
+        "approved_by_role": "Approver or authorized Lead Engineer",
+        "approval_status_allowed": [
+          "draft",
+          "under_review",
+          "approved",
+          "retired",
+          "rejected"
+        ],
+        "immutability_rule": "After approved, do not edit this version; create a new version."
+      }
+    },
+    {
+      "formula_version_id": "f6530000-0000-4000-8000-000000000103",
+      "formula_code": "status_logic",
+      "formula_name": "MVP Shell Thickness Status Logic",
+      "version_no": "1.0.0",
+      "formula_type": "mvp_fixture",
+      "standard_context": [
+        "API 653 high-level storage tank inspection governance"
+      ],
+      "source_type": "approved_fixture_required",
+      "source_reference": "07_Calculation/calculation_validation_method.md#5.3 and 07_Calculation/validation_workbook.xlsx!Manual_Calculation",
+      "expression_ref": "AIM_ENGINE_BUILTIN:STATUS_LOGIC_MVP_V1",
+      "expression_text_for_engine_fixture": "Rule-based status selection using reviewed inputs, evidence gate, unit gate, minimum thickness gate, corrosion rate gate, and remaining life threshold.",
+      "asset_type_allowed": [
+        "atmospheric_storage_tank"
+      ],
+      "component_type_allowed": [
+        "shell_course"
+      ],
+      "status_for_seed": "under_review",
+      "production_enabled": false,
+      "effective_from": null,
+      "retired_at": null,
+      "review_required_before_production": true,
+      "parameters": [
+        {
+          "key": "mvp_remaining_life_action_threshold_y",
+          "value": 2.0,
+          "unit": "year",
+          "controlled": true,
+          "requires_approval": true
+        }
+      ],
+      "input_schema": [
+        {
+          "key": "required_input_complete",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "key": "evidence_code",
+          "type": "string",
+          "required": true,
+          "validation": [
+            "must_exist",
+            "must_link_to_input"
+          ]
+        },
+        {
+          "key": "reading_unit",
+          "type": "string",
+          "required": true,
+          "allowed_values": [
+            "mm"
+          ]
+        },
+        {
+          "key": "current_thickness_mm",
+          "type": "number",
+          "unit": "mm",
+          "required": true
+        },
+        {
+          "key": "minimum_required_thickness_mm",
+          "type": "number",
+          "unit": "mm",
+          "required": true
+        },
+        {
+          "key": "corrosion_rate_mm_y",
+          "type": "number_or_null",
+          "unit": "mm/year",
+          "required": false
+        },
+        {
+          "key": "remaining_life_y",
+          "type": "number_or_na",
+          "unit": "year",
+          "required": false
+        },
+        {
+          "key": "mvp_remaining_life_action_threshold_y",
+          "type": "number",
+          "unit": "year",
+          "required": true
+        }
+      ],
+      "output_schema": [
+        {
+          "key": "status_result",
+          "label": "Status result",
+          "type": "string",
+          "allowed_values": [
+            "INCOMPLETE_INPUT",
+            "BLOCKED_MISSING_EVIDENCE",
+            "UNIT_REVIEW_REQUIRED",
+            "BELOW_MIN_REVIEW",
+            "DATA_REVIEW_REQUIRED",
+            "OK_ZERO_RATE_REVIEW",
+            "ACTION_REQUIRED",
+            "OK"
+          ]
+        },
+        {
+          "key": "action_required",
+          "type": "boolean"
+        },
+        {
+          "key": "warning_code",
+          "type": "string_or_null"
+        },
+        {
+          "key": "formula_version_used",
+          "type": "string"
+        },
+        {
+          "key": "disclaimer",
+          "type": "string",
+          "fixed_value": "Engineering review required before final use."
+        }
+      ],
+      "validation_rules": [
+        "Return INCOMPLETE_INPUT when required numeric input is missing.",
+        "Return BLOCKED_MISSING_EVIDENCE when evidence_code is missing.",
+        "Return UNIT_REVIEW_REQUIRED when thickness unit is not mm.",
+        "Return BELOW_MIN_REVIEW when current_thickness_mm < minimum_required_thickness_mm.",
+        "Return DATA_REVIEW_REQUIRED when corrosion_rate_mm_y < 0.",
+        "Return OK_ZERO_RATE_REVIEW when corrosion_rate_mm_y = 0.",
+        "Return ACTION_REQUIRED when remaining_life_y < mvp_remaining_life_action_threshold_y.",
+        "Return OK when all gates pass and no warning condition applies."
+      ],
+      "approval_workflow": {
+        "drafted_by_role": "Lead Engineer",
+        "reviewed_by_role": "Engineer or Lead Engineer",
+        "approved_by_role": "Approver or authorized Lead Engineer",
+        "approval_status_allowed": [
+          "draft",
+          "under_review",
+          "approved",
+          "retired",
+          "rejected"
+        ],
+        "immutability_rule": "After approved, do not edit this version; create a new version."
+      }
+    }
+  ],
+  "test_cases": [
+    {
+      "test_case_id": "TC-001",
+      "test_case_name": "Normal corrosion rate",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": 10.0,
+      "current_thickness_mm": 9.0,
+      "minimum_required_thickness_mm": 6.0,
+      "years_between_inspections": 5.0,
+      "reading_unit": "mm",
+      "evidence_code": "EVD-2026-000001",
+      "expected_corrosion_rate_mm_y": 0.2,
+      "expected_remaining_life_y": 15.0,
+      "expected_status": "OK",
+      "expected_warning_code": null,
+      "purpose": "Normal positive corrosion rate and remaining life.",
+      "priority": "high"
+    },
+    {
+      "test_case_id": "TC-002",
+      "test_case_name": "Thickness below minimum",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": 10.0,
+      "current_thickness_mm": 5.8,
+      "minimum_required_thickness_mm": 6.0,
+      "years_between_inspections": 5.0,
+      "reading_unit": "mm",
+      "evidence_code": "EVD-2026-000002",
+      "expected_corrosion_rate_mm_y": 0.84,
+      "expected_remaining_life_y": -0.238095,
+      "expected_status": "BELOW_MIN_REVIEW",
+      "expected_warning_code": "CURRENT_BELOW_MINIMUM_REQUIRED_THICKNESS",
+      "purpose": "Current thickness below minimum must block final-use status.",
+      "priority": "critical"
+    },
+    {
+      "test_case_id": "TC-003",
+      "test_case_name": "Zero corrosion rate",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": 9.0,
+      "current_thickness_mm": 9.0,
+      "minimum_required_thickness_mm": 6.0,
+      "years_between_inspections": 5.0,
+      "reading_unit": "mm",
+      "evidence_code": "EVD-2026-000003",
+      "expected_corrosion_rate_mm_y": 0.0,
+      "expected_remaining_life_y": "N/A",
+      "expected_status": "OK_ZERO_RATE_REVIEW",
+      "expected_warning_code": "ZERO_CORROSION_RATE_REVIEW_REQUIRED",
+      "purpose": "Zero corrosion rate must avoid divide-by-zero and require review.",
+      "priority": "high"
+    },
+    {
+      "test_case_id": "TC-004",
+      "test_case_name": "Negative corrosion rate",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": 8.5,
+      "current_thickness_mm": 9.0,
+      "minimum_required_thickness_mm": 6.0,
+      "years_between_inspections": 5.0,
+      "reading_unit": "mm",
+      "evidence_code": "EVD-2026-000004",
+      "expected_corrosion_rate_mm_y": -0.1,
+      "expected_remaining_life_y": "N/A",
+      "expected_status": "DATA_REVIEW_REQUIRED",
+      "expected_warning_code": "NEGATIVE_CORROSION_RATE_REVIEW_REQUIRED",
+      "purpose": "Current thickness greater than previous thickness indicates data/evidence/unit/timing issue.",
+      "priority": "high"
+    },
+    {
+      "test_case_id": "TC-005",
+      "test_case_name": "Missing previous thickness",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": null,
+      "current_thickness_mm": 9.0,
+      "minimum_required_thickness_mm": 6.0,
+      "years_between_inspections": 5.0,
+      "reading_unit": "mm",
+      "evidence_code": "EVD-2026-000005",
+      "expected_corrosion_rate_mm_y": null,
+      "expected_remaining_life_y": "N/A",
+      "expected_status": "INCOMPLETE_INPUT",
+      "expected_warning_code": "MISSING_PREVIOUS_THICKNESS",
+      "purpose": "Missing previous thickness prevents corrosion-rate calculation.",
+      "priority": "critical"
+    },
+    {
+      "test_case_id": "TC-006",
+      "test_case_name": "Missing evidence",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": 10.0,
+      "current_thickness_mm": 9.0,
+      "minimum_required_thickness_mm": 6.0,
+      "years_between_inspections": 5.0,
+      "reading_unit": "mm",
+      "evidence_code": null,
+      "expected_corrosion_rate_mm_y": 0.2,
+      "expected_remaining_life_y": 15.0,
+      "expected_status": "BLOCKED_MISSING_EVIDENCE",
+      "expected_warning_code": "MISSING_EVIDENCE_REFERENCE",
+      "purpose": "Numeric calculation may be possible, but promotion/final use must be blocked without evidence.",
+      "priority": "critical"
+    },
+    {
+      "test_case_id": "TC-007",
+      "test_case_name": "Remaining life below threshold",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": 10.0,
+      "current_thickness_mm": 6.3,
+      "minimum_required_thickness_mm": 6.0,
+      "years_between_inspections": 5.0,
+      "reading_unit": "mm",
+      "evidence_code": "EVD-2026-000007",
+      "expected_corrosion_rate_mm_y": 0.74,
+      "expected_remaining_life_y": 0.405405,
+      "expected_status": "ACTION_REQUIRED",
+      "expected_warning_code": "REMAINING_LIFE_BELOW_MVP_THRESHOLD",
+      "purpose": "Remaining life below threshold must trigger action-required status.",
+      "priority": "critical"
+    },
+    {
+      "test_case_id": "TC-008",
+      "test_case_name": "Unit mismatch warning",
+      "formula_set": "shell_thickness_mvp_v1",
+      "asset_tag": "TANK-T-02",
+      "component": "SHELL_COURSE_1",
+      "previous_thickness_mm": null,
+      "current_thickness_mm": null,
+      "minimum_required_thickness_mm": null,
+      "years_between_inspections": 5.0,
+      "reading_unit": "inch",
+      "raw_previous_thickness": 0.394,
+      "raw_current_thickness": 0.354,
+      "raw_minimum_required_thickness": 0.236,
+      "evidence_code": "EVD-2026-000008",
+      "expected_corrosion_rate_mm_y": null,
+      "expected_remaining_life_y": "N/A",
+      "expected_status": "UNIT_REVIEW_REQUIRED",
+      "expected_warning_code": "UNIT_MISMATCH",
+      "purpose": "Unit mismatch must block final use until engineer confirms conversion basis.",
+      "priority": "critical"
+    }
+  ],
+  "required_permissions": [
+    "formula_registry.read",
+    "formula_registry.manage_draft",
+    "formula_registry.approve",
+    "calculation.run",
+    "calculation.review",
+    "calculation.approve",
+    "evidence.link",
+    "audit.read"
+  ],
+  "required_audit_events": [
+    "FORMULA_VERSION_CREATED",
+    "FORMULA_VERSION_APPROVED",
+    "FORMULA_VERSION_RETIRED",
+    "CALCULATION_INPUT_VALIDATED",
+    "CALCULATION_INPUT_REJECTED",
+    "CALCULATION_RUN_CREATED",
+    "CALCULATION_WARNING_RAISED",
+    "CALCULATION_REVIEWED",
+    "CALCULATION_APPROVED",
+    "CALCULATION_REJECTED"
+  ],
+  "disclaimer": "Engineering review required before final use."
+}
