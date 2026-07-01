@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 import AimShell from './components/AimShell';
 import AuthGate from './components/AuthGate';
+import { ThemeProvider } from './components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'AIM Tank Integrity',
@@ -11,11 +12,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <AuthGate>
-          <AimShell>{children}</AimShell>
-        </AuthGate>
+        <ThemeProvider>
+          <AuthGate>
+            <AimShell>{children}</AimShell>
+          </AuthGate>
+        </ThemeProvider>
       </body>
     </html>
   );
