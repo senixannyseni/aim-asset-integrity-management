@@ -57,7 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/evidence', label: 'Evidence Repository', icon: '📁' },
       { href: '/evidence-traceability', label: 'Evidence Traceability', icon: '🔗' },
-      { href: '/ai-photo-extraction', label: 'AI Photo Extraction', icon: '📷' },
+      { href: '/ai-extraction', label: 'AI Extraction', icon: '📷', match: ['/ai-extraction', '/ai-photo-extraction'] },
       { href: '/reviews', label: 'AI Field Review', icon: '🤖' },
       { href: '/ndt', label: 'NDT Data Room', icon: '📡', match: ['/ndt', '/ndt-data-room'] }
     ]
@@ -106,7 +106,8 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/findings': { title: 'Findings', subtitle: 'Review anomalies, severities, actions, and evidence linkage' },
   '/evidence': { title: 'Evidence Repository', subtitle: 'Upload, verify, and link controlled inspection evidence' },
   '/evidence-traceability': { title: 'Evidence Traceability', subtitle: 'Cross-module evidence coverage and missing evidence indicators' },
-  '/ai-photo-extraction': { title: 'AI Photo Extraction', subtitle: 'Extract, review, and validate photos and visual artifacts from evidence' },
+  '/ai-extraction': { title: 'AI Extraction', subtitle: 'Review staged AI extraction values before promotion' },
+  '/ai-photo-extraction': { title: 'AI Extraction', subtitle: 'Review staged AI extraction values before promotion' },
   '/reviews': { title: 'AI Field Review', subtitle: 'Review staged AI extraction fields before promotion' },
   '/ndt': { title: 'NDT Data Room', subtitle: 'Review UT thickness data, CML/TML grids, and evidence-linked measurements' },
   '/ndt-data-room': { title: 'NDT Data Room', subtitle: 'Review UT thickness data, CML/TML grids, and evidence-linked measurements' },

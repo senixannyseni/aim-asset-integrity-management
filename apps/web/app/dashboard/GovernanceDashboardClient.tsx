@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { CompactDataTable, DetailDrawer, DetailGrid, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type DashboardSection = Record<string, unknown>;
 
@@ -52,6 +53,7 @@ export default function GovernanceDashboardClient() {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedSection, setSelectedSection] = useState<{ key: string; section: DashboardSection } | null>(null);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -91,23 +93,23 @@ export default function GovernanceDashboardClient() {
 
       <section className="aim-preview-grid-4" aria-label="AIM integrity status summary">
         <Link className="aim-kpi aim-kpi--navy" href="/assets">
-          <span className="aim-kpi__label">Total Assets</span>
           <span className="aim-kpi__value">{kpis.assetCount}</span>
+          <span className="aim-kpi__label">Total Assets</span>
           <span className="aim-kpi__sub">registered asset packages</span>
         </Link>
         <Link className="aim-kpi aim-kpi--red" href="/integrity-decisions">
-          <span className="aim-kpi__label">Action Required</span>
           <span className="aim-kpi__value">{kpis.actionCount}</span>
+          <span className="aim-kpi__label">Action Required</span>
           <span className="aim-kpi__sub">blocked or critical governance items</span>
         </Link>
         <Link className="aim-kpi aim-kpi--amber" href="/calculations">
-          <span className="aim-kpi__label">Pending Review</span>
           <span className="aim-kpi__value">{kpis.calculations}</span>
+          <span className="aim-kpi__label">Pending Review</span>
           <span className="aim-kpi__sub">calculation / review readiness items</span>
         </Link>
         <Link className="aim-kpi aim-kpi--green" href="/reports">
-          <span className="aim-kpi__label">Report Readiness</span>
           <span className="aim-kpi__value">{kpis.reportReady}</span>
+          <span className="aim-kpi__label">Report Readiness</span>
           <span className="aim-kpi__sub">report gate indicators</span>
         </Link>
       </section>
@@ -115,19 +117,19 @@ export default function GovernanceDashboardClient() {
       <section className="aim-preview-grid-4" aria-label="Operational queues">
         <Link className="aim-mini-card" href="/reviews">
           <span className="aim-mini-card__icon" style={{ background: '#fffbeb' }}>⏱</span>
-          <span><span className="aim-mini-card__label">Pending Approvals</span><span className="aim-mini-card__value">{kpis.calculations}</span></span>
+          <span><span className="aim-mini-card__value">{kpis.calculations}</span><span className="aim-mini-card__label">Pending Approvals</span></span>
         </Link>
         <Link className="aim-mini-card" href="/findings">
           <span className="aim-mini-card__icon" style={{ background: '#fef2f2' }}>⚠</span>
-          <span><span className="aim-mini-card__label">Critical Findings</span><span className="aim-mini-card__value">{kpis.actionCount}</span></span>
+          <span><span className="aim-mini-card__value">{kpis.actionCount}</span><span className="aim-mini-card__label">Critical Findings</span></span>
         </Link>
         <Link className="aim-mini-card" href="/work-orders">
           <span className="aim-mini-card__icon" style={{ background: '#eff6ff' }}>🔧</span>
-          <span><span className="aim-mini-card__label">Open Work Orders</span><span className="aim-mini-card__value">{kpis.workOrders}</span></span>
+          <span><span className="aim-mini-card__value">{kpis.workOrders}</span><span className="aim-mini-card__label">Open Work Orders</span></span>
         </Link>
-        <Link className="aim-mini-card" href="/ai-photo-extraction">
+        <Link className="aim-mini-card" href="/ai-extraction">
           <span className="aim-mini-card__icon" style={{ background: '#f0fdfa' }}>📷</span>
-          <span><span className="aim-mini-card__label">Photo Review Queue</span><span className="aim-mini-card__value">{kpis.aiQueue}</span></span>
+          <span><span className="aim-mini-card__value">{kpis.aiQueue}</span><span className="aim-mini-card__label">Photo Review Queue</span></span>
         </Link>
       </section>
 
@@ -162,25 +164,46 @@ export default function GovernanceDashboardClient() {
         <section className="aim-panel">
           <div className="aim-panel__head"><span>📊</span><span className="aim-panel__title">Backend Governance Sections</span></div>
           <div className="aim-panel__body">
-            <div className="cards" aria-label="Governance readiness sections">
-              {Object.entries(overview.sections).map(([sectionKey, section]) => (
-                <article key={sectionKey}>
-                  <h2>{SECTION_TITLES[sectionKey] ?? sectionKey}</h2>
-                  <dl>
-                    {visibleEntries(section).map(([key, value]) => (
-                      <div key={key} className="metric-row">
-                        <dt>{key.replaceAll('_', ' ')}</dt>
-                        <dd><code>{renderValue(value)}</code></dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {typeof section.link === 'string' ? <Link href={section.link}>Open related workspace</Link> : <span className="muted-text">Related workspace not available</span>}
-                </article>
-              ))}
-            </div>
+            <CompactDataTable
+              rows={Object.entries(overview.sections)}
+              getRowKey={([sectionKey]) => sectionKey}
+              emptyTitle="No dashboard sections"
+              emptyMessage="No governance sections were returned by the backend."
+              columns={[
+                { header: 'Queue', render: ([sectionKey]) => SECTION_TITLES[sectionKey] ?? sectionKey },
+                { header: 'Status', render: ([sectionKey]) => <StatusBadge status={sectionKey.includes('warning') ? 'needs_review' : sectionKey.includes('report') ? 'blocked' : 'pending_review'} /> },
+                { header: 'Summary', render: ([, section]) => `${visibleEntries(section).length} fields returned` },
+                { header: 'Next Action', render: ([, section]) => typeof section.link === 'string' ? <Link href={section.link}>Open workspace</Link> : <span className="muted-text">No route</span> },
+                { header: 'Details', className: 'pd-cell-actions', render: ([sectionKey, section]) => <button className="secondary-button" type="button" onClick={() => setSelectedSection({ key: sectionKey, section })}>View details</button> }
+              ]}
+            />
           </div>
         </section>
       )}
+      <DetailDrawer
+        open={Boolean(selectedSection)}
+        title={selectedSection ? SECTION_TITLES[selectedSection.key] ?? selectedSection.key : 'Dashboard details'}
+        subtitle="Backend-returned dashboard detail. The main dashboard stays summary-only."
+        status={selectedSection?.key.includes('warning') ? 'needs_review' : 'pending_review'}
+        onClose={() => setSelectedSection(null)}
+        tabs={selectedSection ? [
+          {
+            id: 'overview',
+            label: 'Overview',
+            content: <DetailGrid items={visibleEntries(selectedSection.section).slice(0, 8).map(([key, value]) => ({ label: key.replaceAll('_', ' '), value: renderValue(value) }))} />
+          },
+          {
+            id: 'technical',
+            label: 'Technical Data',
+            content: <TechnicalJson value={selectedSection.section} />
+          },
+          {
+            id: 'audit',
+            label: 'Audit Trail',
+            content: <Link className="secondary-button" href="/audit-logs">Open audit logs</Link>
+          }
+        ] : []}
+      />
     </div>
   );
 }
