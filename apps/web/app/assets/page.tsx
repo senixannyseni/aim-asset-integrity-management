@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { CompactDataTable, DetailDrawer, DetailGrid, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type ValidationIssue = { field: string; message: string; severity?: string };
 
@@ -62,6 +63,17 @@ function fieldValue(form: HTMLFormElement, name: string): string {
 
 function normalizeDate(value: string | null | undefined): string {
   return value ? value.slice(0, 10) : '-';
+}
+
+function assetDisplayName(asset: TankAsset): string {
+  return `${asset.asset_name || 'Unnamed asset'}${asset.facility ? ` / ${asset.facility}` : ''}`;
+}
+
+function dueDateState(value?: string | null): string {
+  if (!value) return 'needs_review';
+  const due = new Date(value);
+  if (Number.isNaN(due.getTime())) return 'needs_review';
+  return due.getTime() < Date.now() ? 'blocked' : 'pending_review';
 }
 
 function normalizePayloadError(payload: ApiErrorPayload, fallback: string): { message: string; issues: ValidationIssue[] } {
@@ -124,6 +136,8 @@ export default function TankAssetRegisterPage() {
   const [errors, setErrors] = useState<ValidationIssue[]>([]);
   const [pageError, setPageError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<TankAsset | null>(null);
 
   const filteredAssets = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -204,126 +218,178 @@ export default function TankAssetRegisterPage() {
 
       setMessage(`Tank asset ${result.data?.tank_tag ?? payload.tank_tag} created. Backend validation and audit logging remain authoritative.`);
       form.reset();
+      setCreateDrawerOpen(false);
       await loadAssets();
     } finally {
       setCreating(false);
     }
   }
 
+  const summary = useMemo(() => {
+    const dueSoon = assets.filter((asset) => dueDateState(asset.inspection_due_date) === 'blocked').length;
+    const approved = assets.filter((asset) => ['approved', 'in_service'].includes(String(asset.record_status ?? asset.operating_status).toLowerCase())).length;
+    const needsReview = assets.filter((asset) => !['approved', 'in_service'].includes(String(asset.record_status ?? asset.operating_status).toLowerCase())).length;
+    return { total: assets.length, approved, needsReview, dueSoon };
+  }, [assets]);
+
   return (
     <main className="app-shell">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">RC4-B / RC4-R</p>
-          <h1>Tank Asset Register</h1>
-          <p>Manage tank asset master data through AIM APIs. RC4-R adds Asset Integrity Package Readiness links while backend validation remains authoritative.</p>
-        </div>
-        <div className="action-row">
-          <Link className="secondary-button" href="/evidence">Evidence</Link>
-          <Link className="secondary-button" href="/ndt">NDT</Link>
-          <Link className="secondary-button" href="/calculations">Calculations</Link>
-          <Link className="secondary-button" href="/reports">Reports</Link>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="RC4-B / RC4-R"
+        title="Tank Asset Register"
+        description="Browse controlled tank asset records, inspection readiness, and next action without exposing design metadata on the main page."
+        status="pending_review"
+        actions={(
+          <>
+            <button className="primary-button" type="button" onClick={() => setCreateDrawerOpen(true)}>Create Asset</button>
+            <Link className="secondary-button" href="/evidence">Evidence</Link>
+            <Link className="secondary-button" href="/ndt">NDT</Link>
+            <Link className="secondary-button" href="/reports">Reports</Link>
+          </>
+        )}
+      />
 
       {permissionDenied && <StatusPanel type="denied" title="Permission denied" message="You do not have permission to view the Tank Asset Register. Backend RBAC is authoritative." />}
       {pageError && <StatusPanel type="error" title="Asset register error" message={pageError} />}
 
       {!permissionDenied && !pageError && (
-        <section className="grid-two">
-          <form className="panel form-grid" onSubmit={createAsset}>
-            <div className="panel-heading">
-              <h2>Create Tank Asset</h2>
-              <p>Create a controlled asset master record. No formulas, calculations, evidence files, or final engineering decisions are created here.</p>
-            </div>
-            <label><span>Tank Tag</span><input name="tank_tag" defaultValue={defaultAssetValues.tank_tag} placeholder="TANK-T-02" required /></label>
-            <label><span>Asset Name</span><input name="asset_name" defaultValue={defaultAssetValues.asset_name} placeholder="Solar Storage Tank T-02" required /></label>
-            <label><span>Facility</span><input name="facility" defaultValue={defaultAssetValues.facility} placeholder="Fuel Terminal A" required /></label>
-            <label><span>Location</span><input name="location" defaultValue={defaultAssetValues.location} placeholder="Tank Farm 1" required /></label>
-            <label><span>Service Fluid</span><input name="service_fluid" defaultValue={defaultAssetValues.service_fluid} placeholder="Diesel / water / crude" required /></label>
-            <label><span>Tank Type</span><input name="tank_type" defaultValue={defaultAssetValues.tank_type} required /></label>
-            <label><span>Construction Year</span><input name="construction_year" type="number" min="1801" max={new Date().getFullYear() + 5} defaultValue={defaultAssetValues.construction_year} required /></label>
-            <label><span>Original Design Code</span><input name="original_design_code" defaultValue={defaultAssetValues.original_design_code} required /></label>
-            <label><span>Current Assessment Code</span><input name="current_assessment_code" defaultValue={defaultAssetValues.current_assessment_code} required /></label>
-            <label><span>Code Edition</span><input name="code_edition" defaultValue={defaultAssetValues.code_edition} placeholder="Engineer-entered edition/reference" required /></label>
-            <label><span>Owner</span><input name="owner" defaultValue={defaultAssetValues.owner} placeholder="Operations / client owner" required /></label>
-            <label>
-              <span>Operating Status</span>
-              <select name="operating_status" defaultValue={defaultAssetValues.operating_status} required>
-                {operatingStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <label><span>Inspection Due Date</span><input name="inspection_due_date" type="date" defaultValue={defaultAssetValues.inspection_due_date} required /></label>
-            <button className="primary-button" type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create Tank Asset'}</button>
-          </form>
+        <>
+          <section className="pd-kpi-grid" aria-label="Asset register summary">
+            <KpiCard title="Assets" value={summary.total} helper="registered tank records" />
+            <KpiCard title="Approved or Active" value={summary.approved} helper="safe status remains backend-owned" status="approved" />
+            <KpiCard title="Needs Review" value={summary.needsReview} helper="draft, inactive, or non-approved states" status="needs_review" />
+            <KpiCard title="Overdue Inspection" value={summary.dueSoon} helper="visible because it can block planning" status={summary.dueSoon > 0 ? 'blocked' : 'approved'} />
+          </section>
 
-          <section className="panel">
-            <div className="panel-heading">
-              <h2>Asset List</h2>
-              <p>Search and open asset detail records for Asset Integrity Package Readiness across geometry, shell-course, material, evidence, NDT, calculation, audit, and report context.</p>
+          <section className="panel wide-panel">
+            <div className="panel-heading row-between">
+              <div>
+                <h2>Asset List</h2>
+                <p>Essential columns only. Design codes, material context, dimensions, owner, and audit details are in the drawer.</p>
+              </div>
+              <button className="secondary-button" type="button" onClick={() => void loadAssets()} disabled={loading}>{loading ? 'Loading...' : 'Refresh'}</button>
             </div>
             <div className="search-row">
               <label className="wide-field">
-                <span>Search / Filter</span>
+                <span>Search</span>
                 <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tag, name, facility, fluid, owner, status" />
               </label>
-              <button className="secondary-button" type="button" onClick={() => void loadAssets()}>Refresh</button>
             </div>
             {message && <div className="notice">{message}</div>}
             <ErrorList issues={errors} />
             {loading ? (
               <StatusPanel type="loading" title="Loading assets" message="Loading tank asset master data from AIM." />
-            ) : filteredAssets.length === 0 ? (
-              <StatusPanel type="empty" title="No tank assets" message="No assets match the current filter. Create a tank asset or clear the search field." />
             ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Asset ID</th>
-                      <th>Tank Tag</th>
-                      <th>Asset Name</th>
-                      <th>Facility / Location</th>
-                      <th>Service / Type</th>
-                      <th>Construction Year</th>
-                      <th>Codes</th>
-                      <th>Owner</th>
-                      <th>Status</th>
-                      <th>Due Date</th>
-                      <th>Related</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAssets.map((asset) => (
-                      <tr key={asset.asset_id}>
-                        <td><span className="badge">{asset.asset_id}</span></td>
-                        <td><Link href={`/assets/${asset.asset_id}`}>{asset.tank_tag}</Link></td>
-                        <td>{asset.asset_name}</td>
-                        <td>{asset.facility}<br /><span className="muted-text">{asset.location}</span></td>
-                        <td>{asset.service_fluid}<br /><span className="muted-text">{asset.tank_type}</span></td>
-                        <td>{asset.construction_year ?? '-'}</td>
-                        <td>{asset.original_design_code} / {asset.current_assessment_code}<br /><span className="muted-text">Edition: {asset.code_edition}</span></td>
-                        <td>{asset.owner}</td>
-                        <td><span className="badge">{asset.operating_status}</span></td>
-                        <td>{normalizeDate(asset.inspection_due_date)}</td>
-                        <td>
-                          <div className="action-row">
-                            <Link href={`/assets/${asset.asset_id}`}>Detail</Link>
-                            <Link href={`/evidence?asset_id=${asset.asset_id}`}>Evidence</Link>
-                            <Link href={`/ndt?asset_id=${asset.asset_id}`}>NDT</Link>
-                            <Link href={`/calculations?asset_id=${asset.asset_id}`}>Calculations</Link>
-                            <Link href={`/reports?asset_id=${asset.asset_id}`}>Reports</Link>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <CompactDataTable
+                rows={filteredAssets}
+                getRowKey={(asset) => asset.asset_id}
+                emptyTitle="No tank assets"
+                emptyMessage="No assets match the current filter. Create a tank asset or clear the search field."
+                columns={[
+                  { header: 'Asset Tag', render: (asset) => <Link href={`/assets/${asset.asset_id}`}>{asset.tank_tag}</Link> },
+                  { header: 'Name / Site', render: (asset) => <span>{asset.asset_name}<br /><span className="muted-text">{asset.facility || asset.location || '-'}</span></span> },
+                  { header: 'Status', render: (asset) => <StatusBadge status={asset.record_status ?? asset.operating_status} /> },
+                  { header: 'Integrity', render: (asset) => <StatusBadge status={asset.operating_status} /> },
+                  { header: 'Next Inspection', render: (asset) => <span>{normalizeDate(asset.inspection_due_date)}<br /><StatusBadge status={dueDateState(asset.inspection_due_date)} label={dueDateState(asset.inspection_due_date) === 'blocked' ? 'blocked' : 'pending_review'} /></span> },
+                  { header: 'Next Action', className: 'pd-cell-actions', render: (asset) => <button className="secondary-button" type="button" onClick={() => setSelectedAsset(asset)}>View details</button> }
+                ]}
+              />
             )}
           </section>
-        </section>
+        </>
       )}
+
+      <DetailDrawer
+        open={createDrawerOpen}
+        title="Create tank asset"
+        subtitle="Focused asset creation. Backend validation and audit logging remain authoritative."
+        status="draft"
+        onClose={() => setCreateDrawerOpen(false)}
+        tabs={[
+          {
+            id: 'overview',
+            label: 'Overview',
+            content: (
+              <form className="form-grid" onSubmit={createAsset}>
+                <label><span>Tank Tag</span><input name="tank_tag" defaultValue={defaultAssetValues.tank_tag} placeholder="TANK-T-02" required /></label>
+                <label><span>Asset Name</span><input name="asset_name" defaultValue={defaultAssetValues.asset_name} placeholder="Solar Storage Tank T-02" required /></label>
+                <label><span>Facility</span><input name="facility" defaultValue={defaultAssetValues.facility} placeholder="Fuel Terminal A" required /></label>
+                <label><span>Location</span><input name="location" defaultValue={defaultAssetValues.location} placeholder="Tank Farm 1" required /></label>
+                <label><span>Service Fluid</span><input name="service_fluid" defaultValue={defaultAssetValues.service_fluid} placeholder="Diesel / water / crude" required /></label>
+                <label><span>Tank Type</span><input name="tank_type" defaultValue={defaultAssetValues.tank_type} required /></label>
+                <label><span>Construction Year</span><input name="construction_year" type="number" min="1801" max={new Date().getFullYear() + 5} defaultValue={defaultAssetValues.construction_year} required /></label>
+                <label><span>Original Design Code</span><input name="original_design_code" defaultValue={defaultAssetValues.original_design_code} required /></label>
+                <label><span>Current Assessment Code</span><input name="current_assessment_code" defaultValue={defaultAssetValues.current_assessment_code} required /></label>
+                <label><span>Code Edition</span><input name="code_edition" defaultValue={defaultAssetValues.code_edition} placeholder="Engineer-entered edition/reference" required /></label>
+                <label><span>Owner</span><input name="owner" defaultValue={defaultAssetValues.owner} placeholder="Operations / client owner" required /></label>
+                <label><span>Operating Status</span><select name="operating_status" defaultValue={defaultAssetValues.operating_status} required>{operatingStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                <label><span>Inspection Due Date</span><input name="inspection_due_date" type="date" defaultValue={defaultAssetValues.inspection_due_date} required /></label>
+                <button className="primary-button wide-field" type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create Tank Asset'}</button>
+              </form>
+            )
+          }
+        ]}
+      />
+
+      <DetailDrawer
+        open={Boolean(selectedAsset)}
+        title={selectedAsset?.tank_tag ?? 'Asset details'}
+        subtitle={selectedAsset ? assetDisplayName(selectedAsset) : undefined}
+        status={selectedAsset?.record_status ?? selectedAsset?.operating_status}
+        onClose={() => setSelectedAsset(null)}
+        tabs={selectedAsset ? [
+          {
+            id: 'overview',
+            label: 'Overview',
+            content: (
+              <DetailGrid items={[
+                { label: 'Asset ID', value: <code>{selectedAsset.asset_id}</code> },
+                { label: 'Name', value: selectedAsset.asset_name },
+                { label: 'Facility', value: selectedAsset.facility || '-' },
+                { label: 'Location', value: selectedAsset.location || '-' },
+                { label: 'Service Fluid', value: selectedAsset.service_fluid || '-' },
+                { label: 'Next Inspection', value: normalizeDate(selectedAsset.inspection_due_date) }
+              ]} />
+            )
+          },
+          {
+            id: 'technical',
+            label: 'Technical Data',
+            content: (
+              <DetailGrid items={[
+                { label: 'Tank Type', value: selectedAsset.tank_type || '-' },
+                { label: 'Construction Year', value: selectedAsset.construction_year ?? '-' },
+                { label: 'Original Design Code', value: selectedAsset.original_design_code || '-' },
+                { label: 'Assessment Code', value: selectedAsset.current_assessment_code || '-' },
+                { label: 'Code Edition', value: selectedAsset.code_edition || '-' },
+                { label: 'Owner', value: selectedAsset.owner || '-' }
+              ]} />
+            )
+          },
+          {
+            id: 'evidence',
+            label: 'Evidence',
+            content: (
+              <div className="pd-compact-actions">
+                <Link className="secondary-button" href={`/evidence?asset_id=${selectedAsset.asset_id}`}>Evidence</Link>
+                <Link className="secondary-button" href={`/ndt?asset_id=${selectedAsset.asset_id}`}>NDT</Link>
+                <Link className="secondary-button" href={`/calculations?asset_id=${selectedAsset.asset_id}`}>Calculations</Link>
+                <Link className="secondary-button" href={`/reports?asset_id=${selectedAsset.asset_id}`}>Reports</Link>
+              </div>
+            )
+          },
+          {
+            id: 'audit',
+            label: 'Audit Trail',
+            content: <Link className="secondary-button" href={`/audit-logs?entity_type=asset&entity_id=${selectedAsset.asset_id}`}>Open audit trail</Link>
+          },
+          {
+            id: 'raw',
+            label: 'Raw Metadata',
+            content: <TechnicalJson value={selectedAsset} />
+          }
+        ] : []}
+      />
     </main>
   );
 }

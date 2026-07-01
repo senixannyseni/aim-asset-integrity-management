@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { CompactDataTable, DetailDrawer, DetailGrid, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type WorkflowSection = Record<string, unknown>;
-
 type WorkflowConsoleOverview = {
   generated_at: string;
   permission_required: string;
@@ -42,6 +42,7 @@ export default function WorkflowConsoleClient() {
   const [overview, setOverview] = useState<WorkflowConsoleOverview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedSection, setSelectedSection] = useState<{ key: string; section: WorkflowSection } | null>(null);
 
   useEffect(() => {
     async function loadWorkflowConsole() {
@@ -61,77 +62,77 @@ export default function WorkflowConsoleClient() {
     void loadWorkflowConsole();
   }, []);
 
+  const sectionRows = Object.entries(overview?.sections ?? {});
+  const failedCount = sectionRows.filter(([key]) => key.includes('failure') || key.includes('error')).length;
+  const followUpCount = sectionRows.filter(([key]) => key.includes('pending')).length;
+
   return (
     <main className="app-shell">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">RC3-G n8n Workflow Console</p>
-          <h1>n8n Workflow Console / Orchestration Visibility</h1>
-          <p>
-            Read-only AIM-side visibility into workflow tasks, notification delivery, failed routing, pending human follow-ups,
-            and recent n8n-related orchestration events. This page does not execute workflows or mutate engineering records.
-          </p>
-        </div>
-        <div className="action-row">
-          <Link className="secondary-button" href="/dashboard">Dashboard</Link>
-          <Link className="secondary-button" href="/audit-logs">Audit Logs</Link>
-          <Link className="secondary-button" href="/work-orders">Work Orders</Link>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="RC3-G n8n workflow console"
+        title="Workflow Console"
+        description="Read-only AIM-side workflow visibility. Payloads, error diagnostics, retry metadata, and prohibited controls are in drawers."
+        status={failedCount > 0 ? 'failed' : followUpCount > 0 ? 'pending_review' : 'closed'}
+        actions={<><Link className="secondary-button" href="/dashboard">Dashboard</Link><Link className="secondary-button" href="/audit-logs">Audit Logs</Link><Link className="secondary-button" href="/work-orders">Work Orders</Link></>}
+      />
 
       {message && <div className="notice"><p>{message}</p></div>}
       {loading && <div className="notice"><p>Loading workflow console...</p></div>}
 
       {overview && (
         <>
+          <section className="pd-kpi-grid" aria-label="Workflow summary">
+            <KpiCard title="Sections" value={sectionRows.length} helper="backend-returned groups" />
+            <KpiCard title="Pending Follow-ups" value={followUpCount} helper="human action queues" status={followUpCount > 0 ? 'pending_review' : 'closed'} />
+            <KpiCard title="Failure Groups" value={failedCount} helper="diagnostics in drawer" status={failedCount > 0 ? 'failed' : 'closed'} />
+            <KpiCard title="Boundary" value="AIM" helper={overview.permission_required} status="closed" />
+          </section>
+
           <section className="panel wide-panel">
             <div className="panel-heading row-between">
               <div>
-                <h2>Workflow Console Boundary</h2>
+                <h2>Workflow Events</h2>
                 <p>{overview.source_of_truth}</p>
-                <p>{overview.boundary_notice}</p>
-                <p>{overview.redaction_notice}</p>
               </div>
-              <span className="badge">Read-only · {overview.permission_required}</span>
+              <StatusBadge status="closed" label="read-only" />
             </div>
-          </section>
-
-          <section className="cards" aria-label="Workflow orchestration visibility sections">
-            {Object.entries(overview.sections).map(([sectionKey, section]: [string, WorkflowSection]) => (
-              <article key={sectionKey}>
-                <h2>{SECTION_TITLES[sectionKey] ?? sectionKey}</h2>
-                <dl>
-                  {visibleEntries(section).map(([key, value]) => (
-                    <div key={key} className="metric-row">
-                      <dt>{key.replaceAll('_', ' ')}</dt>
-                      <dd><code>{renderValue(value)}</code></dd>
-                    </div>
-                  ))}
-                </dl>
-                {typeof section.link === 'string' ? <Link href={section.link}>Open related workspace</Link> : <span>Related workspace not available</span>}
-              </article>
-            ))}
+            <div className="aim-alert aim-alert--blue">{overview.boundary_notice}</div>
+            <CompactDataTable
+              rows={sectionRows}
+              getRowKey={([sectionKey]) => sectionKey}
+              emptyTitle="No workflow sections"
+              emptyMessage="No workflow console sections were returned."
+              columns={[
+                { header: 'Workflow ID', render: ([sectionKey]) => SECTION_TITLES[sectionKey] ?? sectionKey },
+                { header: 'Status', render: ([sectionKey]) => <StatusBadge status={sectionKey.includes('failure') || sectionKey.includes('error') ? 'failed' : sectionKey.includes('pending') ? 'pending_review' : 'closed'} /> },
+                { header: 'Severity', render: ([sectionKey]) => sectionKey.includes('failure') || sectionKey.includes('error') ? 'high' : 'normal' },
+                { header: 'Owner', render: () => 'AIM backend' },
+                { header: 'Last Event', render: () => overview.generated_at },
+                { header: 'Action', className: 'pd-cell-actions', render: ([sectionKey, section]) => <button className="secondary-button" type="button" onClick={() => setSelectedSection({ key: sectionKey, section })}>View details</button> }
+              ]}
+            />
           </section>
 
           <section className="panel wide-panel">
             <h2>Safe AIM Links</h2>
-            <div className="action-row">
-              {overview.traceability_links.map((link) => (
-                <Link key={link.href} className="secondary-button" href={link.href}>{link.label}</Link>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel wide-panel">
-            <h2>Read-only Controls Boundary</h2>
-            <p>
-              This workflow console contains no execute/retry controls, no approve/reject/correct/promote controls, no report issue controls,
-              no evidence delete controls, no admin mutation controls, no audit log edit/delete controls, no calculation runner,
-              no n8n workflow editor or builder, and no credential or webhook secret editor.
-            </p>
+            <div className="action-row">{overview.traceability_links.map((link) => <Link key={link.href} className="secondary-button" href={link.href}>{link.label}</Link>)}</div>
           </section>
         </>
       )}
+
+      <DetailDrawer
+        open={Boolean(selectedSection)}
+        title={selectedSection ? SECTION_TITLES[selectedSection.key] ?? selectedSection.key : 'Workflow details'}
+        subtitle={overview?.redaction_notice}
+        status={selectedSection?.key.includes('failure') || selectedSection?.key.includes('error') ? 'failed' : 'pending_review'}
+        onClose={() => setSelectedSection(null)}
+        tabs={selectedSection ? [
+          { id: 'overview', label: 'Overview', content: <DetailGrid items={visibleEntries(selectedSection.section).slice(0, 8).map(([key, value]) => ({ label: key.replaceAll('_', ' '), value: renderValue(value) }))} /> },
+          { id: 'technical', label: 'Technical Data', content: <TechnicalJson value={selectedSection.section} /> },
+          { id: 'audit', label: 'Audit Trail', content: <Link className="secondary-button" href="/audit-logs">Open audit logs</Link> },
+          { id: 'raw', label: 'Raw Metadata', content: <TechnicalJson value={{ section: selectedSection.section, prohibited_controls: overview?.prohibited_controls }} /> }
+        ] : []}
+      />
     </main>
   );
 }

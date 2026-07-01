@@ -1,95 +1,164 @@
-import Link from 'next/link';
+'use client';
 
-const reviewCards = [
-  { title: 'Photo 12', page: 'Pg:12', component: 'Shell', defect: 'Coating defect', confidence: '82%', status: 'Needs Review', tone: 'badge-warning' },
-  { title: 'Photo 15', page: 'Pg:16', component: 'Shell', defect: 'Corrosion', confidence: '55%', status: 'Needs Source', tone: 'badge-danger' },
-  { title: 'Photo 18', page: 'Pg:27', component: 'Foundation', defect: 'Crack', confidence: '85%', status: 'Needs Review', tone: 'badge-warning' },
-  { title: 'Photo 19', page: 'Pg:27', component: 'Dike', defect: 'Housekeeping', confidence: '76%', status: 'Needs Review', tone: 'badge-warning' }
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { ActionModal, CompactDataTable, DetailDrawer, DetailGrid, GateSummary, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
+
+type ReviewCard = {
+  id: string;
+  title: string;
+  evidence: string;
+  asset: string;
+  page: string;
+  component: string;
+  defect: string;
+  confidence: number;
+  status: 'needs_review' | 'blocked' | 'pending_review' | 'approved';
+  validationFlags: string[];
+  sourceReference: string;
+  rawValue: Record<string, unknown>;
+};
+
+const reviewCards: ReviewCard[] = [
+  { id: 'photo-12', title: 'Photo 12', evidence: 'EVD-2024-000001', asset: 'AST-0042', page: 'p. 12', component: 'Shell', defect: 'Coating defect', confidence: 0.82, status: 'needs_review', validationFlags: ['component_match'], sourceReference: 'Photo appendix p. 12', rawValue: { model_label: 'coating defect', bbox: [120, 42, 320, 188], prompt_version: 'photo-defect-v1' } },
+  { id: 'photo-15', title: 'Photo 15', evidence: 'EVD-2024-000001', asset: 'AST-0042', page: 'p. 16', component: 'Shell', defect: 'Corrosion', confidence: 0.55, status: 'blocked', validationFlags: ['low_confidence', 'source_reference_missing'], sourceReference: 'Needs source confirmation', rawValue: { model_label: 'corrosion staining', bbox: [80, 52, 210, 180], prompt_version: 'photo-defect-v1' } },
+  { id: 'photo-18', title: 'Photo 18', evidence: 'EVD-2024-000002', asset: 'AST-0043', page: 'p. 27', component: 'Foundation', defect: 'Crack', confidence: 0.85, status: 'needs_review', validationFlags: ['severity_required'], sourceReference: 'Photo appendix p. 27', rawValue: { model_label: 'foundation crack', bbox: [14, 75, 240, 166], prompt_version: 'photo-defect-v1' } },
+  { id: 'photo-19', title: 'Photo 19', evidence: 'EVD-2025-000001', asset: 'AST-0042', page: 'p. 27', component: 'Dike', defect: 'Housekeeping', confidence: 0.76, status: 'pending_review', validationFlags: ['non_integrity_observation'], sourceReference: 'Photo appendix p. 27', rawValue: { model_label: 'housekeeping', bbox: [8, 35, 260, 210], prompt_version: 'photo-defect-v1' } }
 ];
 
+function confidenceStatus(confidence: number): 'approved' | 'needs_review' | 'blocked' {
+  if (confidence >= 0.8) return 'approved';
+  if (confidence >= 0.65) return 'needs_review';
+  return 'blocked';
+}
+
 export default function AiPhotoExtractionPage() {
+  const [selected, setSelected] = useState<ReviewCard | null>(null);
+  const [actionTarget, setActionTarget] = useState<ReviewCard | null>(null);
+
+  const summary = useMemo(() => {
+    const blocked = reviewCards.filter((card) => card.status === 'blocked').length;
+    const needsReview = reviewCards.filter((card) => card.status === 'needs_review' || card.status === 'pending_review').length;
+    const reviewed = reviewCards.filter((card) => card.status === 'approved').length;
+    const fieldsNeedingReview = reviewCards.reduce((total, card) => total + card.validationFlags.length, 0);
+    return { total: reviewCards.length, blocked, needsReview, reviewed, fieldsNeedingReview };
+  }, []);
+
   return (
-    <div className="aim-preview-dashboard">
-      <section className="aim-preview-grid-4" aria-label="AI photo extraction status">
-        <div className="aim-kpi aim-kpi--navy"><span className="aim-kpi__label">Extraction Runs</span><span className="aim-kpi__value">3</span><span className="aim-kpi__sub">evidence packages processed</span></div>
-        <div className="aim-kpi aim-kpi--amber"><span className="aim-kpi__label">Pending Review</span><span className="aim-kpi__value">7</span><span className="aim-kpi__sub">photos require engineer review</span></div>
-        <div className="aim-kpi aim-kpi--red"><span className="aim-kpi__label">Needs Source</span><span className="aim-kpi__value">1</span><span className="aim-kpi__sub">source reference incomplete</span></div>
-        <div className="aim-kpi aim-kpi--green"><span className="aim-kpi__label">Reviewed</span><span className="aim-kpi__value">29/36</span><span className="aim-kpi__sub">reviewed before promotion</span></div>
+    <main className="app-shell">
+      <PageHeader
+        eyebrow="AI staging review"
+        title="AI Extraction Review"
+        description="AI output is staging/review data only. Field values, raw extraction output, source references, and validation flags are disclosed after selecting a job."
+        status={summary.blocked > 0 ? 'blocked' : 'pending_review'}
+        actions={<><Link className="secondary-button" href="/evidence">Evidence Repository</Link><Link className="secondary-button" href="/reviews">AI Field Review</Link><Link className="secondary-button" href="/audit-logs">Audit Logs</Link></>}
+      />
+
+      <div className="aim-alert aim-alert--amber">AI extracted values are not final engineering data. Promotion and approval remain backend-gated human review actions.</div>
+
+      <section className="pd-kpi-grid" aria-label="AI extraction summary">
+        <KpiCard title="Extraction Jobs" value="3" helper="evidence packages processed" />
+        <KpiCard title="Needs Review" value={summary.needsReview} helper="fields requiring human attention" status="needs_review" />
+        <KpiCard title="Blocked" value={summary.blocked} helper="source or confidence gate failed" status={summary.blocked > 0 ? 'blocked' : 'approved'} />
+        <KpiCard title="Review Fields" value={summary.fieldsNeedingReview} helper="validation flags in staging data" status="pending_review" />
       </section>
 
-      <section className="aim-panel">
-        <div className="aim-panel__head">
-          <span>📷</span>
-          <span className="aim-panel__title">AI Photo Extraction Preview Alignment</span>
-          <span className="badge badge-teal">Frontend UX</span>
-        </div>
-        <div className="aim-panel__body">
-          <div className="aim-alert aim-alert--blue">
-            This page is a frontend UX alignment workspace based on the AIM Preview reference. Backend photo-artifact endpoints should be wired in a later controlled package. AI photo output remains staging/supporting evidence and cannot approve engineering data.
+      <section className="panel wide-panel">
+        <div className="panel-heading row-between">
+          <div>
+            <h2>Review Queue</h2>
+            <p>Compact staging queue. Extracted field values, raw model output, and source details are in the drawer.</p>
           </div>
-          <div className="action-row">
-            <Link className="secondary-button" href="/evidence">Open Evidence Repository</Link>
-            <Link className="secondary-button" href="/reviews">Open AI Field Review</Link>
-            <Link className="secondary-button" href="/audit-logs">Open Audit Logs</Link>
-          </div>
+          <StatusBadge status="pending_review" label="staging/review" />
         </div>
+        <CompactDataTable
+          rows={reviewCards}
+          getRowKey={(card) => card.id}
+          emptyTitle="No extraction jobs"
+          emptyMessage="No AI extraction jobs found. Start from Evidence Room or create a new extraction job."
+          columns={[
+            { header: 'Job', render: (card) => card.title },
+            { header: 'Asset / Inspection', render: (card) => <span>{card.asset}<br /><span className="muted-text">{card.evidence}</span></span> },
+            { header: 'Status', render: (card) => <StatusBadge status={card.status} /> },
+            { header: 'Confidence', render: (card) => <span>{Math.round(card.confidence * 100)}%<br /><StatusBadge status={confidenceStatus(card.confidence)} label={confidenceStatus(card.confidence)} /></span> },
+            { header: 'Fields Needing Review', render: (card) => card.validationFlags.length },
+            { header: 'Action', className: 'pd-cell-actions', render: (card) => <span className="pd-compact-actions"><button className="secondary-button" type="button" onClick={() => setSelected(card)}>View details</button><button className="secondary-button" type="button" onClick={() => setActionTarget(card)}>Review</button></span> }
+          ]}
+        />
       </section>
 
-      <section className="aim-split-panels">
-        <div className="aim-panel">
-          <div className="aim-panel__head"><span>▶</span><span className="aim-panel__title">Extraction Runs</span></div>
-          <div className="aim-table-wrap">
-            <table>
-              <thead><tr><th>Run</th><th>Evidence</th><th>Asset</th><th>Photos</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr><td><code>run-001</code></td><td>EVD-2024-000001</td><td><code>AST-0042</code></td><td>36</td><td><span className="badge badge-warning">Partial Review</span></td></tr>
-                <tr><td><code>run-002</code></td><td>EVD-2024-000002</td><td><code>AST-0043</code></td><td>22</td><td><span className="badge badge-success">Human Reviewed</span></td></tr>
-                <tr><td><code>run-003</code></td><td>EVD-2025-000001</td><td><code>AST-0042</code></td><td>14</td><td><span className="badge badge-warning">Staged</span></td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <DetailDrawer
+        open={Boolean(selected)}
+        title={selected?.title ?? 'AI extraction details'}
+        subtitle={selected ? `${selected.asset} / ${selected.evidence}` : undefined}
+        status={selected?.status}
+        onClose={() => setSelected(null)}
+        tabs={selected ? [
+          {
+            id: 'overview',
+            label: 'Overview',
+            content: <DetailGrid items={[
+              { label: 'Evidence', value: selected.evidence },
+              { label: 'Asset', value: selected.asset },
+              { label: 'Component', value: selected.component },
+              { label: 'Candidate Finding', value: selected.defect },
+              { label: 'Confidence', value: `${Math.round(selected.confidence * 100)}%` },
+              { label: 'Source', value: selected.sourceReference }
+            ]} />
+          },
+          {
+            id: 'technical',
+            label: 'Technical Data',
+            content: <DetailGrid items={[
+              { label: 'Extracted Value', value: selected.defect },
+              { label: 'Normalized Value', value: selected.defect.toLowerCase().replaceAll(' ', '_') },
+              { label: 'Source Reference', value: selected.sourceReference },
+              { label: 'Validation Flags', value: selected.validationFlags.join(', ') || '-' }
+            ]} />
+          },
+          {
+            id: 'evidence',
+            label: 'Evidence',
+            content: <div className="pd-compact-actions"><Link className="secondary-button" href="/evidence">Open evidence</Link><Link className="secondary-button" href="/findings">Open findings</Link></div>
+          },
+          {
+            id: 'gate',
+            label: 'Gate Checklist',
+            content: <GateSummary pass={selected.status === 'blocked' ? 1 : 2} warning={selected.status === 'needs_review' || selected.status === 'pending_review' ? 1 : 0} fail={selected.status === 'blocked' ? 1 : 0} />
+          },
+          {
+            id: 'audit',
+            label: 'Audit Trail',
+            content: <Link className="secondary-button" href="/audit-logs?entity_type=ai_extraction_job">Open audit trail</Link>
+          },
+          {
+            id: 'raw',
+            label: 'Raw Metadata',
+            content: <TechnicalJson value={selected.rawValue} />
+          }
+        ] : []}
+      />
 
-        <div className="aim-panel">
-          <div className="aim-panel__head"><span>🧭</span><span className="aim-panel__title">Review Rules</span></div>
-          <div className="aim-panel__body">
-            <p>Reviewer must verify the image, caption, source page, component, defect classification, and evidence linkage before promotion.</p>
-            <p>Corrections require reason, source reference, manual override/audit event, and backend gate validation.</p>
-            <div className="aim-alert aim-alert--amber">Do not implement “approve all” without backend permission, evidence, and gate checks.</div>
-          </div>
+      <ActionModal
+        open={Boolean(actionTarget)}
+        title={actionTarget ? `Review ${actionTarget.title}` : 'Review AI field'}
+        subtitle="Approve, reject, or correct staging data. Backend remains authoritative for final promotion."
+        status={actionTarget?.status}
+        onClose={() => setActionTarget(null)}
+      >
+        <DetailGrid items={[
+          { label: 'Candidate Value', value: actionTarget?.defect ?? '-' },
+          { label: 'Confidence', value: actionTarget ? `${Math.round(actionTarget.confidence * 100)}%` : '-' },
+          { label: 'Source', value: actionTarget?.sourceReference ?? '-' },
+          { label: 'Validation Flags', value: actionTarget?.validationFlags.join(', ') || '-' }
+        ]} />
+        <label><span>Decision</span><select defaultValue="correct"><option value="approve">approve</option><option value="correct">correct</option><option value="reject">reject</option></select></label>
+        <label><span>Reviewer Comment</span><input placeholder="Reason required for correction or rejection" /></label>
+        <div className="action-row">
+          <button className="primary-button" type="button" disabled>Submit review via backend</button>
+          <span className="muted-text">No backend review endpoint is called from this UX preview.</span>
         </div>
-
-        <div className="aim-panel">
-          <div className="aim-panel__head"><span>🔗</span><span className="aim-panel__title">Linkage Targets</span></div>
-          <Link className="aim-activity-row" href="/findings"><span>⚠️</span><span><strong>Findings</strong><br /><small>Photo supports anomaly/finding evidence</small></span></Link>
-          <Link className="aim-activity-row" href="/reports"><span>📄</span><span><strong>Reports</strong><br /><small>Photo appendix and source traceability</small></span></Link>
-          <Link className="aim-activity-row" href="/integrity-decisions"><span>🛡</span><span><strong>Integrity Decisions</strong><br /><small>Supporting evidence, never AI approval</small></span></Link>
-        </div>
-      </section>
-
-      <section className="aim-panel">
-        <div className="aim-panel__head"><span>👁</span><span className="aim-panel__title">Photo Review Queue</span></div>
-        <div className="aim-panel__body">
-          <div className="cards compact-cards">
-            {reviewCards.map((card) => (
-              <article key={card.title}>
-                <div style={{ alignItems: 'center', background: '#f8fafc', borderRadius: 12, display: 'flex', height: 110, justifyContent: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 28 }}>📷</span>
-                </div>
-                <div className="row-between">
-                  <h2 style={{ margin: 0 }}>{card.title}</h2>
-                  <span className="badge">{card.page}</span>
-                </div>
-                <p>{card.component} · {card.defect}</p>
-                <div className="row-between">
-                  <span className={`badge ${card.tone}`}>{card.status}</span>
-                  <code>{card.confidence}</code>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-    </div>
+      </ActionModal>
+    </main>
   );
 }
