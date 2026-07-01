@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { CompactDataTable, DetailDrawer, DetailGrid, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type ValidationIssue = { field: string; message: string; severity?: string };
@@ -55,6 +56,18 @@ const defaultAssetValues = {
   operating_status: 'in_service',
   inspection_due_date: ''
 };
+
+const ASSET_BRANCHES: ModuleBranchItem[] = [
+  { id: 'overview', label: 'Overview', description: 'Register summary', icon: 'OV' },
+  { id: 'readiness', label: 'Condition', ariaLabel: 'Asset Integrity Package Readiness', description: 'RC4-R gates', icon: 'RD' },
+  { id: 'evidence', label: 'Evidence', description: 'Asset evidence links', icon: 'EV' },
+  { id: 'ndt', label: 'NDT', description: 'Measurement coverage', icon: 'ND' },
+  { id: 'calculations', label: 'Calc', description: 'Run traceability', icon: 'CA' },
+  { id: 'decisions', label: 'Decision', description: 'Integrity decisions', icon: 'DE' },
+  { id: 'reports', label: 'Report', description: 'Issued packages', icon: 'RP' },
+  { id: 'work_orders', label: 'Work', description: 'Follow-up actions', icon: 'WO' },
+  { id: 'audit', label: 'Audit', description: 'Asset trail', icon: 'AU' }
+];
 
 function fieldValue(form: HTMLFormElement, name: string): string {
   const value = new FormData(form).get(name);
@@ -231,9 +244,19 @@ export default function TankAssetRegisterPage() {
     const needsReview = assets.filter((asset) => !['approved', 'in_service'].includes(String(asset.record_status ?? asset.operating_status).toLowerCase())).length;
     return { total: assets.length, approved, needsReview, dueSoon };
   }, [assets]);
+  const activeBranch = useActiveModuleBranch(ASSET_BRANCHES);
+  const showAssetRegister = activeBranch === 'overview' || activeBranch === 'readiness';
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={ASSET_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'overview' || branch.id === 'readiness' ? summary.total : undefined,
+          status: branch.id === 'readiness' && summary.dueSoon > 0 ? 'blocked' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="RC4-B / RC4-R"
         title="Tank Asset Register"
@@ -254,18 +277,18 @@ export default function TankAssetRegisterPage() {
 
       {!permissionDenied && !pageError && (
         <>
-          <section className="pd-kpi-grid" aria-label="Asset register summary">
-            <KpiCard title="Assets" value={summary.total} helper="registered tank records" />
-            <KpiCard title="Asset Integrity Package Readiness" value={summary.total} helper="open asset detail for readiness gates" status="pending_review" />
-            <KpiCard title="Approved or Active" value={summary.approved} helper="safe status remains backend-owned" status="approved" />
-            <KpiCard title="Needs Review" value={summary.needsReview} helper="draft, inactive, or non-approved states" status="needs_review" />
+          {showAssetRegister && <section className="pd-kpi-grid" aria-label="Asset register summary">
+            <KpiCard title="Assets" value={summary.total} helper="records" />
+            <KpiCard title="Asset Integrity Package Readiness" value={summary.total} helper="open condition" status="pending_review" />
+            <KpiCard title="Approved or Active" value={summary.approved} helper="backend controlled" status="approved" />
+            <KpiCard title="Needs Review" value={summary.needsReview} helper="needs review" status="needs_review" />
             <KpiCard title="Overdue Inspection" value={summary.dueSoon} helper="visible because it can block planning" status={summary.dueSoon > 0 ? 'blocked' : 'approved'} />
-          </section>
+          </section>}
 
-          <section className="panel wide-panel">
+          {showAssetRegister && <section className="panel wide-panel">
             <div className="panel-heading row-between">
               <div>
-                <h2>Asset List</h2>
+                <h2>Assets</h2>
                 <p>Essential columns only. Design codes, material context, dimensions, owner, and audit details are in the drawer.</p>
               </div>
               <button className="secondary-button" type="button" onClick={() => void loadAssets()} disabled={loading}>{loading ? 'Loading...' : 'Refresh'}</button>
@@ -292,11 +315,32 @@ export default function TankAssetRegisterPage() {
                   { header: 'Status', render: (asset) => <StatusBadge status={asset.record_status ?? asset.operating_status} /> },
                   { header: 'Integrity', render: (asset) => <StatusBadge status={asset.operating_status} /> },
                   { header: 'Next Inspection', render: (asset) => <span>{normalizeDate(asset.inspection_due_date)}<br /><StatusBadge status={dueDateState(asset.inspection_due_date)} label={dueDateState(asset.inspection_due_date) === 'blocked' ? 'blocked' : 'pending_review'} /></span> },
-                  { header: 'Next Action', className: 'pd-cell-actions', render: (asset) => <button className="secondary-button" type="button" onClick={() => setSelectedAsset(asset)}>View details</button> }
+                  { header: 'Next Action', className: 'pd-cell-actions', render: (asset) => <button className="secondary-button" type="button" onClick={() => setSelectedAsset(asset)}>Details</button> }
                 ]}
               />
             )}
-          </section>
+          </section>}
+
+          {!showAssetRegister && (
+            <section className="panel wide-panel">
+              <div className="panel-heading">
+                <h2>{ASSET_BRANCHES.find((branch) => branch.id === activeBranch)?.label}</h2>
+                <p>Select an asset to open the branch-specific workspace. Detailed evidence, NDT, calculations, decisions, reports, work orders, and audit data stay in routed workspaces or drawers.</p>
+              </div>
+              <CompactDataTable
+                rows={filteredAssets}
+                getRowKey={(asset) => asset.asset_id}
+                emptyTitle="No tank assets"
+                emptyMessage="No assets match the current filter."
+                columns={[
+                  { header: 'Asset Tag', render: (asset) => <Link href={`/assets/${asset.asset_id}`}>{asset.tank_tag}</Link> },
+                  { header: 'Name / Site', render: (asset) => <span>{asset.asset_name}<br /><span className="muted-text">{asset.facility || asset.location || '-'}</span></span> },
+                  { header: 'Status', render: (asset) => <StatusBadge status={asset.record_status ?? asset.operating_status} /> },
+                  { header: 'Next Action', className: 'pd-cell-actions', render: (asset) => <span className="pd-compact-actions"><Link className="secondary-button" href={activeBranch === 'evidence' ? `/evidence?asset_id=${asset.asset_id}` : activeBranch === 'ndt' ? `/ndt?asset_id=${asset.asset_id}` : activeBranch === 'calculations' ? `/calculations?asset_id=${asset.asset_id}` : activeBranch === 'decisions' ? `/integrity-decisions?asset_id=${asset.asset_id}` : activeBranch === 'reports' ? `/reports?asset_id=${asset.asset_id}` : activeBranch === 'work_orders' ? `/work-orders?asset_id=${asset.asset_id}` : `/audit-logs?entity_type=asset&entity_id=${asset.asset_id}`}>Open</Link><button className="secondary-button" type="button" onClick={() => setSelectedAsset(asset)}>Details</button></span> }
+                ]}
+              />
+            </section>
+          )}
         </>
       )}
 

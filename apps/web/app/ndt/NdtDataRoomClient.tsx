@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { CompactDataTable, DetailDrawer, DetailGrid, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type ValidationIssue = { field: string; message: string; severity?: 'error' | 'warning' | string };
@@ -39,6 +40,14 @@ type NdtMeasurement = {
 type NdtDataRoomClientProps = { fixedAssetId?: string; assetScoped?: boolean };
 
 const METHOD_OPTIONS = ['UT', 'MFL', 'CML', 'TML', 'visual', 'NDT map'];
+const NDT_BRANCHES: ModuleBranchItem[] = [
+  { id: 'datasets', label: 'Datasets', description: 'Measurement datasets', icon: 'DS' },
+  { id: 'measurements', label: 'Measures', description: 'Readings table', icon: 'ME' },
+  { id: 'critical', label: 'Critical', description: 'Critical values', icon: 'CR' },
+  { id: 'traceability', label: 'Trace', ariaLabel: 'Inspection Traceability Readiness', description: 'RC4-P gates', icon: 'TR' },
+  { id: 'evidence', label: 'Evidence', description: 'Linked evidence', icon: 'EV' },
+  { id: 'review', label: 'Review', description: 'Reviewer state', icon: 'RV' }
+];
 
 function displayValue(value: unknown, fallback = '-'): string {
   return value === null || value === undefined || value === '' ? fallback : String(value);
@@ -157,6 +166,13 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
     const needsReview = filteredMeasurements.filter((measurement) => String(measurement.reviewer_status ?? measurement.validation_status ?? '').toLowerCase().includes('review')).length;
     return { total: filteredMeasurements.length, critical, missingEvidence, needsReview };
   }, [filteredMeasurements]);
+  const activeBranch = useActiveModuleBranch(NDT_BRANCHES, 'datasets');
+  const branchMeasurements = useMemo(() => filteredMeasurements.filter((measurement) => {
+    if (activeBranch === 'critical') return Boolean(measurement.is_critical);
+    if (activeBranch === 'evidence') return Boolean(measurement.evidence_file_id);
+    if (activeBranch === 'review') return String(measurement.reviewer_status ?? measurement.validation_status ?? '').toLowerCase().includes('review');
+    return true;
+  }), [activeBranch, filteredMeasurements]);
 
   async function createMeasurement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -220,6 +236,14 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
   }
 
   return <main className="app-shell">
+    <ModuleBranchNav
+      items={NDT_BRANCHES.map((branch) => ({
+        ...branch,
+        count: branch.id === 'datasets' || branch.id === 'measurements' || branch.id === 'traceability' ? summary.total : branch.id === 'critical' ? summary.critical : branch.id === 'evidence' ? summary.total - summary.missingEvidence : branch.id === 'review' ? summary.needsReview : undefined,
+        status: branch.id === 'traceability' && summary.missingEvidence > 0 ? 'blocked' : undefined
+      }))}
+      activeId={activeBranch}
+    />
     <PageHeader
       eyebrow="RC4-D"
       title={assetScoped ? 'Asset NDT Measurements' : 'NDT Data Room'}
@@ -258,7 +282,7 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
           <label><span>Evidence State</span><select value={evidenceStateFilter} onChange={(event) => setEvidenceStateFilter(event.target.value)}><option value="">All</option><option value="linked">Evidence linked</option><option value="missing">Missing evidence</option><option value="critical_missing">Critical missing evidence</option></select></label>
         </div>
         <CompactDataTable
-          rows={filteredMeasurements}
+          rows={branchMeasurements}
           getRowKey={(measurement) => measurement.measurement_id}
           emptyTitle="No NDT measurements"
           emptyMessage="No measurements match the current filters."
@@ -269,7 +293,7 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
             { header: 'Status', render: (measurement) => <StatusBadge status={measurement.validation_status ?? 'pending_review'} /> },
             { header: 'Critical / Evidence', render: (measurement) => measurement.evidence_file_id ? <StatusBadge status="approved" label={measurement.is_critical ? 'critical linked' : 'linked'} /> : <StatusBadge status={measurement.is_critical ? 'blocked' : 'needs_review'} label={measurement.is_critical ? 'critical missing' : 'missing'} /> },
             { header: 'Review State', render: (measurement) => <StatusBadge status={measurement.reviewer_status ?? 'pending_review'} /> },
-            { header: 'Action', className: 'pd-cell-actions', render: (measurement) => <button className="secondary-button" type="button" onClick={() => setSelectedMeasurement(measurement)}>View details</button> }
+            { header: 'Action', className: 'pd-cell-actions', render: (measurement) => <button className="secondary-button" type="button" onClick={() => setSelectedMeasurement(measurement)}>Details</button> }
           ]}
         />
       </section>

@@ -535,9 +535,8 @@ export default function AimShell({ children }: { children: ReactNode }) {
 
       <div className="aim-main">
         <header className="aim-topbar">
-          <div>
-            <div className="aim-topbar__title">{meta.title}</div>
-            <div className="aim-topbar__subtitle">{meta.subtitle}</div>
+          <div className="aim-topbar__context">
+            <span className="sr-only">Current page: {meta.title}. {meta.subtitle}</span>
           </div>
           <div className="aim-topbar__right">
             <Link href="/tenant-admin" className="aim-topbar__pill aim-topbar__pill--tenant" title="Open tenant admin" aria-label="Open tenant admin">

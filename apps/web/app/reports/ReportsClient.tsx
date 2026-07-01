@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { ActionModal, CompactDataTable, DetailDrawer, DetailGrid, GateSummary, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type CalculationRun = { calculation_run_id: string; run_id: string; asset_id: string; run_status: string; review_status: string; approval_status: string; locked_flag: boolean };
@@ -10,6 +11,15 @@ type EvidenceRecord = { evidence_id: string; evidence_code?: string; original_fi
 type IntegrityDecision = { integrity_decision_id: string; decision_code?: string; calculation_run_id: string; decision_status: string; evidence_count?: number };
 type ReportExport = { report_export_id: string; export_type?: string; export_format?: string; export_status?: string; download_status?: string; content_hash_sha256?: string; download_url?: string };
 type ReportRecord = { report_id: string; report_code: string; report_title: string; report_status: string; report_version: number; calculation_run_id: string; docx_object_path?: string; pdf_object_path?: string; input_snapshot_hash?: string; locked_flag?: boolean };
+
+const REPORT_BRANCHES: ModuleBranchItem[] = [
+  { id: 'reports', label: 'Reports', description: 'Report register', icon: 'RP' },
+  { id: 'issue', label: 'Gates', description: 'Issue gates', icon: 'IR' },
+  { id: 'exports', label: 'Exports', description: 'DOCX/PDF/JSON', icon: 'EX' },
+  { id: 'evidence', label: 'Evidence', description: 'Evidence gates', icon: 'EV' },
+  { id: 'approval', label: 'Approval', description: 'Approved reports', icon: 'AH' },
+  { id: 'audit', label: 'Audit', description: 'Report trail', icon: 'AU' }
+];
 
 function messageFromPayload(payload: Record<string, unknown>): string {
   const error = payload.error as { message?: string; code?: string } | undefined;
@@ -68,6 +78,14 @@ export default function ReportsClient() {
     return { total: reports.length, issued, blocked, ready };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reports, decisions]);
+  const activeBranch = useActiveModuleBranch(REPORT_BRANCHES, 'reports');
+  const branchReports = useMemo(() => reports.filter((report) => {
+    if (activeBranch === 'issue' || activeBranch === 'gates') return report.report_status !== 'issued';
+    if (activeBranch === 'evidence') return !canIssue(report) && report.report_status !== 'issued';
+    if (activeBranch === 'approval') return ['approved', 'issued'].includes(report.report_status);
+    return true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [activeBranch, reports, decisions]);
 
   function approvedDecisionForReport(report: ReportRecord): IntegrityDecision | undefined {
     return decisions.find((decision) => decision.calculation_run_id === report.calculation_run_id && decision.decision_status === 'approved');
@@ -144,6 +162,14 @@ export default function ReportsClient() {
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={REPORT_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'reports' ? summary.total : branch.id === 'issue' ? summary.ready : branch.id === 'evidence' ? summary.blocked : branch.id === 'approval' ? summary.issued : undefined,
+          status: branch.id === 'evidence' && summary.blocked > 0 ? 'blocked' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="Report issue gates"
         title="Reports"
@@ -171,7 +197,7 @@ export default function ReportsClient() {
           <label><span>Evidence for Linking</span><select value={evidenceId} onChange={(event) => setEvidenceId(event.target.value)}><option value="">Select evidence</option>{evidence.map((item) => <option key={item.evidence_id} value={item.evidence_id}>{item.evidence_code ?? item.evidence_id} - {item.original_filename ?? item.file_name}</option>)}</select></label>
         </div>
         <CompactDataTable
-          rows={reports}
+          rows={branchReports}
           getRowKey={(report) => report.report_id}
           emptyTitle="No reports"
           emptyMessage="No reports found. Generate a draft after inspection and integrity decision records are ready."
@@ -181,7 +207,7 @@ export default function ReportsClient() {
             { header: 'Status', render: (report) => <StatusBadge status={report.report_status} label={report.report_status === 'draft' ? 'draft' : report.report_status} /> },
             { header: 'Gate Summary', render: (report) => <GateSummary {...gateCounts(report)} /> },
             { header: 'Issue Readiness', render: (report) => <StatusBadge status={canIssue(report) ? 'approved' : report.report_status === 'issued' ? 'issued' : 'blocked'} label={canIssue(report) ? 'approved' : report.report_status === 'issued' ? 'issued' : 'blocked'} /> },
-            { header: 'Primary Action', className: 'pd-cell-actions', render: (report) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/reports/${report.report_id}`}>Detail</Link><button className="secondary-button" type="button" onClick={() => setSelected(report)}>View details</button><button className="primary-button" type="button" disabled={!canIssue(report)} onClick={() => setAction({ kind: 'issue', report })}>Issue</button></span> }
+            { header: 'Primary Action', className: 'pd-cell-actions', render: (report) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/reports/${report.report_id}`}>Detail</Link><button className="secondary-button" type="button" onClick={() => setSelected(report)}>Details</button><button className="primary-button" type="button" disabled={!canIssue(report)} onClick={() => setAction({ kind: 'issue', report })}>Issue</button></span> }
           ]}
         />
       </section>

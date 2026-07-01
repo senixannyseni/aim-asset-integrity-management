@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { CompactDataTable, DetailDrawer, DetailGrid, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type DashboardSection = Record<string, unknown>;
@@ -29,6 +30,15 @@ const SECTION_TITLES: Record<string, string> = {
   governance_warnings: 'Governance / Audit Warnings',
   not_available: 'Not Available'
 };
+
+const DASHBOARD_BRANCHES: ModuleBranchItem[] = [
+  { id: 'overview', label: 'Overview', description: 'Top status and KPIs', icon: 'OV' },
+  { id: 'reviews', label: 'Reviews', description: 'Pending approvals', icon: 'RQ' },
+  { id: 'blocked_reports', label: 'Blocked', description: 'Issue gate blockers', icon: 'BR' },
+  { id: 'evidence_gaps', label: 'Gaps', description: 'Missing evidence paths', icon: 'EG' },
+  { id: 'workflow_errors', label: 'Errors', description: 'Workflow warnings', icon: 'WE' },
+  { id: 'recent_audit', label: 'Audit', description: 'Governance sections', icon: 'AU' }
+];
 
 function renderValue(value: unknown): string {
   if (value === null || value === undefined) return '-';
@@ -84,14 +94,21 @@ export default function GovernanceDashboardClient() {
 
     return { assetCount, actionCount, reportReady, workOrders, aiQueue, calculations };
   }, [sections]);
+  const activeBranch = useActiveModuleBranch(DASHBOARD_BRANCHES);
+  const branchItems = DASHBOARD_BRANCHES.map((branch) => ({
+    ...branch,
+    count: branch.id === 'overview' ? kpis.assetCount : branch.id === 'reviews' ? kpis.calculations : branch.id === 'blocked_reports' ? kpis.reportReady : branch.id === 'evidence_gaps' ? firstNumber(sections?.evidence_readiness, 0) : branch.id === 'workflow_errors' ? kpis.actionCount : undefined,
+    status: branch.id === 'blocked_reports' || branch.id === 'workflow_errors' ? 'watch' : undefined
+  }));
 
   return (
     <div className="aim-preview-dashboard">
       <h1 className="sr-only">Governance Dashboard Readiness Overview</h1>
       {message && <div className="aim-alert aim-alert--amber">⚠ {message}</div>}
       {loading && <div className="aim-alert aim-alert--blue">Loading governance dashboard from AIM backend…</div>}
+      <ModuleBranchNav items={branchItems} activeId={activeBranch} />
 
-      <section className="aim-preview-grid-4" aria-label="AIM integrity status summary">
+      {activeBranch === 'overview' && <section className="aim-preview-grid-4" aria-label="AIM integrity status summary">
         <Link className="aim-kpi aim-kpi--navy" href="/assets">
           <span className="aim-kpi__value">{kpis.assetCount}</span>
           <span className="aim-kpi__label">Total Assets</span>
@@ -112,9 +129,9 @@ export default function GovernanceDashboardClient() {
           <span className="aim-kpi__label">Report Readiness</span>
           <span className="aim-kpi__sub">report gate indicators</span>
         </Link>
-      </section>
+      </section>}
 
-      <section className="aim-preview-grid-4" aria-label="Operational queues">
+      {activeBranch === 'reviews' && <section className="aim-preview-grid-4" aria-label="Operational queues">
         <Link className="aim-mini-card" href="/reviews">
           <span className="aim-mini-card__icon" style={{ background: '#fffbeb' }}>⏱</span>
           <span><span className="aim-mini-card__value">{kpis.calculations}</span><span className="aim-mini-card__label">Pending Approvals</span></span>
@@ -131,9 +148,9 @@ export default function GovernanceDashboardClient() {
           <span className="aim-mini-card__icon" style={{ background: '#f0fdfa' }}>📷</span>
           <span><span className="aim-mini-card__value">{kpis.aiQueue}</span><span className="aim-mini-card__label">Photo Review Queue</span></span>
         </Link>
-      </section>
+      </section>}
 
-      <section className="aim-split-panels">
+      {activeBranch === 'reviews' && <section className="aim-split-panels">
         <div className="aim-panel">
           <div className="aim-panel__head"><span>⏱</span><span className="aim-panel__title">Pending Tasks</span><span className="badge badge-warning">Review</span></div>
           <Link className="aim-activity-row" href="/calculations"><span>🔢</span><span><strong>Calculation review readiness</strong><br /><small>Formula version, input evidence, warning, and approval gates</small></span></Link>
@@ -158,9 +175,39 @@ export default function GovernanceDashboardClient() {
           <Link className="aim-activity-row" href="/integrity-decisions"><span>🛡</span><span><strong>Integrity Decisions</strong><br /><small>Human-owned engineering decision records</small></span></Link>
           <Link className="aim-activity-row" href="/work-orders"><span>🔧</span><span><strong>Work Orders</strong><br /><small>Internal fallback before external CMMS</small></span></Link>
         </div>
-      </section>
+      </section>}
 
-      {overview && (
+      {activeBranch === 'blocked_reports' && (
+        <section className="aim-panel">
+          <div className="aim-panel__head"><span className="aim-panel__title">Blocked Reports</span><Link className="aim-panel__link" href="/reports">Open reports</Link></div>
+          <div className="aim-panel__body">
+            <p>{kpis.reportReady} report gate indicator(s) need issue-readiness review. The issue action stays backend-gated until report, evidence, calculation, decision, and approval checks pass.</p>
+          </div>
+        </section>
+      )}
+
+      {activeBranch === 'evidence_gaps' && (
+        <section className="aim-panel">
+          <div className="aim-panel__head"><span className="aim-panel__title">Evidence Gaps</span><Link className="aim-panel__link" href="/evidence-traceability">Traceability</Link></div>
+          <div className="aim-panel__body">
+            <p>Evidence readiness remains visible because missing links can block calculation review, integrity decisions, report issue, and work-order closure.</p>
+            <div className="action-row"><Link className="secondary-button" href="/evidence">Evidence Repository</Link><Link className="secondary-button" href="/evidence-traceability">Evidence Traceability</Link></div>
+          </div>
+        </section>
+      )}
+
+      {activeBranch === 'workflow_errors' && (
+        <section className="aim-panel">
+          <div className="aim-panel__head"><span className="aim-panel__title">Workflow Errors</span><Link className="aim-panel__link" href="/workflow-console">Workflow console</Link></div>
+          <div className="aim-panel__body">
+            <p>{overview?.source_of_truth ?? 'AIM remains the system of record. n8n orchestrates only through AIM APIs.'}</p>
+            <p>{overview?.redaction_notice ?? 'Final engineering data, reports, and approvals remain backend-gated and auditable.'}</p>
+            <div className="aim-alert aim-alert--blue">Read-only dashboard · permission: {overview?.permission_required ?? 'dashboard.view'}</div>
+          </div>
+        </section>
+      )}
+
+      {activeBranch === 'recent_audit' && overview && (
         <section className="aim-panel">
           <div className="aim-panel__head"><span>📊</span><span className="aim-panel__title">Backend Governance Sections</span></div>
           <div className="aim-panel__body">
@@ -174,7 +221,7 @@ export default function GovernanceDashboardClient() {
                 { header: 'Status', render: ([sectionKey]) => <StatusBadge status={sectionKey.includes('warning') ? 'needs_review' : sectionKey.includes('report') ? 'blocked' : 'pending_review'} /> },
                 { header: 'Summary', render: ([, section]) => `${visibleEntries(section).length} fields returned` },
                 { header: 'Next Action', render: ([, section]) => typeof section.link === 'string' ? <Link href={section.link}>Open workspace</Link> : <span className="muted-text">No route</span> },
-                { header: 'Details', className: 'pd-cell-actions', render: ([sectionKey, section]) => <button className="secondary-button" type="button" onClick={() => setSelectedSection({ key: sectionKey, section })}>View details</button> }
+                { header: 'Details', className: 'pd-cell-actions', render: ([sectionKey, section]) => <button className="secondary-button" type="button" onClick={() => setSelectedSection({ key: sectionKey, section })}>Details</button> }
               ]}
             />
           </div>

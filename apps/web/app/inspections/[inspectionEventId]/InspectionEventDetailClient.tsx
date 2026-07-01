@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../../components/ModuleBranchNav';
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } };
 type ReadinessGate = { gate_type: string; gate_status: 'pass' | 'warning' | 'fail' | string; blocking?: boolean; message?: string; metadata?: Record<string, unknown> };
@@ -21,6 +22,17 @@ type InspectionReadiness = {
   audit_events?: Array<Record<string, unknown>>;
   governance_notes?: string[];
 };
+
+const INSPECTION_DETAIL_BRANCHES: ModuleBranchItem[] = [
+  { id: 'overview', label: 'Overview', description: 'Package summary', icon: 'OV' },
+  { id: 'scope', label: 'Scope', description: 'Inspection scope', icon: 'SC' },
+  { id: 'evidence', label: 'Evidence', description: 'Evidence coverage', icon: 'EV' },
+  { id: 'findings', label: 'Findings', description: 'Anomalies', icon: 'FI' },
+  { id: 'ndt', label: 'NDT', description: 'NDT coverage', icon: 'ND' },
+  { id: 'readiness', label: 'Gates', ariaLabel: 'Inspection Package Readiness', description: 'RC4-Q gates', icon: 'RD' },
+  { id: 'review', label: 'Review', description: 'Review trace', icon: 'RV' },
+  { id: 'audit', label: 'Audit', description: 'Audit timeline', icon: 'AU' }
+];
 
 function displayValue(value: unknown, fallback = '-'): string {
   return value === null || value === undefined || value === '' ? fallback : String(value);
@@ -76,8 +88,17 @@ export default function InspectionEventDetailClient({ inspectionEventId }: { ins
   const context = readiness?.linked_context ?? {};
   const evidenceRows = readiness?.evidence_traceability?.linked_evidence ?? [];
   const auditRows = readiness?.audit_events ?? [];
+  const activeBranch = useActiveModuleBranch(INSPECTION_DETAIL_BRANCHES);
 
   return <main className="app-shell">
+    <ModuleBranchNav
+      items={INSPECTION_DETAIL_BRANCHES.map((branch) => ({
+        ...branch,
+        count: branch.id === 'evidence' ? evidenceRows.length : branch.id === 'audit' ? auditRows.length : branch.id === 'readiness' ? readiness?.gate_summary?.blocking ?? 0 : undefined,
+        status: branch.id === 'readiness' && (readiness?.gate_summary?.blocking ?? 0) > 0 ? 'blocked' : undefined
+      }))}
+      activeId={activeBranch}
+    />
     <header className="page-header">
       <div>
         <p className="eyebrow">RC4-Q</p>
@@ -97,14 +118,14 @@ export default function InspectionEventDetailClient({ inspectionEventId }: { ins
     {error && <section className="error-list" role="alert"><h2>Request failed</h2><p>{error}</p></section>}
 
     {readiness && <>
-      <section className="cards">
+      {activeBranch === 'overview' && <section className="cards">
         <article><h2>{displayValue(inspection?.inspection_code)}</h2><p>Inspection code</p></article>
         <article><h2>{readiness.ready_for_downstream_use ? 'Ready' : 'Not ready'}</h2><p>Downstream readiness</p></article>
         <article><h2>{displayValue(readiness.gate_summary?.blocking ?? 0)}</h2><p>Blocking gates</p></article>
         <article><h2>{displayValue(readiness.evidence_traceability?.direct_evidence_count ?? 0)}</h2><p>Linked evidence</p></article>
-      </section>
+      </section>}
 
-      <section className="panel">
+      {activeBranch === 'scope' && <section className="panel">
         <div className="panel-heading row-between"><div><h2>Inspection Scope</h2><p>Inspection package metadata from AIM PostgreSQL.</p></div><span className={badgeClass(inspection?.status)}>{displayValue(inspection?.status)}</span></div>
         <dl className="detail-grid">
           <dt>Inspection Event ID</dt><dd>{inspectionEventId}</dd>
@@ -114,26 +135,24 @@ export default function InspectionEventDetailClient({ inspectionEventId }: { ins
           <dt>Summary</dt><dd>{displayValue(inspection?.summary)}</dd>
           <dt>Created / Updated</dt><dd>{dateValue(inspection?.created_at)} / {dateValue(inspection?.updated_at)}</dd>
         </dl>
-      </section>
+      </section>}
 
-      <section className="panel">
+      {activeBranch === 'readiness' && <section className="panel">
         <div className="panel-heading"><h2>Inspection Package Readiness Gates</h2><p>Preview-only gates. This page does not approve, calculate, issue reports, or close work orders.</p></div>
         <div className="table-wrap"><table><thead><tr><th>Gate</th><th>Status</th><th>Blocking</th><th>Message</th></tr></thead><tbody>{(readiness.readiness_gates ?? []).map((gate) => <tr key={gate.gate_type}><td>{gate.gate_type}</td><td><span className={badgeClass(gate.gate_status)}>{gate.gate_status}</span></td><td>{gate.blocking ? 'yes' : 'no'}</td><td>{displayValue(gate.message)}</td></tr>)}</tbody></table></div>
-      </section>
+      </section>}
 
-      <section className="cards">
+      {activeBranch === 'overview' && <section className="cards">
         {Object.entries(readiness.package_counts ?? {}).map(([key, value]) => <article key={key}><h2>{value}</h2><p>{key.replaceAll('_', ' ')}</p></article>)}
-      </section>
+      </section>}
 
-      <TraceTable title="Evidence Coverage" rows={evidenceRows} emptyMessage="Direct same-asset evidence linked to the inspection package." />
-      <TraceTable title="NDT Measurement Coverage" rows={context.ndt_measurements ?? []} emptyMessage="NDT measurements linked to this inspection event." />
-      <TraceTable title="Findings / Anomalies" rows={context.findings ?? []} emptyMessage="Findings raised from this inspection package." />
-      <TraceTable title="Calculation Runs" rows={context.calculation_runs ?? []} emptyMessage="Deterministic calculation runs using this inspection context." />
-      <TraceTable title="Review / Approval Trace" rows={[...(context.engineering_reviews ?? []), ...(context.approval_records ?? [])]} emptyMessage="Human engineering review and approval trace." />
-      <TraceTable title="Downstream Decisions, Reports, and Work Orders" rows={[...(context.integrity_decisions ?? []), ...(context.reports ?? []), ...(context.internal_work_orders ?? [])]} emptyMessage="Downstream engineering outputs linked to this inspection package." />
-      <TraceTable title="Audit Timeline" rows={auditRows} emptyMessage="Audit events for the inspection package and related engineering records." />
+      {activeBranch === 'evidence' && <TraceTable title="Evidence Coverage" rows={evidenceRows} emptyMessage="Direct same-asset evidence linked to the inspection package." />}
+      {activeBranch === 'ndt' && <TraceTable title="NDT Measurement Coverage" rows={context.ndt_measurements ?? []} emptyMessage="NDT measurements linked to this inspection event." />}
+      {activeBranch === 'findings' && <TraceTable title="Findings / Anomalies" rows={context.findings ?? []} emptyMessage="Findings raised from this inspection package." />}
+      {activeBranch === 'review' && <><TraceTable title="Calculation Runs" rows={context.calculation_runs ?? []} emptyMessage="Deterministic calculation runs using this inspection context." /><TraceTable title="Review / Approval Trace" rows={[...(context.engineering_reviews ?? []), ...(context.approval_records ?? [])]} emptyMessage="Human engineering review and approval trace." /><TraceTable title="Downstream Decisions, Reports, and Work Orders" rows={[...(context.integrity_decisions ?? []), ...(context.reports ?? []), ...(context.internal_work_orders ?? [])]} emptyMessage="Downstream engineering outputs linked to this inspection package." /></>}
+      {activeBranch === 'audit' && <TraceTable title="Audit Timeline" rows={auditRows} emptyMessage="Audit events for the inspection package and related engineering records." />}
 
-      <section className="notice"><h2>Governance Notes</h2><ul>{(readiness.governance_notes ?? []).map((note) => <li key={note}>{note}</li>)}</ul></section>
+      {activeBranch === 'readiness' && <section className="notice"><h2>Governance Notes</h2><ul>{(readiness.governance_notes ?? []).map((note) => <li key={note}>{note}</li>)}</ul></section>}
     </>}
   </main>;
 }

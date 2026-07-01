@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { ActionModal, CompactDataTable, DetailDrawer, DetailGrid, GateSummary, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type ReviewCard = {
@@ -18,6 +19,16 @@ type ReviewCard = {
   sourceReference: string;
   rawValue: Record<string, unknown>;
 };
+
+const PHOTO_BRANCHES: ModuleBranchItem[] = [
+  { id: 'jobs', label: 'Jobs', description: 'Extraction jobs', icon: 'JB' },
+  { id: 'fields_review', label: 'Review', description: 'Validation flags', icon: 'FR' },
+  { id: 'approved', label: 'Approved', description: 'Reviewed fields', icon: 'AP' },
+  { id: 'corrected', label: 'Corrected', description: 'Correction queue', icon: 'CO' },
+  { id: 'rejected', label: 'Rejected', description: 'Rejected or blocked', icon: 'RJ' },
+  { id: 'promotion', label: 'Promote', description: 'Gate summary', icon: 'PR' },
+  { id: 'audit', label: 'Audit', description: 'Review trail', icon: 'AU' }
+];
 
 const reviewCards: ReviewCard[] = [
   { id: 'photo-12', title: 'Photo 12', evidence: 'EVD-2024-000001', asset: 'AST-0042', page: 'p. 12', component: 'Shell', defect: 'Coating defect', confidence: 0.82, status: 'needs_review', validationFlags: ['component_match'], sourceReference: 'Photo appendix p. 12', rawValue: { model_label: 'coating defect', bbox: [120, 42, 320, 188], prompt_version: 'photo-defect-v1' } },
@@ -43,9 +54,25 @@ export default function AiPhotoExtractionPage() {
     const fieldsNeedingReview = reviewCards.reduce((total, card) => total + card.validationFlags.length, 0);
     return { total: reviewCards.length, blocked, needsReview, reviewed, fieldsNeedingReview };
   }, []);
+  const activeBranch = useActiveModuleBranch(PHOTO_BRANCHES, 'jobs');
+  const branchCards = useMemo(() => reviewCards.filter((card) => {
+    if (activeBranch === 'fields_review') return card.validationFlags.length > 0;
+    if (activeBranch === 'approved') return card.status === 'approved';
+    if (activeBranch === 'corrected') return card.status === 'pending_review';
+    if (activeBranch === 'rejected') return card.status === 'blocked';
+    return true;
+  }), [activeBranch]);
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={PHOTO_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'jobs' ? summary.total : branch.id === 'fields_review' ? summary.fieldsNeedingReview : branch.id === 'rejected' ? summary.blocked : branch.id === 'approved' ? summary.reviewed : undefined,
+          status: branch.id === 'promotion' ? 'review' : branch.id === 'rejected' && summary.blocked > 0 ? 'blocked' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="Photo staging review"
         title="Photo Extraction Review"
@@ -54,14 +81,14 @@ export default function AiPhotoExtractionPage() {
         actions={<><Link className="secondary-button" href="/evidence">Evidence Repository</Link><Link className="secondary-button" href="/reviews">Photo Field Review</Link><Link className="secondary-button" href="/audit-logs">Audit Logs</Link></>}
       />
 
-      <div className="aim-alert aim-alert--amber">Photo extracted values are not final engineering data. Promotion and approval remain backend-gated human review actions.</div>
+      <div className="aim-alert aim-alert--amber">AI output is staging data only. Engineer review is required before promotion.</div>
 
-      <section className="pd-kpi-grid" aria-label="Photo extraction summary">
+      {activeBranch !== 'audit' && <section className="pd-kpi-grid" aria-label="Photo extraction summary">
         <KpiCard title="Extraction Jobs" value="3" helper="evidence packages processed" />
         <KpiCard title="Needs Review" value={summary.needsReview} helper="fields requiring human attention" status="needs_review" />
         <KpiCard title="Blocked" value={summary.blocked} helper="source or confidence gate failed" status={summary.blocked > 0 ? 'blocked' : 'approved'} />
         <KpiCard title="Review Fields" value={summary.fieldsNeedingReview} helper="validation flags in staging data" status="pending_review" />
-      </section>
+      </section>}
 
       <section className="panel wide-panel">
         <div className="panel-heading row-between">
@@ -71,8 +98,12 @@ export default function AiPhotoExtractionPage() {
           </div>
           <StatusBadge status="pending_review" label="staging/review" />
         </div>
-        <CompactDataTable
-          rows={reviewCards}
+        {activeBranch === 'promotion' ? (
+          <GateSummary pass={summary.reviewed} warning={summary.needsReview} fail={summary.blocked} label="Promotion readiness for photo extraction staging data" />
+        ) : activeBranch === 'audit' ? (
+          <div className="module-branch-panel"><p className="muted-text">Audit trail for extraction review and promotion readiness stays in immutable audit logs.</p><Link className="secondary-button" href="/audit-logs?entity_type=ai_extraction_job">Open audit logs</Link></div>
+        ) : <CompactDataTable
+          rows={branchCards}
           getRowKey={(card) => card.id}
           emptyTitle="No extraction jobs"
           emptyMessage="No photo extraction jobs found. Start from Evidence Room or create a new extraction job."
@@ -82,9 +113,9 @@ export default function AiPhotoExtractionPage() {
             { header: 'Status', render: (card) => <StatusBadge status={card.status} /> },
             { header: 'Confidence', render: (card) => <span>{Math.round(card.confidence * 100)}%<br /><StatusBadge status={confidenceStatus(card.confidence)} label={confidenceStatus(card.confidence)} /></span> },
             { header: 'Fields Needing Review', render: (card) => card.validationFlags.length },
-            { header: 'Action', className: 'pd-cell-actions', render: (card) => <span className="pd-compact-actions"><button className="secondary-button" type="button" onClick={() => setSelected(card)}>View details</button><button className="secondary-button" type="button" onClick={() => setActionTarget(card)}>Review</button></span> }
+            { header: 'Action', className: 'pd-cell-actions', render: (card) => <span className="pd-compact-actions"><button className="secondary-button" type="button" onClick={() => setSelected(card)}>Details</button><button className="secondary-button" type="button" onClick={() => setActionTarget(card)}>Review</button></span> }
           ]}
-        />
+        />}
       </section>
 
       <DetailDrawer

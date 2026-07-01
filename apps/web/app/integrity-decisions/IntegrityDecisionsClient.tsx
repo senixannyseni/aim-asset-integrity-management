@@ -3,11 +3,21 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api-client';
+import { ModuleBranchNav, useActiveModuleBranch, type ModuleBranchItem } from '../components/ModuleBranchNav';
 import { ActionModal, CompactDataTable, DetailDrawer, DetailGrid, KpiCard, PageHeader, StatusBadge, TechnicalJson } from '../components/ProgressiveDisclosure';
 
 type CalculationRun = { calculation_run_id: string; run_id?: string; asset_id: string; inspection_event_id?: string; approval_status?: string; review_status?: string };
 type EvidenceRecord = { evidence_id: string; evidence_code?: string; original_filename?: string; file_name?: string };
 type IntegrityDecision = { integrity_decision_id: string; decision_code?: string; asset_id: string; calculation_run_id: string; integrity_status: string; decision_status: string; decision_summary?: string; evidence_count?: number };
+
+const DECISION_BRANCHES: ModuleBranchItem[] = [
+  { id: 'open', label: 'Open', description: 'Pending records', icon: 'OP' },
+  { id: 'approved', label: 'Approved', description: 'Approved records', icon: 'AP' },
+  { id: 'work_order', label: 'Work', description: 'Follow-up action', icon: 'WO' },
+  { id: 'inspection', label: 'Inspect', description: 'Inspection action', icon: 'IN' },
+  { id: 'evidence', label: 'Basis', description: 'Evidence gates', icon: 'EV' },
+  { id: 'audit', label: 'Audit', description: 'Decision trail', icon: 'AU' }
+];
 
 function messageFromPayload(payload: Record<string, unknown>): string {
   const error = payload.error as { message?: string; code?: string } | undefined;
@@ -57,6 +67,16 @@ export default function IntegrityDecisionsClient() {
     const blocked = decisions.filter((decision) => Number(decision.evidence_count ?? 0) === 0 || decision.decision_status === 'rejected').length;
     return { total: decisions.length, approved, pending, blocked };
   }, [decisions]);
+  const activeBranch = useActiveModuleBranch(DECISION_BRANCHES, 'open');
+  const branchDecisions = useMemo(() => decisions.filter((decision) => {
+    const statusText = `${decision.decision_status} ${decision.integrity_status} ${decision.decision_summary ?? ''}`.toLowerCase();
+    if (activeBranch === 'approved') return decision.decision_status === 'approved';
+    if (activeBranch === 'work_order') return statusText.includes('work') || statusText.includes('action');
+    if (activeBranch === 'inspection') return statusText.includes('inspection');
+    if (activeBranch === 'evidence') return Number(decision.evidence_count ?? 0) === 0;
+    if (activeBranch === 'audit') return true;
+    return decision.decision_status !== 'approved' && decision.decision_status !== 'rejected';
+  }), [activeBranch, decisions]);
 
   async function createDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -107,6 +127,14 @@ export default function IntegrityDecisionsClient() {
 
   return (
     <main className="app-shell">
+      <ModuleBranchNav
+        items={DECISION_BRANCHES.map((branch) => ({
+          ...branch,
+          count: branch.id === 'open' ? counts.pending : branch.id === 'approved' ? counts.approved : branch.id === 'evidence' ? counts.blocked : undefined,
+          status: branch.id === 'evidence' && counts.blocked > 0 ? 'blocked' : undefined
+        }))}
+        activeId={activeBranch}
+      />
       <PageHeader
         eyebrow="Human-owned decisions"
         title="Integrity Decisions"
@@ -134,7 +162,7 @@ export default function IntegrityDecisionsClient() {
           <label><span>Evidence for Linking</span><select value={evidenceId} onChange={(event) => setEvidenceId(event.target.value)}><option value="">Select evidence</option>{evidence.map((item) => <option key={item.evidence_id} value={item.evidence_id}>{item.evidence_code ?? item.evidence_id} - {item.original_filename ?? item.file_name}</option>)}</select></label>
         </div>
         <CompactDataTable
-          rows={decisions}
+          rows={branchDecisions}
           getRowKey={(decision) => decision.integrity_decision_id}
           emptyTitle="No integrity decisions"
           emptyMessage="Create one after inspection, evidence, NDT, and calculation gates are complete."
@@ -144,7 +172,7 @@ export default function IntegrityDecisionsClient() {
             { header: 'Recommendation', render: (decision) => <StatusBadge status={decision.integrity_status} /> },
             { header: 'Review State', render: (decision) => <StatusBadge status={decision.decision_status} /> },
             { header: 'Evidence', render: (decision) => Number(decision.evidence_count ?? 0) > 0 ? <StatusBadge status="approved" label={`linked (${decision.evidence_count})`} /> : <StatusBadge status="blocked" label="missing" /> },
-            { header: 'Action', className: 'pd-cell-actions', render: (decision) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/integrity-decisions/${decision.integrity_decision_id}`}>Decision readiness</Link><button className="secondary-button" type="button" onClick={() => setSelected(decision)}>View details</button><button className="primary-button" type="button" disabled={Number(decision.evidence_count ?? 0) === 0 || decision.decision_status === 'approved'} onClick={() => setActionTarget(decision)}>Approve</button></span> }
+            { header: 'Action', className: 'pd-cell-actions', render: (decision) => <span className="pd-compact-actions"><Link className="secondary-button" href={`/integrity-decisions/${decision.integrity_decision_id}`}>Decision readiness</Link><button className="secondary-button" type="button" onClick={() => setSelected(decision)}>Details</button><button className="primary-button" type="button" disabled={Number(decision.evidence_count ?? 0) === 0 || decision.decision_status === 'approved'} onClick={() => setActionTarget(decision)}>Approve</button></span> }
           ]}
         />
       </section>
