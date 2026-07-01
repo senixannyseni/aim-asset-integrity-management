@@ -1,6 +1,3 @@
--- Optional manual seed equivalent to db/migrations/0034_calculation_formula_library_runtime_bridge.sql.
--- Use db:migrate for the normal application path.
-
 -- RC4-AA: Calculation formula-library runtime bridge.
 -- Scope: seed controlled AIM MVP shell-thickness fixture formulas into the existing
 -- formula_registry/formula_versions schema so calculation runs can persist traceable

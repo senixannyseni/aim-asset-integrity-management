@@ -14,6 +14,11 @@ import {
 } from "../modules/calculation-engine/deterministic-engine.js";
 import type { ValidationContext } from "../modules/engineering-validation/validation-engine.js";
 import { assertFormulaVersionIsExecutable } from "../modules/formula-registry/executable-sync.js";
+import {
+  buildFormulaLibraryRunArtifacts,
+  FORMULA_LIBRARY_RUN_SET,
+  normalizeFormulaLibraryRunRequest,
+} from "../modules/calculations/formula-library-run.js";
 
 export const calculationsRouter = Router();
 
@@ -942,6 +947,335 @@ calculationsRouter.get(
       });
     } catch (error) {
       next(error);
+    }
+  },
+);
+
+
+calculationsRouter.post(
+  "/engineering/calculations/formula-library/run",
+  requirePermission("calculation.run"),
+  async (req, res, next) => {
+    const { request: runRequest, issues } = normalizeFormulaLibraryRunRequest(req.body);
+    if (issues.length > 0 || !runRequest) {
+      res.status(400).json({
+        error: {
+          code: "VALIDATION_FAILED",
+          message:
+            "Formula library calculation run requires explicit formula_code=status_logic, formula_version=1.0.0, asset_id, and shell-thickness inputs.",
+          details: issues,
+        },
+      });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const tenant = requireTenantContextFromRequest(req);
+
+      const assetResult = await client.query<DbRow>(
+        "select id from assets where id = $1::uuid and tenant_id = $2::uuid and deleted_at is null",
+        [runRequest.asset_id, tenant.tenantId],
+      );
+      if (assetResult.rowCount === 0) {
+        await client.query("rollback");
+        res.status(404).json({
+          error: {
+            code: "ASSET_NOT_FOUND",
+            message: "asset_id must reference an active asset in the current tenant.",
+          },
+        });
+        return;
+      }
+
+      if (runRequest.inspection_event_id) {
+        const inspectionResult = await client.query(
+          "select id from inspection_events where id = $1::uuid and asset_id = $2::uuid and tenant_id = $3::uuid",
+          [runRequest.inspection_event_id, runRequest.asset_id, tenant.tenantId],
+        );
+        if (inspectionResult.rowCount === 0) {
+          await client.query("rollback");
+          validationError(
+            res,
+            "inspection_event_id",
+            "inspection_event_id must belong to the selected tenant asset.",
+          );
+          return;
+        }
+      }
+
+      const formula = await getApprovedFormulaVersion(
+        client,
+        runRequest.formula_code,
+        runRequest.formula_version,
+      );
+      try {
+        assertFormulaVersionIsExecutable(formula);
+      } catch (guardrailError) {
+        await writeAudit(
+          client,
+          req,
+          "FORMULA_LIBRARY_RUN_BLOCKED",
+          "formula_versions",
+          null,
+          null,
+          {
+            requested_formula_code: runRequest.formula_code,
+            requested_formula_version: runRequest.formula_version,
+            formula_set: FORMULA_LIBRARY_RUN_SET,
+            reason:
+              guardrailError instanceof Error
+                ? guardrailError.message
+                : "Formula library run blocked.",
+          },
+          {
+            explicit_formula_version_required: true,
+            approved_synchronized_formula_versions_required: true,
+            no_silent_formula_default: true,
+            no_dynamic_formula_execution: true,
+          },
+        );
+        await client.query("commit");
+        res.status(400).json({
+          error: {
+            code: "APPROVED_FORMULA_LIBRARY_VERSION_REQUIRED",
+            message:
+              "Formula library calculation runs require an explicit approved synchronized status_logic@1.0.0 formula_versions record. Run migrations/seeds and obtain human approval before official execution.",
+          },
+        });
+        return;
+      }
+
+      const formulaVersionSnapshot = mapFormulaVersion(formula);
+      const artifacts = buildFormulaLibraryRunArtifacts(
+        runRequest,
+        formulaVersionSnapshot,
+      );
+      const runVersion = await nextRunVersion(
+        client,
+        runRequest.asset_id,
+        String(formula.id),
+        tenant.tenantId,
+      );
+      const runCode = `CALC-FLIB-${Date.now()}-${runVersion}`;
+      const formulaSetVersion = `${runRequest.formula_set}:${String(formulaVersionSnapshot.formula_code)}@${String(formulaVersionSnapshot.version)}`;
+
+      const runResult = await client.query<DbRow>(
+        `insert into calculation_runs(
+          tenant_id,
+          asset_id,
+          inspection_event_id,
+          formula_registry_id,
+          formula_version_id,
+          run_version,
+          status,
+          run_id,
+          run_status,
+          formula_set_version,
+          input_snapshot_hash,
+          validation_status,
+          output_summary,
+          review_status,
+          approval_status,
+          input_snapshot_json,
+          unit_normalized_input_json,
+          validation_result_json,
+          warnings_json,
+          formula_version_snapshot_json,
+          output_snapshot_json,
+          final_use_status,
+          final_use_disclaimer,
+          final_use_blockers_json,
+          output_snapshot_hash,
+          initiated_by,
+          created_by,
+          locked_flag
+        ) values (
+          $1, $2, $3, $4, $5,
+          $6, $7, $8, $9, $10, $11, $12, $13::jsonb, 'not_reviewed', 'not_requested',
+          $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb,
+          $20, $21, $22::jsonb, $23, $24, $24, false
+        ) returning *`,
+        [
+          tenant.tenantId,
+          runRequest.asset_id,
+          runRequest.inspection_event_id,
+          formula.id,
+          formula.formula_version_id,
+          runVersion,
+          artifacts.status,
+          runCode,
+          artifacts.runStatus,
+          formulaSetVersion,
+          artifacts.inputSnapshotHash,
+          artifacts.validationStatus,
+          JSON.stringify({
+            formula_set: runRequest.formula_set,
+            calculation_status: artifacts.result.calculation_status,
+            warning_code: artifacts.result.warning_code,
+            corrosion_rate_mm_y: artifacts.result.corrosion_rate_mm_y,
+            remaining_life_y: artifacts.result.remaining_life_y,
+            review_required: artifacts.result.review_required,
+          }),
+          JSON.stringify(artifacts.inputSnapshot),
+          JSON.stringify(artifacts.normalizedInputSnapshot),
+          JSON.stringify(artifacts.validationResult),
+          JSON.stringify(
+            artifacts.result.warning_code
+              ? [
+                  {
+                    code: artifacts.result.warning_code,
+                    calculation_status: artifacts.result.calculation_status,
+                  },
+                ]
+              : [],
+          ),
+          JSON.stringify(formulaVersionSnapshot),
+          JSON.stringify(artifacts.outputSnapshot),
+          artifacts.finalUseStatus,
+          ENGINEERING_REVIEW_DISCLAIMER,
+          JSON.stringify(artifacts.finalUseBlockers),
+          artifacts.outputSnapshotHash,
+          actorUserId(req),
+        ],
+      );
+      const run = runResult.rows[0];
+      const runId = String(run?.id ?? "");
+
+      for (const row of artifacts.inputRows) {
+        await client.query(
+          `insert into calculation_inputs(
+            calculation_run_id,
+            input_name,
+            raw_value,
+            normalized_value,
+            raw_unit,
+            normalized_unit,
+            source_entity_type,
+            source_entity_id,
+            evidence_file_id,
+            validation_status
+          ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            runId,
+            row.name,
+            row.rawValue,
+            row.normalizedValue,
+            row.rawUnit,
+            row.normalizedUnit,
+            row.sourceEntityType,
+            uuidOrNull(row.sourceEntityId),
+            uuidOrNull(row.evidenceFileId),
+            row.validationStatus,
+          ],
+        );
+      }
+
+      for (const row of artifacts.outputRows) {
+        await client.query(
+          `insert into calculation_outputs(
+            calculation_run_id,
+            output_name,
+            output_value,
+            output_unit,
+            output_json,
+            warning_code,
+            warning_message
+          ) values ($1, $2, $3, $4, $5::jsonb, $6, $7)`,
+          [
+            runId,
+            row.name,
+            row.value,
+            row.unit,
+            JSON.stringify(row.json),
+            row.warningCode,
+            row.warningMessage,
+          ],
+        );
+      }
+
+      const auditLogId = await writeAudit(
+        client,
+        req,
+        "calculation.formula_library_run_requested",
+        "calculation_run",
+        runId,
+        null,
+        {
+          run: mapRun(run ?? {}),
+          formula_version: formulaVersionSnapshot,
+          input_snapshot_hash: artifacts.inputSnapshotHash,
+        },
+        {
+          formula_set: runRequest.formula_set,
+          explicit_formula_version_required: true,
+          no_silent_formula_default: true,
+          no_eval_or_dynamic_formula_execution: true,
+        },
+      );
+      await writeAudit(
+        client,
+        req,
+        artifacts.validationStatus === "blocked"
+          ? "calculation.failed"
+          : "calculation.completed",
+        "calculation_run",
+        runId,
+        null,
+        {
+          result: artifacts.result,
+          output_snapshot_hash: artifacts.outputSnapshotHash,
+        },
+        {
+          final_use_status: artifacts.finalUseStatus,
+          final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER,
+        },
+      );
+      if (artifacts.result.warning_code) {
+        await writeAudit(
+          client,
+          req,
+          "calculation.warning_raised",
+          "calculation_run",
+          runId,
+          null,
+          artifacts.result,
+          { warning_code: artifacts.result.warning_code },
+        );
+      }
+      if (artifacts.finalUseStatus === "blocked") {
+        await writeAudit(
+          client,
+          req,
+          "calculation.final_use_blocked",
+          "calculation_run",
+          runId,
+          null,
+          artifacts.finalUseBlockers,
+          { blockers: artifacts.finalUseBlockers },
+        );
+      }
+
+      await client.query("commit");
+      res.status(artifacts.validationStatus === "blocked" ? 422 : 201).json({
+        data: {
+          ...mapRun(run ?? {}),
+          formula_set: runRequest.formula_set,
+          calculation: artifacts.result,
+          formula: mapFormula(formula),
+          formula_version: formulaVersionSnapshot,
+          input_snapshot_hash: artifacts.inputSnapshotHash,
+          output_snapshot_hash: artifacts.outputSnapshotHash,
+          final_use_disclaimer: ENGINEERING_REVIEW_DISCLAIMER,
+        },
+        auditLogId,
+      });
+    } catch (error) {
+      await client.query("rollback");
+      next(error);
+    } finally {
+      client.release();
     }
   },
 );
