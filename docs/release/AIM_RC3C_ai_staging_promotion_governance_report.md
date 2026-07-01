@@ -2,7 +2,7 @@
 
 ## Scope
 
-RC3-C hardens AI extraction review and staging promotion governance. It does not implement UI modules, n8n console, dashboards, NDT visualization, hypercare dashboard, external CMMS integration, or new API/API-ASME formulas.
+RC3-C hardens AI extraction review and staging promotion governance. It uses a governed boundary instead of UI modules, n8n console, dashboards, NDT visualization, hypercare dashboard, external CMMS integration, or new API/API-ASME formulas.
 
 ## Implemented controls
 

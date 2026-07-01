@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import { config } from '../config/env.js';
 
 const PBKDF2_ALGORITHM = 'sha256';
 const PBKDF2_ITERATIONS = 310_000;
@@ -26,12 +25,6 @@ export function verifyPassword(password: string, storedHash: string): boolean {
     if (!Number.isInteger(iterations) || iterations <= 0 || !salt || !expectedHash) return false;
     const actualHash = crypto.pbkdf2Sync(password, salt, iterations, PBKDF2_KEY_LENGTH, PBKDF2_ALGORITHM).toString('hex');
     return safeEqual(actualHash, expectedHash);
-  }
-
-  // LOCAL/TEST compatibility only for pre-existing placeholder demo hashes in the sprint baseline seed.
-  // Production users must use migrated real password hashes.
-  if (config.allowLocalDemoAuth && storedHash.includes('placeholder')) {
-    return password === config.authLocalDemoPassword;
   }
 
   return false;

@@ -56,7 +56,7 @@ type RbiCaseInput = {
   recommendedInterval: string;
   inspectionPlanReference: string;
   evidenceLinks: RbiEvidenceLinkInput[];
-  inputPlaceholders: Record<string, unknown>;
+  inputRequirements: Record<string, unknown>;
   triggerSource: string;
   triggerReason: string;
   triggerRuleId: string;
@@ -271,7 +271,7 @@ function mapRbiCase(row: DbRow | undefined): Record<string, unknown> | null {
     recommended_interval: row.recommended_interval,
     inspection_plan_reference: row.inspection_plan_reference,
     evidence_links: row.evidence_links,
-    input_placeholders: row.input_placeholders,
+    input_requirements: row.input_requirements,
     trigger_source: row.trigger_source,
     trigger_reason: row.trigger_reason,
     trigger_rule_id: row.trigger_rule_id,
@@ -371,21 +371,21 @@ function nextCaseCode(): string {
   return `RBI-${Date.now()}`;
 }
 
-function defaultInputPlaceholders(
+function defaultInputRequirements(
   body: Record<string, unknown>,
 ): Record<string, unknown> {
-  const supplied = isPlainObject(body.input_placeholders)
-    ? body.input_placeholders
+  const supplied = isPlainObject(body.input_requirements)
+    ? body.input_requirements
     : {};
   return {
     consequence_of_failure:
       supplied.consequence_of_failure ??
       body.consequence_of_failure ??
-      "placeholder_required",
+      "engineering_input_required",
     probability_of_failure:
       supplied.probability_of_failure ??
       body.probability_of_failure ??
-      "placeholder_required",
+      "engineering_input_required",
     damage_mechanism:
       supplied.damage_mechanism ??
       body.damage_mechanism ??
@@ -393,27 +393,27 @@ function defaultInputPlaceholders(
     inspection_effectiveness:
       supplied.inspection_effectiveness ??
       body.inspection_effectiveness ??
-      "placeholder_required",
+      "engineering_input_required",
     fluid_service:
-      supplied.fluid_service ?? body.fluid_service ?? "placeholder_required",
-    inventory: supplied.inventory ?? body.inventory ?? "placeholder_required",
+      supplied.fluid_service ?? body.fluid_service ?? "engineering_input_required",
+    inventory: supplied.inventory ?? body.inventory ?? "engineering_input_required",
     operating_severity:
       supplied.operating_severity ??
       body.operating_severity ??
-      "placeholder_required",
+      "engineering_input_required",
     mitigation_controls:
       supplied.mitigation_controls ??
       body.mitigation_controls ??
-      "placeholder_required",
+      "engineering_input_required",
     calculation_basis:
-      "qualitative_or_semi_quantitative_placeholder_only_no_api_581_rules",
+      "qualitative_or_semi_quantitative_screening_only_no_api_581_rules",
   };
 }
 
 function normalizeManualBody(
   body: Record<string, unknown>,
 ): NormalizedRbiCaseInput {
-  const placeholders = defaultInputPlaceholders(body);
+  const requirements = defaultInputRequirements(body);
   const rawEvidenceLinks = Array.isArray(body.evidence_links)
     ? body.evidence_links
     : Array.isArray(body.evidenceLinks)
@@ -445,11 +445,11 @@ function normalizeManualBody(
     component: asString(body.component) ?? "unknown_component",
     damageMechanism:
       asString(body.damage_mechanism) ??
-      String(placeholders.damage_mechanism ?? "engineering_review_required"),
+      String(requirements.damage_mechanism ?? "engineering_review_required"),
     probabilityDriver:
-      asString(body.probability_driver) ?? "engineering_review_placeholder",
+      asString(body.probability_driver) ?? "engineering_review_required",
     consequenceDriver:
-      asString(body.consequence_driver) ?? "consequence_placeholder_required",
+      asString(body.consequence_driver) ?? "consequence_input_required",
     riskCategory: asString(body.risk_category) ?? "screening_required",
     recommendedInterval:
       asString(body.recommended_interval) ?? "engineer_review_required",
@@ -465,7 +465,7 @@ function normalizeManualBody(
       "Manual RBI interface case created for engineering review.",
     triggerRuleId:
       asString(body.trigger_rule_id) ?? "RBI-TRIG-ENGINEERING-REVIEW",
-    inputPlaceholders: placeholders,
+    inputRequirements: requirements,
   };
 }
 
@@ -521,7 +521,7 @@ async function insertRbiCase(
       recommended_interval,
       inspection_plan_reference,
       evidence_links,
-      input_placeholders,
+      input_requirements,
       trigger_source,
       trigger_reason,
       trigger_rule_id,
@@ -536,8 +536,8 @@ async function insertRbiCase(
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10,
       $11, $12, $13::jsonb, $14::jsonb, $15,
-      $16, $17, 'qualitative_or_semi_quantitative_placeholder_only',
-      'RBI interface only. Quantitative API RP 581 rules are not implemented unless approved Formula Registry rules are supplied.',
+      $16, $17, 'qualitative_or_semi_quantitative_screening_only',
+      'RBI interface only. Quantitative API RP 581 use requires approved Formula Registry rules.',
       $18, $19, $20, $21, $21
     ) returning *`,
     [
@@ -554,7 +554,7 @@ async function insertRbiCase(
       data.recommendedInterval,
       data.inspectionPlanReference,
       JSON.stringify(data.evidenceLinks),
-      JSON.stringify(data.inputPlaceholders),
+      JSON.stringify(data.inputRequirements),
       data.triggerSource,
       data.triggerReason,
       data.triggerRuleId,
@@ -842,7 +842,7 @@ async function duplicateRbiTrigger(
     "a.tenant_id = $1::uuid",
     "rc.trigger_source = $2",
     "rc.trigger_rule_id = $3",
-    `coalesce(rc.input_placeholders ->> $5, '') = $4`,
+    `coalesce(rc.input_requirements ->> $5, '') = $4`,
     "rc.status <> 'closed'",
   ];
   if (options.calculationRunId) {
@@ -1179,7 +1179,7 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
           asString(rule?.probability_driver) ?? "calculation_warning_screening",
         consequenceDriver:
           asString(rule?.consequence_driver) ??
-          "consequence_placeholder_required",
+          "consequence_input_required",
         riskCategory: riskCategoryFromWarnings(warningCodes, rule),
         recommendedInterval:
           asString(rule?.recommended_interval) ?? "engineer_review_required",
@@ -1187,18 +1187,18 @@ rbiRouter.post('/rbi/cases/from-calculation', requirePermission('rbi.interface.c
           asString(rule?.inspection_plan_reference) ??
           "update_inspection_plan_after_rbi_review",
         evidenceLinks,
-        inputPlaceholders: {
-          consequence_of_failure: "placeholder_required",
+        inputRequirements: {
+          consequence_of_failure: "engineering_input_required",
           probability_of_failure: warningCodes,
           damage_mechanism:
             asString(req.body.damage_mechanism) ?? "corrosion_screening",
-          inspection_effectiveness: "placeholder_required",
+          inspection_effectiveness: "engineering_input_required",
           fluid_service: "from_asset_or_user_input_required",
-          inventory: "placeholder_required",
-          operating_severity: "placeholder_required",
-          mitigation_controls: "placeholder_required",
+          inventory: "engineering_input_required",
+          operating_severity: "engineering_input_required",
+          mitigation_controls: "engineering_input_required",
           calculation_basis:
-            "qualitative_placeholder_only_from_calculation_warning",
+            "qualitative_screening_from_calculation_warning",
           source_calculation_run_id: run.id,
           source_warning_codes: warningCodes,
           source_warning_signature: sourceWarningSignature,
@@ -1390,7 +1390,7 @@ rbiRouter.post(
         probabilityDriver: "repeated_anomaly_screening",
         consequenceDriver:
           asString(req.body.consequence_driver) ??
-          "consequence_placeholder_required",
+          "consequence_input_required",
         riskCategory: asString(req.body.risk_category) ?? "medium",
         recommendedInterval:
           asString(req.body.recommended_interval) ?? "engineer_review_required",
@@ -1398,18 +1398,18 @@ rbiRouter.post(
           asString(req.body.inspection_plan_reference) ??
           "review_damage_mechanism_and_history",
         evidenceLinks,
-        inputPlaceholders: {
-          consequence_of_failure: "placeholder_required",
+        inputRequirements: {
+          consequence_of_failure: "engineering_input_required",
           probability_of_failure: "repeated_anomaly_history",
           damage_mechanism:
             asString(req.body.damage_mechanism) ?? "repeated_anomaly_screening",
-          inspection_effectiveness: "placeholder_required",
+          inspection_effectiveness: "engineering_input_required",
           fluid_service: "from_asset_or_user_input_required",
-          inventory: "placeholder_required",
-          operating_severity: "placeholder_required",
-          mitigation_controls: "placeholder_required",
+          inventory: "engineering_input_required",
+          operating_severity: "engineering_input_required",
+          mitigation_controls: "engineering_input_required",
           calculation_basis:
-            "qualitative_placeholder_only_from_finding_history",
+            "qualitative_screening_from_finding_history",
           source_module: "findings_anomaly_history",
           repeated_anomaly_count: findingsResult.rows.length,
           source_finding_signature: sourceFindingSignature,

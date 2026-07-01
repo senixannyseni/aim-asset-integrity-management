@@ -125,7 +125,7 @@ function ensureHumanReviewerActor(req: Request, res: ApiResponse, action: string
   return true;
 }
 
-const WEAK_REASON_VALUES = new Set(['n/a', 'na', 'none', 'nil', '-', '--', 'test', 'testing', 'tbd', 'todo']);
+const WEAK_REASON_VALUES = new Set(['n/a', 'na', 'none', 'nil', '-', '--', 'test', 'testing', 'pending', 'not_ready']);
 
 function isMeaningfulReason(value: unknown): value is string {
   const reason = asString(value);

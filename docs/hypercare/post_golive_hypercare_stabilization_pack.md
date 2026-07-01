@@ -31,7 +31,7 @@ This package is intentionally documentation/evidence-control only. Post-go-live 
 
 ## 3. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, raw incident payloads, or vulnerability exploit details into hypercare documents. Use redacted placeholders and attach sensitive evidence only in approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, raw incident payloads, or vulnerability exploit details into hypercare documents. Use redacted fixtures and attach sensitive evidence only in approved secure evidence storage.
 
 ## 4. Required Human Review
 

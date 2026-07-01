@@ -3,9 +3,9 @@ import { AIM_AUTH_COOKIE } from './auth-routing';
 
 export const API_BASE = process.env.NEXT_PUBLIC_AIM_API_BASE_URL ?? 'http://localhost:4000';
 
-const DEMO_HEADERS_ENABLED = process.env.NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED === 'true';
+const DEV_HEADERS_ENABLED = process.env.NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED === 'true';
 
-export const DEV_DEMO_HEADERS: Record<string, string> = {
+export const DEV_AUTH_HEADERS: Record<string, string> = {
   'x-aim-demo-roles': 'admin',
   'x-aim-demo-email': 'admin@aim.local'
 };
@@ -216,8 +216,8 @@ function buildApiInit(init: AimRequestInit = {}): RequestInit {
     headers.set('x-aim-tenant-slug', tenantSelection.tenantSlug);
   }
 
-  if (DEMO_HEADERS_ENABLED) {
-    for (const [key, value] of Object.entries(DEV_DEMO_HEADERS)) {
+  if (DEV_HEADERS_ENABLED) {
+    for (const [key, value] of Object.entries(DEV_AUTH_HEADERS)) {
       if (!headers.has(key)) headers.set(key, value);
     }
   }

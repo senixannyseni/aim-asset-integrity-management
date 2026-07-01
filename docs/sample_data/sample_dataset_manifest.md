@@ -18,7 +18,7 @@ This dataset must not contain:
 - confidential engineering data,
 - proprietary API/ASME formulas.
 
-All emails use the reserved example domain `example.test`. All identifiers are deterministic UAT placeholders.
+All emails use the reserved example domain `example.test`. All identifiers are deterministic UAT fixtures.
 
 ## 1. Dataset Principles
 
@@ -64,7 +64,7 @@ All emails use the reserved example domain `example.test`. All identifiers are d
 | service_fluid | `Synthetic Diesel Service` |
 | asset_status | `active` |
 | design_code_reference | `API 650` as high-level metadata only; do not reproduce clauses. |
-| material | `UAT Material Placeholder` |
+| material | `UAT Material Fixture` |
 | Notes | Use only as synthetic metadata for workflow validation. |
 
 ## 5. Inspection Record
@@ -80,11 +80,11 @@ All emails use the reserved example domain `example.test`. All identifiers are d
 | lead_inspector | `inspector.uat@example.test` |
 | assigned_engineer | `engineer.uat@example.test` |
 
-## 6. Evidence Metadata Placeholders
+## 6. Evidence Metadata Fixtures
 
-No actual files are included by this manifest. Use small dummy files in local/UAT object storage only.
+No actual files are included by this manifest. Use small small fixture files in local/UAT object storage only.
 
-| Evidence Code | Placeholder File Name | File Type | MIME | Intended Link |
+| Evidence Code | Fixture File Name | File Type | MIME | Intended Link |
 |---|---|---|---|---|
 | `EVD-UAT-001` | `AIM-UAT-T-001_INS-001_INSPECTION_REPORT.pdf` | `.pdf` | `application/pdf` | extraction source, report attachment |
 | `EVD-UAT-002` | `AIM-UAT-T-001_INS-001_UT_READINGS.csv` | `.csv` | `text/csv` | NDT source, calculation input |
@@ -104,7 +104,7 @@ Required metadata fields:
 - `file_size_bytes`
 - `checksum`
 - `storage_uri`
-- `malware_scan_status` placeholder value such as `pending`, `not_configured`, or `passed` depending on implementation.
+- `malware_scan_status` fixture value such as `pending`, `not_configured`, or `passed` depending on implementation.
 
 ## 7. Evidence Links
 
@@ -267,7 +267,7 @@ If `db/seeds/0002_uat_sample_data.sql` is created later, it must:
 4. Use `example.test` emails only.
 5. Contain no secrets or production object storage paths.
 6. Avoid bypassing review/gate logic.
-7. Avoid external CMMS integration data beyond null/optional placeholder fields.
+7. Avoid external CMMS integration data beyond null/optional future-integration fields.
 8. Not change schema.
 9. Be run only in local/UAT databases, never production.
 

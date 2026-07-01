@@ -78,7 +78,7 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(route).not.toMatch(/insert into integrity_decisions/i);
   });
 
-  it('adds guided RBI list UI and case detail workflow actions with placeholder risk matrix labels', () => {
+  it('adds guided RBI list UI and case detail workflow actions with screening risk matrix labels', () => {
     const listUi = expectFile('apps/web/app/rbi/RbiInterfaceClient.tsx');
     const detailPage = expectFile('apps/web/app/rbi/[caseId]/page.tsx');
     const detailUi = expectFile('apps/web/app/rbi/[caseId]/RbiCaseDetailClient.tsx');
@@ -90,8 +90,8 @@ describe('RC4-I RBI workflow detail, guided UI, and duplicate prevention', () =>
     expect(listUi).toContain('Create from Calculation Warning');
     expect(listUi).toContain('Create from Repeated Finding History');
     expect(listUi).toContain('/api/v1/rbi/cases/from-finding-history');
-    expect(listUi).toContain('Risk Matrix Placeholder');
-    expect(listUi).toContain('placeholder/semi-quantitative');
+    expect(listUi).toContain('Risk Matrix Screening');
+    expect(listUi).toContain('screening/semi-quantitative');
     expect(listUi).toContain('Open detail');
     expect(detailPage).toContain('RbiCaseDetailClient');
     expect(detailUi).toContain('Status Update');

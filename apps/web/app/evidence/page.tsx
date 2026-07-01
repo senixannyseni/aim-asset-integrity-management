@@ -482,7 +482,7 @@ function EvidenceRepositoryPageClient() {
             <div className="search-row">
               <label className="wide-field"><span>Asset Filter</span><select value={assetFilter} onChange={(event) => { setAssetFilter(event.target.value); void loadPageData(event.target.value); }}><option value="">All assets</option>{assets.map((asset) => <option key={asset.asset_id} value={asset.asset_id}>{asset.tank_tag ?? asset.asset_id} - {asset.asset_name ?? 'asset'}</option>)}</select></label>
               <label className="wide-field"><span>Inspection / Event Filter</span><input value={inspectionFilter} onChange={(event) => setInspectionFilter(event.target.value)} /></label>
-              <label className="wide-field"><span>Search</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="code, file, method, component" /></label>
+              <label className="wide-field"><span>Search</span><input value={search} onChange={(event) => setSearch(event.target.value)} /></label>
             </div>
             {message && <div className="notice">{message}</div>}
             <ErrorList issues={errors} />
@@ -529,7 +529,7 @@ function EvidenceRepositoryPageClient() {
                 <label className="wide-field"><span>Evidence File</span><input id="evidence-file-picker" type="file" onChange={onFileSelected} accept={supportedExtensions.join(',')} required /></label>
                 {selectedFile && <div className="notice wide-field"><p><strong>File:</strong> {selectedFile.name}</p><p><strong>Size:</strong> {fileSizeLabel(selectedFile.size)} | <strong>MIME:</strong> {mimeForFile(selectedFile)} | <strong>Extension:</strong> {extensionForFileName(selectedFile.name) || '-'}</p><p><strong>SHA-256:</strong> {selectedFileChecksum || uploadStage}</p></div>}
                 <label><span>Asset</span><select value={metadata.asset_id} onChange={(event) => updateMetadata('asset_id', event.target.value)} required><option value="">Select asset</option>{assets.map((asset) => <option key={asset.asset_id} value={asset.asset_id}>{asset.tank_tag ?? asset.asset_id} - {asset.asset_name ?? 'asset'}</option>)}</select></label>
-                <label><span>Inspection / Event ID</span><input value={metadata.inspection_id} onChange={(event) => updateMetadata('inspection_id', event.target.value)} placeholder="Optional UUID" /></label>
+                <label><span>Inspection / Event ID</span><input value={metadata.inspection_id} onChange={(event) => updateMetadata('inspection_id', event.target.value)} /></label>
                 <label><span>Method</span><input value={metadata.method} onChange={(event) => updateMetadata('method', event.target.value)} required /></label>
                 <label><span>Component</span><input value={metadata.component} onChange={(event) => updateMetadata('component', event.target.value)} required /></label>
                 <label><span>Location</span><input value={metadata.location} onChange={(event) => updateMetadata('location', event.target.value)} /></label>

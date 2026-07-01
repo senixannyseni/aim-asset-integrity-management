@@ -55,7 +55,7 @@ export type RemainingLifeResult = {
 };
 
 export type DeterministicCalculationRequest = ValidationContext & {
-  calculation_scope?: 'thickness_screening' | 'corrosion_rate' | 'remaining_life' | 'inspection_interval_placeholder';
+  calculation_scope?: 'thickness_screening' | 'corrosion_rate' | 'remaining_life' | 'inspection_interval_review_required';
   calculation_request?: Record<string, unknown> | null;
   thresholds?: Record<string, unknown> | null;
 };

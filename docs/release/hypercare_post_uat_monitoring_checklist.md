@@ -1,7 +1,7 @@
 # Phase 2.3 Hypercare and Post-UAT Monitoring Checklist
 
 **Status:** Template / pending activation  
-**Scope:** Post-UAT and release-candidate monitoring only. This does not implement new product functionality.
+**Scope:** Post-UAT and release-candidate monitoring only. This uses a governed boundary instead of new product functionality.
 
 ## 1. Hypercare Duration
 

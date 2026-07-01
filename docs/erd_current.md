@@ -31,7 +31,7 @@ erDiagram
 
   users ||--o{ formula_registry : creates_updates_approves
   formula_registry ||--o{ formula_registry : previous_version
-  formula_registry ||--o{ formula_test_runs : placeholder_test_runs
+  formula_registry ||--o{ formula_test_runs : fixture_test_runs
 
   assets ||--o{ calculation_runs : calculation_runs
   formula_registry ||--o{ calculation_runs : formula_version
@@ -54,7 +54,7 @@ AIM/PostgreSQL stores final structured engineering data, metadata, validation sn
 
 ## Formula Registry Note
 
-Formula Registry rows represent controlled metadata versions. Formula expressions for API-controlled logic must remain controlled placeholders until manually entered and approved by authorized engineers using licensed sources or approved fixtures. The required `formula_expression_source` field preserves formula source traceability.
+Formula Registry rows represent controlled metadata versions. Formula expressions for API-controlled logic must remain controlled fixtures until manually entered and approved by authorized engineers using licensed sources or approved fixtures. The required `formula_expression_source` field preserves formula source traceability.
 
 
 ## FFS Trigger Workflow Note
@@ -66,16 +66,16 @@ FFS cases are governance trigger records aligned to API 579-1/ASME FFS-1 workflo
 
 `rbi_cases` is implemented as an API RP 580/581 governance interface table. It links to `assets`, optionally to `inspection_events`, optionally to `calculation_runs`, and evidence through both JSON snapshot metadata and `evidence_links` rows with `linked_entity_type = 'rbi_case'`.
 
-`rbi_trigger_rules` stores configurable trigger mappings from deterministic calculation warning codes or engineering review triggers to qualitative placeholder probability/consequence drivers and recommended inspection-plan actions.
+`rbi_trigger_rules` stores configurable trigger mappings from deterministic calculation warning codes or engineering review triggers to qualitative fixture probability/consequence drivers and recommended inspection-plan actions.
 
 No quantitative API RP 581 logic is represented in the ERD. Quantitative rules require future approved Formula Registry entries and a controlled executor.
 
 
 ## RC4-I RBI Detail Workflow and Repeated-Anomaly Trigger ERD Addendum
 
-RC4-I introduces no new tables. The logical relationship from `findings` to `rbi_cases` is represented through `rbi_cases.input_placeholders.source_findings`, `source_finding_signature`, `trigger_source = finding_history`, and supporting `evidence_links` rows where evidence exists. This is intentionally metadata/traceability only.
+RC4-I introduces no new tables. The logical relationship from `findings` to `rbi_cases` is represented through `rbi_cases.input_requirements.source_findings`, `source_finding_signature`, `trigger_source = finding_history`, and supporting `evidence_links` rows where evidence exists. This is intentionally metadata/traceability only.
 
-`calculation_runs` to `rbi_cases` duplicate prevention is represented through `calculation_run_id`, `trigger_rule_id`, and `input_placeholders.source_warning_signature`. Repeated finding duplicate prevention is represented through `asset_id`, `trigger_rule_id`, and `input_placeholders.source_finding_signature`.
+`calculation_runs` to `rbi_cases` duplicate prevention is represented through `calculation_run_id`, `trigger_rule_id`, and `input_requirements.source_warning_signature`. Repeated finding duplicate prevention is represented through `asset_id`, `trigger_rule_id`, and `input_requirements.source_finding_signature`.
 
 No quantitative API RP 581 probability/consequence equations, no automatic final integrity decision, and no report issuance logic are introduced.
 
@@ -145,7 +145,7 @@ Additional Phase 1.3 relationships and controls:
 - `staging_records` and `extraction_fields` may link to `manual_overrides` for human corrections.
 - `data_quality_checks` may reference extraction job, extraction field, or staging record.
 - `evidence_links` is the normalized linkage table for AI staging promotion evidence; evidence is not duplicated into final engineering records.
-- `evidence_files` has signed URL access/audit metadata and malware scan placeholder status.
+- `evidence_files` has signed URL access/audit metadata and malware scan fixture status.
 - Approval/report issue routes write to `audit_logs` and enforce RBAC, comments/reasons, and segregation-of-duty checks.
 
 ## Phase 1.4 OpenAPI and Contract Alignment Addendum

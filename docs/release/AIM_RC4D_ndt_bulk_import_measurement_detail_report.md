@@ -133,4 +133,4 @@ docs/uat/uat_rc4d_ndt_bulk_import_measurement_detail.md
 
 ## Out of Scope Preserved
 
-RC4-D does not implement Tank Asset Register changes, Evidence upload changes, validation-by-asset UX, Formula Registry synchronization, Calculation UI changes, calculation engine changes, FFS workflow changes, RBI workflow changes, engineering approval UX, report builder changes, n8n webhook integration, AI staging promotion handlers, new formulas, direct n8n database access, or backend NDT schema changes.
+RC4-D uses a governed boundary instead of Tank Asset Register changes, Evidence upload changes, validation-by-asset UX, Formula Registry synchronization, Calculation UI changes, calculation engine changes, FFS workflow changes, RBI workflow changes, engineering approval UX, report builder changes, n8n webhook integration, AI staging promotion handlers, new formulas, direct n8n database access, or backend NDT schema changes.

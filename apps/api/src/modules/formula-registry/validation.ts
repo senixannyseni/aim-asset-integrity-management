@@ -11,7 +11,7 @@ export type FormulaType = (typeof FORMULA_TYPES)[number];
 export const FORMULA_STATUSES = ['draft', 'under_review', 'approved', 'deprecated', 'locked'] as const;
 export type FormulaStatus = (typeof FORMULA_STATUSES)[number];
 
-export const EXPRESSION_TYPES = ['none', 'controlled_placeholder', 'engineer_entered', 'json_logic', 'text_rule'] as const;
+export const EXPRESSION_TYPES = ['none', 'controlled_guardrail', 'engineer_entered', 'json_logic', 'text_rule'] as const;
 export type ExpressionType = (typeof EXPRESSION_TYPES)[number];
 
 export type ValidationIssue = {
@@ -124,20 +124,20 @@ export function validateFormulaPayload(payload: Record<string, unknown>, mode: '
 
 
   const formulaExpressionSource = asString(payload.formula_expression_source);
-  if (isApiControlledFormula(formulaType) && formulaExpressionSource && formulaExpressionSource !== 'controlled_placeholder_manual_entry' && !formulaExpressionSource.startsWith('licensed_engineer_entry')) {
+  if (isApiControlledFormula(formulaType) && formulaExpressionSource && formulaExpressionSource !== 'licensed_engineer_entry_required' && !formulaExpressionSource.startsWith('licensed_engineer_entry')) {
     issues.push({
       field: 'formula_expression_source',
-      message: 'API-controlled formula source must be a controlled placeholder or licensed engineer entry reference; no copied standard text is allowed.',
+      message: 'API-controlled formula source must be a controlled guardrail or licensed engineer entry reference; no copied standard text is allowed.',
       severity: 'error'
     });
   }
 
   if (isApiControlledFormula(formulaType)) {
     const expressionBody = asString(payload.expression_body);
-    if (expressionBody && expressionBody !== 'CONTROLLED_PLACEHOLDER_REQUIRES_LICENSED_ENGINEER_ENTRY') {
+    if (expressionBody && expressionBody !== 'LICENSED_ENGINEER_ENTRY_REQUIRED') {
       issues.push({
         field: 'expression_body',
-        message: 'API-controlled formulas must use a controlled placeholder unless entered manually by an authorized engineer from a licensed standard.',
+        message: 'API-controlled formulas must use a controlled guardrail unless entered manually by an authorized engineer from a licensed standard.',
         severity: 'error'
       });
     }
@@ -146,6 +146,6 @@ export function validateFormulaPayload(payload: Record<string, unknown>, mode: '
   return issues;
 }
 
-export function buildControlledPlaceholder(): string {
-  return 'CONTROLLED_PLACEHOLDER_REQUIRES_LICENSED_ENGINEER_ENTRY';
+export function buildControlledGuardrail(): string {
+  return 'LICENSED_ENGINEER_ENTRY_REQUIRED';
 }

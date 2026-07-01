@@ -29,7 +29,7 @@ This package is intentionally documentation/evidence-control only. P5-4 does not
 
 ## 3. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, database dumps, confidential client evidence, or raw backup artifacts into P5-4 documents. Use redacted placeholders and attach sensitive recovery evidence only in approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, database dumps, confidential client evidence, or raw backup artifacts into P5-4 documents. Use redacted fixtures and attach sensitive recovery evidence only in approved secure evidence storage.
 
 ## 4. Required Human Review
 

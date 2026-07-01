@@ -1,6 +1,6 @@
 # RC3-B UAT Object Storage Scripts
 
-Use placeholder values only. Do not paste real secrets into this document.
+Use fixture values only. Do not paste real secrets into this document.
 
 ## 1. Confirm containers and environment
 

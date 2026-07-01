@@ -33,7 +33,7 @@ This package is intentionally documentation/evidence-control only. It does not a
 
 Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, customer PII, real customer data, confidential client evidence, customer commercial terms, contract redlines, invoice/payment details, tenant billing details, payment processing data, partner contract terms, partner credentials, confidential sales pipeline data, or vulnerability exploit details into this pack.
 
-Use redacted placeholders and approved evidence storage for sensitive commercial, customer, partner, legal, or financial material.
+Use redacted fixtures and approved evidence storage for sensitive commercial, customer, partner, legal, or financial material.
 
 ## 4. Required Human Review
 

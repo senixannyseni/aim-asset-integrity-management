@@ -16,7 +16,7 @@ This package is intentionally documentation/evidence-control only. P5-2 does not
 |---|---|---|---|---|
 | P5-ENV-001 | Release baseline | Release tag, commit SHA, branch, PR, and clean working tree evidence | Developer / DevOps | Deployed artifact traces to approved tag and commit |
 | P5-ENV-002 | Build artifact provenance | Build command, artifact identifier/checksum, and build environment summary | DevOps | Artifact provenance is recorded before deployment |
-| P5-ENV-003 | Environment variable inventory | Environment variable inventory with placeholders/redactions only | DevOps / Security Owner | Required configuration exists; no real secrets are pasted |
+| P5-ENV-003 | Environment variable inventory | Environment variable inventory with fixtures/redactions only | DevOps / Security Owner | Required configuration exists; no real secrets are pasted |
 | P5-ENV-004 | `.env.example` parity | Comparison between `.env.example` and deployed required variables | Developer / DevOps | Missing/stale configuration is resolved or risk-accepted |
 | P5-ENV-005 | Production configuration validation | API URL, frontend URL, CORS, TLS/HTTPS, NODE_ENV, log level, and feature flags | DevOps | Production-like runtime configuration is reviewed |
 | P5-ENV-006 | PostgreSQL access validation | DB target, app role, migration role, privilege boundary, backup location | DevOps / DBA | Least-privilege DB access is documented |
@@ -29,7 +29,7 @@ This package is intentionally documentation/evidence-control only. P5-2 does not
 
 ## 3. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, confidential client evidence, or vulnerability exploit details into P5-2 documents. Use redacted placeholders and attach sensitive evidence only in approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, confidential client evidence, or vulnerability exploit details into P5-2 documents. Use redacted fixtures and attach sensitive evidence only in approved secure evidence storage.
 
 ## 4. Required Human Review
 

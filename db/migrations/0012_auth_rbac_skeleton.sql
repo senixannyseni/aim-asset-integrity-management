@@ -1,7 +1,7 @@
 -- Phase 1 Governance Closure: backend JWT/session auth skeleton and DB-backed RBAC support.
 -- Scope-limited to identity/session metadata. No AI staging, formulas, API 579/581, CMMS, or 3D processing added here.
 
-alter table users add column if not exists password_hash_algorithm text not null default 'legacy_placeholder';
+alter table users add column if not exists password_hash_algorithm text not null default 'pbkdf2_sha256';
 alter table users add column if not exists password_changed_at timestamptz;
 alter table users add column if not exists failed_login_count integer not null default 0;
 alter table users add column if not exists locked_until timestamptz;

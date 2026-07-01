@@ -49,7 +49,7 @@ describe('Phase 1.3 governance batch', () => {
     expect(reports).toContain('REPORT_GATES_NOT_SATISFIED');
   });
 
-  it('hardens evidence governance with signed URL issuance, scan placeholder, and linked deletion block', () => {
+  it('hardens evidence governance with signed URL issuance, scan status guardrail, and linked deletion block', () => {
     const route = readRepoFile('apps/api/src/routes/evidence.ts');
     const validation = readRepoFile('apps/api/src/modules/evidence/validation.ts');
     expect(route).toContain("evidenceRouter.get('/evidence/:evidenceId/download-url'");

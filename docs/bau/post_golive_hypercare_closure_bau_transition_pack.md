@@ -41,7 +41,7 @@ n8n remains orchestration-only. AIM remains the system of record.
 
 ## 4. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, raw incident payloads, or vulnerability exploit details into BAU transition records. Use redacted placeholders and approved evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, raw incident payloads, or vulnerability exploit details into BAU transition records. Use redacted fixtures and approved evidence storage.
 
 ## 5. No-Go Conditions
 

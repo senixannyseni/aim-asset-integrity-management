@@ -105,7 +105,7 @@ describe('RC3-J final UAT / release candidate closure', () => {
       expect(smoke).toContain(token);
     }
 
-    for (const token of ['admin user handover', 'engineer reviewer handover', 'evidence manager handover', 'report approver handover', 'operations/hypercare owner handover', 'incident escalation path', 'known limitations', 'support contact placeholders', 'training completion checklist']) {
+    for (const token of ['admin user handover', 'engineer reviewer handover', 'evidence manager handover', 'report approver handover', 'operations/hypercare owner handover', 'incident escalation path', 'known limitations', 'support contact fields', 'training completion checklist']) {
       expect(handover).toContain(token);
     }
 

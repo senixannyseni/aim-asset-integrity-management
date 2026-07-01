@@ -7,7 +7,7 @@
 
 | Rollout gate | Required evidence | Owner | Status |
 |---|---|---|---|
-| Customer wave definition | Customer list placeholder, qualification class, and readiness gate | Product Owner | Pending |
+| Customer wave definition | Customer list fixture, qualification class, and readiness gate | Product Owner | Pending |
 | Entry criteria | Contract/scope readiness, data readiness, support owner, and UAT plan | Product Owner / Delivery Lead | Pending |
 | Capacity check | Delivery, support, DevOps, security, customer success staffing | Operations | Pending |
 | Change freeze / release path | Approved release window, rollback path, and customer communication | Lead Engineer / DevOps | Pending |

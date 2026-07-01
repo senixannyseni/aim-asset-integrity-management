@@ -218,16 +218,16 @@ export default function AdminGovernanceClient() {
           <label><span>Action</span><select name="action" defaultValue="assign"><option value="assign">Assign role</option><option value="remove">Remove role</option></select></label>
           <label><span>User</span><select name="user_id" required><option value="">Select user</option>{data.users.map((user) => <option key={user.user_id} value={user.user_id}>{user.email}</option>)}</select></label>
           <label><span>Role</span><select name="role_id" required><option value="">Select role</option>{data.roles.map((role) => <option key={role.role_id} value={role.role_id}>{role.role_code}</option>)}</select></label>
-          <label className="wide-field"><span>Reason</span><input name="reason" placeholder="Meaningful reason required for audit trail" required /></label>
+          <label className="wide-field"><span>Reason</span><input name="reason" required /></label>
           <button className="primary-button wide-field" type="submit">Submit audited role change</button>
         </form>
       </ActionModal>
 
       <ActionModal open={settingModalOpen} title="Update allowlisted setting" subtitle="Secret, credential, environment-derived, and signed URL settings are redacted or blocked." status="pending_review" onClose={() => setSettingModalOpen(false)}>
         <form className="form-grid" onSubmit={submitSettingUpdate}>
-          <label><span>Allowlisted Setting Key</span><input name="setting_key" placeholder="governance_banner_text" required /></label>
-          <label><span>New Value JSON/String</span><input name="setting_value" placeholder='"Visible governance notice" or 24' required /></label>
-          <label className="wide-field"><span>Reason</span><input name="reason" placeholder="Meaningful reason required for audit trail" required /></label>
+          <label><span>Allowlisted Setting Key</span><input name="setting_key" required /></label>
+          <label><span>New Value JSON/String</span><input name="setting_value" required /></label>
+          <label className="wide-field"><span>Reason</span><input name="reason" required /></label>
           <button className="primary-button wide-field" type="submit">Submit audited setting update</button>
         </form>
       </ActionModal>

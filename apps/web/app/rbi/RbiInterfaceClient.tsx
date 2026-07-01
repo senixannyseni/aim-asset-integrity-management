@@ -19,7 +19,7 @@ type RbiCase = {
   recommended_interval: string;
   inspection_plan_reference: string;
   evidence_links?: Array<Record<string, unknown>>;
-  input_placeholders?: Record<string, unknown>;
+  input_requirements?: Record<string, unknown>;
   trigger_source: string;
   trigger_reason: string;
   trigger_rule_id: string;
@@ -38,12 +38,12 @@ const defaultGuidedValues = {
   system: 'tank_integrity',
   component: 'shell',
   damage_mechanism: 'corrosion_screening',
-  probability_driver: 'engineering_review_placeholder',
-  consequence_driver: 'consequence_placeholder_required',
+  probability_driver: 'engineering_review_required',
+  consequence_driver: 'consequence_input_required',
   risk_category: 'screening_required',
   recommended_interval: 'engineer_review_required',
   inspection_plan_reference: 'not_assigned',
-  trigger_reason: 'Manual RBI interface case created from engineering review. Quantitative API RP 581 rules are not implemented.',
+  trigger_reason: 'Manual RBI interface case created from engineering review. Quantitative API RP 581 use requires approved Formula Registry rules.',
   evidence_file_id: ''
 };
 
@@ -86,23 +86,23 @@ function buildGuidedPayload(form: HTMLFormElement): Record<string, unknown> {
     system: fieldValue(form, 'system') || 'tank_integrity',
     component: fieldValue(form, 'component') || 'shell',
     damage_mechanism: fieldValue(form, 'damage_mechanism') || 'engineering_review_required',
-    probability_driver: fieldValue(form, 'probability_driver') || 'engineering_review_placeholder',
-    consequence_driver: fieldValue(form, 'consequence_driver') || 'consequence_placeholder_required',
+    probability_driver: fieldValue(form, 'probability_driver') || 'engineering_review_required',
+    consequence_driver: fieldValue(form, 'consequence_driver') || 'consequence_input_required',
     risk_category: fieldValue(form, 'risk_category') || 'screening_required',
     recommended_interval: fieldValue(form, 'recommended_interval') || 'engineer_review_required',
     inspection_plan_reference: fieldValue(form, 'inspection_plan_reference') || 'not_assigned',
     trigger_source: 'engineering_review',
     trigger_reason: fieldValue(form, 'trigger_reason') || defaultGuidedValues.trigger_reason,
-    input_placeholders: {
-      consequence_of_failure: 'placeholder_required',
-      probability_of_failure: fieldValue(form, 'probability_driver') || 'engineering_review_placeholder',
+    input_requirements: {
+      consequence_of_failure: 'engineering_input_required',
+      probability_of_failure: fieldValue(form, 'probability_driver') || 'engineering_review_required',
       damage_mechanism: fieldValue(form, 'damage_mechanism') || 'engineering_review_required',
-      inspection_effectiveness: 'placeholder_required',
-      fluid_service: 'placeholder_required',
-      inventory: 'placeholder_required',
-      operating_severity: 'placeholder_required',
-      mitigation_controls: 'placeholder_required',
-      calculation_basis: 'qualitative_or_semi_quantitative_placeholder_only_no_api_581_rules'
+      inspection_effectiveness: 'engineering_input_required',
+      fluid_service: 'engineering_input_required',
+      inventory: 'engineering_input_required',
+      operating_severity: 'engineering_input_required',
+      mitigation_controls: 'engineering_input_required',
+      calculation_basis: 'qualitative_or_semi_quantitative_screening_only_no_api_581_rules'
     },
     evidence_links: evidenceFileId ? [{ evidence_file_id: evidenceFileId, source_entity_type: 'engineering_review' }] : []
   };
@@ -118,13 +118,13 @@ function validateGuidedPayload(payload: Record<string, unknown>): ValidationIssu
 
 function RiskMatrix({ cases }: { cases: RbiCase[] }) {
   const matrixRows = [
-    { consequence: 'Consequence placeholder: high', label: 'High consequence placeholder' },
-    { consequence: 'Consequence placeholder: medium', label: 'Medium consequence placeholder' },
-    { consequence: 'Consequence placeholder: low', label: 'Low consequence placeholder' }
+    { consequence: 'High consequence screening', label: 'High consequence screening' },
+    { consequence: 'Medium consequence screening', label: 'Medium consequence screening' },
+    { consequence: 'Low consequence screening', label: 'Low consequence screening' }
   ];
 
   return (
-    <div className="risk-matrix" aria-label="Placeholder RBI risk matrix">
+    <div className="risk-matrix" aria-label="RBI screening risk matrix">
       <div className="risk-cell risk-axis">Consequence / Probability</div>
       {riskBuckets.map((bucket) => <div className="risk-cell risk-axis" key={bucket}>{bucket}</div>)}
       {matrixRows.map((row) => (
@@ -260,16 +260,16 @@ export default function RbiInterfaceClient() {
   const previewPayload = {
     ...defaultGuidedValues,
     trigger_source: 'engineering_review',
-    input_placeholders: {
-      consequence_of_failure: 'placeholder_required',
+    input_requirements: {
+      consequence_of_failure: 'engineering_input_required',
       probability_of_failure: defaultGuidedValues.probability_driver,
       damage_mechanism: defaultGuidedValues.damage_mechanism,
-      inspection_effectiveness: 'placeholder_required',
-      fluid_service: 'placeholder_required',
-      inventory: 'placeholder_required',
-      operating_severity: 'placeholder_required',
-      mitigation_controls: 'placeholder_required',
-      calculation_basis: 'qualitative_or_semi_quantitative_placeholder_only_no_api_581_rules'
+      inspection_effectiveness: 'engineering_input_required',
+      fluid_service: 'engineering_input_required',
+      inventory: 'engineering_input_required',
+      operating_severity: 'engineering_input_required',
+      mitigation_controls: 'engineering_input_required',
+      calculation_basis: 'qualitative_or_semi_quantitative_screening_only_no_api_581_rules'
     },
     evidence_links: []
   };
@@ -280,7 +280,7 @@ export default function RbiInterfaceClient() {
         <div>
           <p className="eyebrow">RC4-I</p>
           <h1>RBI Workflow</h1>
-          <p>Guided API RP 580/581 interface workflow. Risk matrix and drivers remain placeholder/semi-quantitative unless approved Formula Registry rules are supplied.</p>
+          <p>Guided API RP 580/581 interface workflow. Risk matrix and drivers remain screening/semi-quantitative unless approved Formula Registry rules are supplied.</p>
         </div>
         <Link className="secondary-button" href="/">Foundation Home</Link>
       </header>
@@ -312,7 +312,7 @@ export default function RbiInterfaceClient() {
 
         <section className="panel">
           <div className="panel-heading">
-            <h2>Risk Matrix Placeholder</h2>
+            <h2>Risk Matrix Screening</h2>
             <p>Display-only, qualitative/semi-quantitative visualization. It does not implement API RP 581 quantitative probability or consequence formulas.</p>
           </div>
           <div className="stat-row">

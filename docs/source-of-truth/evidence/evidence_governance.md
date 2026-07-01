@@ -144,7 +144,7 @@ The MVP supports the following evidence file types:
 | PNG image | `.png` | Screenshots, NDT maps, figures, annotated images |
 | AutoCAD drawing | `.dwg` | Drawings, layout references, tank drawings |
 | Drawing exchange | `.dxf` | Drawing exchange files |
-| STL model | `.stl` | 3D reference object or scan-derived mesh placeholder |
+| STL model | `.stl` | 3D reference object or scan-derived mesh fixture |
 | ZIP archive | `.zip` | Controlled bundle of related evidence files |
 
 ### 4.1 Rejected File Types

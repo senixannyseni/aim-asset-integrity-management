@@ -22,7 +22,7 @@ Implemented database migration:
 
 ## Engineering Boundary
 
-This sprint does not implement API/API-ASME copyrighted formulas.
+This sprint uses a governed boundary instead of API/API-ASME copyrighted formulas.
 
 Allowed deterministic calculations include:
 
@@ -31,7 +31,7 @@ Allowed deterministic calculations include:
 - remaining life screening based on selected retirement thickness or controlled formula output
 - basic pass/fail comparator
 - warning threshold generation
-- next inspection interval placeholder rule
+- next inspection interval fixture rule
 
 API-dependent calculations must use Formula Registry metadata only.
 

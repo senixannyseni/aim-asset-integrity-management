@@ -115,7 +115,7 @@ export default function DataDictionaryClient() {
 
       <section className="panel">
         <div className="panel-heading"><h2>Search and filter</h2><p>No secrets, object keys, signed URLs, tokens, or sensitive config values are included.</p></div>
-        <div className="form-grid"><label><span>Search</span><input value={search} onChange={(event: ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)} placeholder="field, label, unit, source, rule, page" /></label><label><span>Domain</span><select value={domainFilter} onChange={(event: ChangeEvent<HTMLSelectElement>) => setDomainFilter(event.target.value)}><option value="">All domains</option>{domains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}</select></label></div>
+        <div className="form-grid"><label><span>Search</span><input value={search} onChange={(event: ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)} /></label><label><span>Domain</span><select value={domainFilter} onChange={(event: ChangeEvent<HTMLSelectElement>) => setDomainFilter(event.target.value)}><option value="">All domains</option>{domains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}</select></label></div>
       </section>
 
       <section className="cards compact-cards">{domains.map((domain) => <article key={domain}><h2>{dictionary.filter((field) => field.group_name === domain).length}</h2><p>{domain}</p></article>)}</section>

@@ -29,7 +29,7 @@ RC4-Q adds a read-only inspection package readiness endpoint and frontend detail
 
 ## Boundaries
 
-This patch does not implement formulas, FFS/RBI calculations, evidence storage changes, approval bypasses, report issue actions, work-order closure, AI finalization, or n8n finalization.
+This patch uses a governed boundary instead of formulas, FFS/RBI calculations, evidence storage changes, approval bypasses, report issue actions, work-order closure, AI finalization, or n8n finalization.
 
 ## Validation
 

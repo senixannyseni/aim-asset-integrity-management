@@ -17,10 +17,10 @@ The review is designed to support controlled BAU handoff after customer onboardi
 
 AI/n8n/service actors cannot close tenant support escalation, SLA exception, or BAU handoff reviews.
 
-Sprint 6 does not implement external support-ticketing integration or automatic customer activation.
+Sprint 6 uses a governed boundary instead of external support-ticketing integration or automatic customer activation.
 
 ## Safety and non-disclosure guardrails
 
-Do not paste secrets, tenant credentials, customer PII, real customer data, tenant data, tenant billing details, payment processing data, full API 579, full API 581, or copied API/API-ASME formulas into these records. Use placeholders and evidence IDs only.
+Do not paste secrets, tenant credentials, customer PII, real customer data, tenant data, tenant billing details, payment processing data, full API 579, full API 581, or copied API/API-ASME formulas into these records. Use fixtures and evidence IDs only.
 
 AI/n8n/service actors cannot accept multi-tenant Sprint 6 evidence, approve tenant onboarding, approve customer activation, approve support SLA exceptions, approve support escalation closure, approve BAU handoff, waive customer onboarding evidence, or sign Sprint 6 closure.

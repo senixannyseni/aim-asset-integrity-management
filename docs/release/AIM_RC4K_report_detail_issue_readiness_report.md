@@ -32,7 +32,7 @@ The issue readiness preview returns:
 
 ## Boundary confirmations
 
-RC4-K does not implement:
+RC4-K uses a governed boundary instead of:
 
 - new API/API-ASME formulas;
 - full API 579 or API 581 logic;

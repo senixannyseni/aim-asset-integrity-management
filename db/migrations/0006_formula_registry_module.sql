@@ -13,7 +13,7 @@ create table if not exists formula_registry (
   component text,
   damage_mechanism text,
   formula_type text not null default 'universal_deterministic',
-  expression_type text not null default 'controlled_placeholder',
+  expression_type text not null default 'controlled_guardrail',
   expression_body text,
   input_schema jsonb not null default '{}'::jsonb,
   output_schema jsonb not null default '{}'::jsonb,
@@ -47,7 +47,7 @@ alter table formula_registry
   add column if not exists component text,
   add column if not exists damage_mechanism text,
   add column if not exists formula_type text not null default 'universal_deterministic',
-  add column if not exists expression_type text not null default 'controlled_placeholder',
+  add column if not exists expression_type text not null default 'controlled_guardrail',
   add column if not exists expression_body text,
   add column if not exists input_schema jsonb not null default '{}'::jsonb,
   add column if not exists output_schema jsonb not null default '{}'::jsonb,
@@ -79,7 +79,7 @@ alter table formula_registry add constraint formula_registry_formula_type_check
 
 alter table formula_registry drop constraint if exists formula_registry_expression_type_check;
 alter table formula_registry add constraint formula_registry_expression_type_check
-  check (expression_type in ('none', 'controlled_placeholder', 'engineer_entered', 'json_logic', 'text_rule'));
+  check (expression_type in ('none', 'controlled_guardrail', 'engineer_entered', 'json_logic', 'text_rule'));
 
 update formula_registry
 set
@@ -91,8 +91,8 @@ set
   output_schema = coalesce(nullif(output_schema, '{}'::jsonb), outputs_schema, '{}'::jsonb),
   unit_rules = coalesce(nullif(unit_rules, '{}'::jsonb), units_schema, '{}'::jsonb),
   expression_body = coalesce(expression_body, formula_expression),
-  formula_expression_source = coalesce(formula_expression_source, 'controlled_placeholder_manual_entry'),
-  expression_type = coalesce(expression_type, 'controlled_placeholder'),
+  formula_expression_source = coalesce(formula_expression_source, 'licensed_engineer_entry_required'),
+  expression_type = coalesce(expression_type, 'controlled_guardrail'),
   formula_type = coalesce(formula_type, 'universal_deterministic'),
   blocking_rules = coalesce(blocking_rules, '[]'::jsonb),
   locked_flag = coalesce(locked_flag, false),
@@ -109,7 +109,7 @@ where formula_id is null
    or formula_type is null
    or blocking_rules is null;
 
-alter table formula_registry alter column formula_expression_source set default 'controlled_placeholder_manual_entry';
+alter table formula_registry alter column formula_expression_source set default 'licensed_engineer_entry_required';
 alter table formula_registry alter column formula_expression_source set not null;
 
 create unique index if not exists ux_formula_registry_formula_id_version on formula_registry(formula_id, version);
@@ -124,14 +124,14 @@ create table if not exists formula_test_runs (
   test_case_reference text,
   input_snapshot_json jsonb not null default '{}'::jsonb,
   output_snapshot_json jsonb not null default '{}'::jsonb,
-  result_status text not null default 'placeholder' check (result_status in ('placeholder', 'passed', 'failed', 'blocked')),
+  result_status text not null default 'not_executed' check (result_status in ('not_executed', 'passed', 'failed', 'blocked')),
   message text not null,
   run_by uuid references users(id),
   created_at timestamptz not null default now()
 );
 
 insert into permissions(permission_code, description) values
-  ('formula.test', 'Run Formula Registry placeholder test case checks')
+  ('formula.test', 'Run Formula Registry guardrail test case checks')
 on conflict (permission_code) do update set description = excluded.description;
 
 insert into role_permissions(role_id, permission_id)
@@ -173,10 +173,10 @@ insert into formula_registry(
   effective_date,
   locked_flag
 ) values (
-  'controlled_placeholder_manual_entry',
-  'AIM-FORMULA-CONTROLLED-PLACEHOLDER',
-  'AIM-FORMULA-CONTROLLED-PLACEHOLDER',
-  'Controlled Formula Registry Placeholder - Not Executable',
+  'licensed_engineer_entry_required',
+  'AIM-FORMULA-LICENSED-ENTRY-REQUIRED',
+  'AIM-FORMULA-LICENSED-ENTRY-REQUIRED',
+  'Licensed Engineer Formula Entry Required - Not Executable',
   'Engineering Basis / Licensed Standard / Engineer-approved workbook',
   'User-supplied licensed edition required',
   'User-supplied licensed edition required',
@@ -184,12 +184,12 @@ insert into formula_registry(
   'shell',
   'general_thickness_governance',
   'api_controlled',
-  'controlled_placeholder',
-  'CONTROLLED_PLACEHOLDER_REQUIRES_LICENSED_ENGINEER_ENTRY',
+  'controlled_guardrail',
+  'LICENSED_ENGINEER_ENTRY_REQUIRED',
   '{"inputs":"defined by authorized engineer"}'::jsonb,
   '{"outputs":"defined by authorized engineer"}'::jsonb,
   '{"rule":"units must be explicitly normalized before calculation"}'::jsonb,
-  '{"rule":"placeholder cannot be executed"}'::jsonb,
+  '{"rule":"guardrail entry cannot be executed"}'::jsonb,
   '["Do not use without approved status and licensed engineer-entered expression/source."]'::jsonb,
   'validation_workbook_or_engineer_fixture_required',
   'draft',

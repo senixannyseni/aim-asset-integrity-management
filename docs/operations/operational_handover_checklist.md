@@ -16,11 +16,12 @@ Define the minimum handover items before RC3 release-candidate operations begin.
 
 - [ ] Incident escalation path documented.
 - [ ] Severity classification agreed.
-- [ ] On-call or support contact placeholders filled.
-- [ ] Product Owner contact placeholder filled.
-- [ ] Lead Engineer contact placeholder filled.
-- [ ] IT Admin contact placeholder filled.
-- [ ] n8n/workflow support owner placeholder filled.
+- [ ] On-call or support contact fixtures filled.
+- [ ] Product Owner contact fixture filled.
+- [ ] Lead Engineer contact fixture filled.
+- [ ] IT Admin contact fixture filled.
+- [ ] n8n/workflow support owner fixture filled.
+- [ ] Support contact fields completed: name, role, email/phone/channel, escalation level, availability window, backup contact.
 
 ## Known Limitations
 
@@ -49,5 +50,6 @@ Define the minimum handover items before RC3 release-candidate operations begin.
 - operations/hypercare owner handover
 - incident escalation path
 - known limitations
-- support contact placeholders
+- support contact fixtures
+- support contact fields
 - training completion checklist

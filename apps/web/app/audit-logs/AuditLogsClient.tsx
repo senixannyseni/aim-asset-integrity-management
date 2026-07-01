@@ -147,13 +147,13 @@ export default function AuditLogsClient() {
           <p>No mutation controls are provided. Audit logs are immutable and displayed with sensitive metadata redacted.</p>
         </div>
         <form className="form-grid" onSubmit={submitFilters}>
-          <label><span>Event Type</span><input name="event_type" placeholder="AI_STAGING_PROMOTED" /></label>
-          <label><span>Entity Type</span><input name="entity_type" placeholder="extraction_job" /></label>
-          <label><span>Entity ID</span><input name="entity_id" placeholder="UUID" /></label>
-          <label><span>Actor User ID</span><input name="actor_user_id" placeholder="UUID" /></label>
+          <label><span>Event Type</span><input name="event_type" /></label>
+          <label><span>Entity Type</span><input name="entity_type" /></label>
+          <label><span>Entity ID</span><input name="entity_id" /></label>
+          <label><span>Actor User ID</span><input name="actor_user_id" /></label>
           <label><span>From</span><input name="from" type="datetime-local" /></label>
           <label><span>To</span><input name="to" type="datetime-local" /></label>
-          <label className="wide-field"><span>Search Safe Fields</span><input name="search" placeholder="event, entity type, request ID, actor name/email" /></label>
+          <label className="wide-field"><span>Search Safe Fields</span><input name="search" /></label>
           <div className="action-row">
             <button className="primary-button" type="submit">Apply Filters</button>
             <button className="secondary-button" type="button" onClick={(event) => resetFilters(event.currentTarget.form as HTMLFormElement)}>Reset</button>

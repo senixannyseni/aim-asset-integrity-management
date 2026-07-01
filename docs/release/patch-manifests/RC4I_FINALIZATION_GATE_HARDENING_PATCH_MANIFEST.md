@@ -39,7 +39,7 @@ This follow-up patch cleans RC4-I before RC4-J work starts. It closes finalizati
 
 ## Governance Boundary
 
-This patch does not implement quantitative API RP 581 formulas, final integrity decisions, report issue automation, FFS creation, or direct n8n/database writes. AI/service actors remain unable to approve, export, close, or finalize RBI cases.
+This patch uses a governed boundary instead of quantitative API RP 581 formulas, final integrity decisions, report issue automation, FFS creation, or direct n8n/database writes. AI/service actors remain unable to approve, export, close, or finalize RBI cases.
 
 ## Validation Commands
 

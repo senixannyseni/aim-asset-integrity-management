@@ -19,7 +19,7 @@ type RbiCase = {
   recommended_interval: string;
   inspection_plan_reference: string;
   evidence_links?: Array<Record<string, unknown>>;
-  input_placeholders?: Record<string, unknown>;
+  input_requirements?: Record<string, unknown>;
   trigger_source: string;
   trigger_reason: string;
   trigger_rule_id: string;
@@ -56,7 +56,7 @@ function hasPermission(user: CurrentUser | null, permission: string): boolean {
 }
 
 function sourceFindings(rbiCase: RbiCase | null): Array<Record<string, unknown>> {
-  const value = rbiCase?.input_placeholders?.source_findings;
+  const value = rbiCase?.input_requirements?.source_findings;
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null) : [];
 }
 
@@ -66,7 +66,7 @@ function RiskSummary({ rbiCase }: { rbiCase: RbiCase }) {
       <div className="risk-cell risk-axis">RBI driver</div>
       <div className="risk-cell"><strong>{rbiCase.probability_driver}</strong><span>Probability driver</span></div>
       <div className="risk-cell"><strong>{rbiCase.consequence_driver}</strong><span>Consequence driver</span></div>
-      <div className="risk-cell"><strong>{rbiCase.risk_category}</strong><span>Placeholder risk</span></div>
+      <div className="risk-cell"><strong>{rbiCase.risk_category}</strong><span>Screening risk</span></div>
       <div className="risk-cell risk-axis">Governance</div>
       <div className="risk-cell"><strong>Display-only</strong><span>No API RP 581 quantitative formula</span></div>
       <div className="risk-cell"><strong>Formula Registry required</strong><span>For production quantitative rules</span></div>
@@ -209,7 +209,7 @@ export default function RbiCaseDetailClient({ caseId }: { caseId: string }) {
         </section>
 
         <section className="panel">
-          <div className="panel-heading"><h2>Placeholder Risk Matrix</h2><p>Display-only: no proprietary API RP 581 probability or consequence formulas are implemented.</p></div>
+          <div className="panel-heading"><h2>RBI Screening Matrix</h2><p>Display-only: no proprietary API RP 581 probability or consequence formulas are implemented.</p></div>
           <RiskSummary rbiCase={rbiCase} />
           <div className="notice">Production quantitative RBI requires approved Formula Registry rules and licensed engineering governance.</div>
         </section>
@@ -226,7 +226,7 @@ export default function RbiCaseDetailClient({ caseId }: { caseId: string }) {
         <form className="panel" onSubmit={reviewCase}>
           <div className="panel-heading"><h2>Review Action</h2><p>Engineer/QA review records reviewer, timestamp, comment, and audit event.</p></div>
           <label><span>Review status</span><select name="review_status" defaultValue="ready_for_review">{reviewStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
-          <label><span>Comment</span><input name="comment" placeholder="Review note" /></label>
+          <label><span>Comment</span><input name="comment" /></label>
           <button className="primary-button" disabled={actionLoading || !canReview} type="submit">Record review</button>
           {!canReview && <p className="error-list">Permission required: rbi.interface.review</p>}
         </form>
@@ -243,7 +243,7 @@ export default function RbiCaseDetailClient({ caseId }: { caseId: string }) {
         </section>
         <form className="panel" onSubmit={closeCase}>
           <div className="panel-heading"><h2>Close Case</h2><p>Closure requires a comment/reason and senior-engineer/lead-engineer/admin authority.</p></div>
-          <label><span>Closure comment</span><input name="closure_comment" required placeholder="Reason for closing this RBI interface case" /></label>
+          <label><span>Closure comment</span><input name="closure_comment" required /></label>
           <button className="primary-button" disabled={actionLoading || !canApprove} type="submit">Close RBI case</button>
         </form>
       </section>
@@ -260,8 +260,8 @@ export default function RbiCaseDetailClient({ caseId }: { caseId: string }) {
       </section>
 
       <section className="panel wide-panel">
-        <div className="panel-heading"><h2>Input placeholders and governance metadata</h2><p>Read-only traceability payload. These placeholders are not engineering-approved quantitative formulas.</p></div>
-        <pre>{renderJson(rbiCase.input_placeholders)}</pre>
+        <div className="panel-heading"><h2>RBI input requirements and governance metadata</h2><p>Read-only traceability payload. These inputs are not engineering-approved quantitative formulas.</p></div>
+        <pre>{renderJson(rbiCase.input_requirements)}</pre>
       </section>
     </main>
   );

@@ -12,7 +12,7 @@ This small follow-up patch fixes validation issues found after applying the AIM 
    - `/ndt`
 2. Restores legacy test marker strings expected by existing API-side frontend closure tests while keeping the redesigned UI:
    - `AIM Login`
-   - `Demo headers are disabled unless NEXT_PUBLIC_AIM_ALLOW_DEMO_HEADERS=true.`
+   - `Development headers are disabled unless NEXT_PUBLIC_AIM_ALLOW_DEMO_HEADERS=true.`
    - `Governance Dashboard Readiness Overview`
 3. Does not change backend runtime authority, n8n orchestration boundaries, API contracts, or governance behavior. Database-file handling is limited to restoring `0028` and applying a narrow PostgreSQL compatibility correction to `0029` for fresh migration runs; it does not add schema shape changes or trigger-disable logic.
 

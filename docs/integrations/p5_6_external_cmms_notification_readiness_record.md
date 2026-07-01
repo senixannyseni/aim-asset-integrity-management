@@ -14,7 +14,7 @@ Required evidence:
 - field mapping from AIM internal work order to external CMMS work order;
 - outbound/inbound payload ownership;
 - authentication and service-account owner;
-- sandbox endpoint evidence using redacted placeholders only;
+- sandbox endpoint evidence using redacted fixtures only;
 - cutover/no-cutover decision;
 - rollback to internal work-order fallback procedure;
 - human approval for external CMMS cutover.
@@ -35,12 +35,12 @@ Required evidence:
 
 ## 3. Notification and Webhook Routing Readiness
 
-Notification/webhook routing must reach named humans without exposing sensitive evidence. Redacted placeholders must be used for webhook URLs, notification tokens, channel identifiers, object keys, and signed URL examples.
+Notification/webhook routing must reach named humans without exposing sensitive evidence. Redacted fixtures must be used for webhook URLs, notification tokens, channel identifiers, object keys, and signed URL examples.
 
 Required evidence:
 
 - notification channel inventory;
-- webhook endpoint inventory using redacted placeholders;
+- webhook endpoint inventory using redacted fixtures;
 - routing owner;
 - retry/escalation owner;
 - redaction rule for message body and logs;

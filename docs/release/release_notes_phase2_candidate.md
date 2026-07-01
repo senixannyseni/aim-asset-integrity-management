@@ -64,7 +64,7 @@ The release candidate remains limited to the approved atmospheric storage tank M
 - No 3D processing is included.
 - No unapproved frontend scope outside governed RC4 screens is included in this release-candidate stabilization pack.
 - No invented API/ASME formulas are included.
-- Evidence files in the UAT seed are metadata placeholders only.
+- Evidence files in the UAT seed are metadata fixtures only.
 - The UAT seed must be applied only to local/UAT databases.
 - Formal production go-live still requires operator approval, UAT sign-off, backup verification, and release-candidate checklist completion.
 
@@ -80,7 +80,7 @@ The following are explicitly out of scope for this release candidate:
 - invented API/ASME formulas;
 - production credentials, production object storage keys, or real client evidence.
 
-Mentions of these topics in the repository are boundary, future, placeholder, negative-test, or out-of-scope statements only.
+Mentions of these topics in the repository are boundary, future, fixture, negative-test, or out-of-scope statements only.
 
 ## 7. Deployment Notes
 
@@ -144,7 +144,7 @@ External SAP/Maximo/CMMS integration remains out of MVP scope. Internal AIM work
 This RC2 addendum adds runtime/front-end closure for UAT Cycle 2:
 
 - FFS/RBI calculation-run lookup is UUID/text-aware to prevent PostgreSQL UUID/text operator errors.
-- Frontend API client uses JWT bearer tokens by default and sends demo headers only when `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true`.
+- Frontend API client uses JWT bearer tokens by default and sends demo headers only when `NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED=true`.
 - New `/login`, `/integrity-decisions`, and `/work-orders` frontend workflows support governed UAT execution.
 - Report UI exposes per-entity evidence gate actions for `report`, `calculation_run`, and `integrity_decision`.
 - UAT Cycle 2 documents cover runtime regression, frontend walkthrough, and signoff checklist.

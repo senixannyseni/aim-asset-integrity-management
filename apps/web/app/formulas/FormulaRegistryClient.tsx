@@ -81,7 +81,8 @@ export default function FormulaRegistryClient() {
       damage_mechanism: formValue(form, 'damage_mechanism'),
       formula_type: formulaType,
       expression_type: formValue(form, 'expression_type'),
-      expression_body: formulaType === 'api_controlled' ? 'CONTROLLED_PLACEHOLDER_REQUIRES_LICENSED_ENGINEER_ENTRY' : formValue(form, 'expression_body'),
+      formula_expression_source: formulaType === 'api_controlled' ? 'licensed_engineer_entry_required' : 'engineer_entered_or_fixture',
+      expression_body: formulaType === 'api_controlled' ? 'LICENSED_ENGINEER_ENTRY_REQUIRED' : formValue(form, 'expression_body'),
       input_schema: safeJson(formValue(form, 'input_schema'), {}),
       output_schema: safeJson(formValue(form, 'output_schema'), {}),
       unit_rules: safeJson(formValue(form, 'unit_rules'), {}),
@@ -114,7 +115,7 @@ export default function FormulaRegistryClient() {
         <div>
           <p className="eyebrow">Sprint 5</p>
           <h1>Formula Registry</h1>
-          <p>RC4-F controlled formula metadata, versioning, approval, executable sync status, and placeholder test governance. No engineering formula is executed here.</p>
+          <p>RC4-F controlled formula metadata, versioning, approval, executable sync status, and guardrail test governance. No engineering formula is executed here.</p>
         </div>
         <div className="action-row">
           <Link className="secondary-button" href="/validation">Validation</Link>
@@ -126,15 +127,15 @@ export default function FormulaRegistryClient() {
         <form className="panel form-grid" onSubmit={createFormula}>
           <div className="panel-heading">
             <h2>Create Controlled Formula</h2>
-            <p>API-controlled expressions must remain placeholders until entered by an authorized engineer from a licensed standard.</p>
+            <p>API-controlled expressions must remain guardrails until entered by an authorized engineer from a licensed standard.</p>
           </div>
-          <label><span>Formula ID</span><input name="formula_id" placeholder="Example: API653-SHELL-THK-MIN" required /></label>
-          <label><span>Formula Name</span><input name="formula_name" placeholder="Example: Shell minimum thickness governance rule" required /></label>
-          <label><span>Code Basis</span><input name="code_basis" placeholder="Example: API 653 / Engineering Basis" required /></label>
-          <label><span>Code Edition</span><input name="code_edition" placeholder="User-supplied licensed edition" required /></label>
-          <label><span>Clause Reference</span><input name="clause_reference" placeholder="Manual licensed reference, no copied clause text" required /></label>
-          <label><span>Component</span><input name="component" placeholder="shell / bottom / roof" /></label>
-          <label><span>Damage Mechanism</span><input name="damage_mechanism" placeholder="corrosion / settlement / lining" /></label>
+          <label><span>Formula ID</span><input name="formula_id" required /></label>
+          <label><span>Formula Name</span><input name="formula_name" required /></label>
+          <label><span>Code Basis</span><input name="code_basis" required /></label>
+          <label><span>Code Edition</span><input name="code_edition" required /></label>
+          <label><span>Clause Reference</span><input name="clause_reference" required /></label>
+          <label><span>Component</span><input name="component" /></label>
+          <label><span>Damage Mechanism</span><input name="damage_mechanism" /></label>
           <label>
             <span>Formula Type</span>
             <select name="formula_type" defaultValue="api_controlled">
@@ -147,8 +148,8 @@ export default function FormulaRegistryClient() {
           </label>
           <label>
             <span>Expression Type</span>
-            <select name="expression_type" defaultValue="controlled_placeholder">
-              <option value="controlled_placeholder">controlled_placeholder</option>
+            <select name="expression_type" defaultValue="controlled_guardrail">
+              <option value="controlled_guardrail">controlled_guardrail</option>
               <option value="engineer_entered">engineer_entered</option>
               <option value="json_logic">json_logic</option>
               <option value="text_rule">text_rule</option>
@@ -157,13 +158,13 @@ export default function FormulaRegistryClient() {
           </label>
           <label><span>Version</span><input name="version" defaultValue="0.1.0" required /></label>
           <label><span>Effective Date</span><input name="effective_date" type="date" /></label>
-          <label className="panel-heading"><span>Expression Body</span><input name="expression_body" placeholder="Controlled placeholder; do not paste copyrighted clauses" /></label>
+          <label className="panel-heading"><span>Expression Body</span><input name="expression_body" /></label>
           <label><span>Input Schema JSON</span><textarea name="input_schema" defaultValue={'{"thickness_mm":"number"}'} /></label>
           <label><span>Output Schema JSON</span><textarea name="output_schema" defaultValue={'{"status":"string"}'} /></label>
           <label><span>Unit Rules JSON</span><textarea name="unit_rules" defaultValue={'{"thickness":"mm"}'} /></label>
           <label><span>Validation Rules JSON</span><textarea name="validation_rules" defaultValue={'{"requires_approved_formula":true}'} /></label>
           <label><span>Blocking Rules JSON</span><textarea name="blocking_rules" defaultValue={'["draft formulas cannot be used in production calculation"]'} /></label>
-          <label><span>Test Case Reference</span><input name="test_case_reference" placeholder="Workbook/test fixture reference" /></label>
+          <label><span>Test Case Reference</span><input name="test_case_reference" /></label>
           <button className="primary-button" type="submit">Create Draft Formula</button>
         </form>
 
@@ -174,7 +175,7 @@ export default function FormulaRegistryClient() {
               <p>Approved or locked registry records must be synchronized to executable formula_versions before calculation services can use them.</p>
             </div>
             <div className="search-row">
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search formula" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} />
               <button className="secondary-button" type="button" onClick={() => void loadFormulas(search)}>Search</button>
             </div>
           </div>

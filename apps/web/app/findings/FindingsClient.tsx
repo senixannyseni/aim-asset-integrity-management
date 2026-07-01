@@ -262,7 +262,7 @@ export default function FindingsClient({ fixedAssetId, assetScoped = false }: Fi
           <label><span>Status</span><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>{STATUSES.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <label><span>Source type</span><select value={form.source_type} onChange={(event) => setForm({ ...form, source_type: event.target.value })}>{SOURCE_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <label><span>Inspection event ID</span><input value={form.inspection_event_id} onChange={(event) => setForm({ ...form, inspection_event_id: event.target.value })} /></label>
-          <label><span>Component</span><input value={form.component} onChange={(event) => setForm({ ...form, component: event.target.value })} placeholder="shell / floor / roof" /></label>
+          <label><span>Component</span><input value={form.component} onChange={(event) => setForm({ ...form, component: event.target.value })} /></label>
           <label><span>Shell course no.</span><input value={form.shell_course_no} onChange={(event) => setForm({ ...form, shell_course_no: event.target.value })} /></label>
           <label><span>CML/TML ID</span><input value={form.cml_tml_id} onChange={(event) => setForm({ ...form, cml_tml_id: event.target.value })} /></label>
           <label><span>Grid ref</span><input value={form.grid_ref} onChange={(event) => setForm({ ...form, grid_ref: event.target.value })} /></label>

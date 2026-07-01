@@ -43,7 +43,7 @@ n8n remains orchestration-only. AIM remains the system of record.
 
 Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, customer commercial terms, pricing approvals, legal opinions, raw vulnerability exploit details, real customer data, contract redlines, invoice/payment details, or customer PII into commercial launch records.
 
-Use synthetic/demo data, redacted placeholders, and approved secure evidence storage for sensitive commercial/customer evidence.
+Use synthetic/demo data, redacted fixtures, and approved secure evidence storage for sensitive commercial/customer evidence.
 
 ## 5. No-Go Conditions
 

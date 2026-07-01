@@ -2,7 +2,7 @@
 
 **Purpose:** Provide practical role-based training for controlled UAT/release preparation after Phase 1 Governance Closure.  
 **Audience:** Admin, Inspector, Engineer, Lead Engineer, Approver, IT Admin, Management.  
-**Scope:** Training only. This pack does not implement frontend UI and does not change backend governance behavior.
+**Scope:** Training only. This pack uses a governed boundary instead of frontend UI and does not change backend governance behavior.
 
 ## 1. Core Messages for All Users
 

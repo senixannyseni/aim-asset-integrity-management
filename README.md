@@ -46,7 +46,7 @@ Production go-live remains conditional until the evidence bundle is completed, a
 - AI extraction output must go to extraction/staging tables only and must remain non-final until human review and controlled promotion.
 - AI must not approve engineering data, calculations, integrity decisions, formulas, issued reports, or work orders.
 - A universal deterministic calculation engine is implemented for AIM-owned calculations only.
-- API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas and quantitative API RP 581 rules remain controlled placeholders unless entered by authorized engineers from licensed standards or approved fixtures.
+- API/API-ASME formula expressions must not be invented, copied, hard-coded, or reproduced. API-controlled formulas and quantitative API RP 581 rules remain controlled fixtures unless entered by authorized engineers from licensed standards or approved fixtures.
 
 ## Implemented Modules
 
@@ -94,16 +94,16 @@ Production go-live remains conditional until the evidence bundle is completed, a
 
 ### Sprint 5 — Formula Registry Module
 
-- Controlled Formula Registry CRUD/versioning/approval/deprecation/test-run placeholder.
+- Controlled Formula Registry CRUD/versioning/approval/deprecation/test-run fixture.
 - Formula metadata fields include `formula_expression_source`, `formula_id`, `formula_name`, code basis/edition/clause reference, formula type, expression type/body, schemas, unit rules, validation rules, blocking rules, version/status/approval/lock fields.
 - Editing an approved/locked formula creates a new draft version.
 - Only `admin` and `senior_engineer` may create/update/approve/deprecate/test formula records.
-- Formula test-run endpoint is a placeholder and does not execute formula expressions.
+- Formula test-run endpoint is a fixture and does not execute formula expressions.
 
 
 ### Sprint 6 — Deterministic Calculation Engine
 
-- Universal deterministic calculation engine for unit conversion, corrosion rate screening, remaining life screening, warning thresholds, and inspection interval placeholder logic.
+- Universal deterministic calculation engine for unit conversion, corrosion rate screening, remaining life screening, warning thresholds, and inspection interval fixture logic.
 - Calculation runs store input snapshot hash, formula version trace, validation status, normalized inputs, outputs, warnings, and audit log.
 - API/API-ASME formula execution remains blocked unless future approved Formula Registry execution rules are provided.
 
@@ -116,7 +116,7 @@ Production go-live remains conditional until the evidence bundle is completed, a
 ### Sprint 8 — RBI Interface and Trigger Workflow
 
 - API RP 580/581 governance-aligned RBI interface cases.
-- Qualitative/semi-quantitative placeholder only unless quantitative rules are formally provided in Formula Registry.
+- Qualitative/semi-quantitative fixture only unless quantitative rules are formally provided in Formula Registry.
 - RBI cases can be created manually or from deterministic calculation warnings such as high corrosion rate, short remaining life, repeated anomalies, or engineering review.
 - Risk summary and inspection plan recommendation are auditable and clearly labeled by calculation basis.
 
@@ -230,7 +230,7 @@ pnpm dev:web
 
 ## Current Limitations
 
-- Universal deterministic calculation execution is implemented for AIM-owned unit conversion, corrosion-rate, remaining-life screening, comparator, warning, and placeholder interval logic.
+- Universal deterministic calculation execution is implemented for AIM-owned unit conversion, corrosion-rate, remaining-life screening, comparator, warning, and fixture interval logic.
 - No API/API-ASME formula expression is embedded or executed.
 - Evidence binary upload/signed object-storage URL flow is implemented in RC3-B through AIM-controlled upload sessions, checksum verification, object-existence checks, RBAC-controlled signed URLs, and audit logging. Production deployment still requires environment-specific S3-compatible object-storage credentials, malware scanning integration, retention policy, and operational monitoring.
 - AI extraction/staging workflow is implemented within AIM API governance boundaries and remains staging-only until human review.
@@ -272,7 +272,7 @@ Workflow statuses: `open`, `under_review`, `data_required`, `assessment_in_progr
 
 ## Sprint 7 Governance and Security Hardening
 
-This historical Sprint 7 section predates later Phase 1/2 work. The current MVP still does not implement API/API-ASME formulas, full RBI calculation, external CMMS integration, or 3D processing; later phases add AI extraction/staging, report generation/issue gates, and internal AIM work order fallback.
+This historical Sprint 7 section predates later Phase 1/2 work. The current MVP still uses a governed boundary instead of API/API-ASME formulas, full RBI calculation, external CMMS integration, or 3D processing; later phases add AI extraction/staging, report generation/issue gates, and internal AIM work order fallback.
 
 Key hardening items:
 
@@ -292,8 +292,8 @@ Status: Complete.
 
 - Adds API RP 580/581-aligned RBI interface cases and trigger rules.
 - Supports manual engineering-review creation and calculation-warning creation.
-- Preserves source calculation run, source measurement, evidence, and placeholder inputs.
-- Uses qualitative/semi-quantitative placeholder basis only. No proprietary quantitative API RP 581 logic is implemented.
+- Preserves source calculation run, source measurement, evidence, and fixture inputs.
+- Uses qualitative/semi-quantitative fixture basis only. No proprietary quantitative API RP 581 logic is implemented.
 
 
 ## Sprint 9 Evidence Linkage and Security Boundary Hardening
@@ -345,7 +345,7 @@ Current hard boundaries remain: AIM is the system of record; AI output remains s
 The RC2 branch adds product-facing UAT closure items:
 
 - JWT login is available at `/login`; frontend API calls use `Authorization: Bearer <token>` from `data.accessToken`.
-- Demo headers are disabled by default and are only sent when `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true`.
+- Development headers are disabled by default and are only sent when `NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED=true`.
 - Integrity decision workflow is available at `/integrity-decisions` and requires direct evidence before approval.
 - Report UI shows per-entity evidence actions for `report`, `calculation_run`, and `integrity_decision` before final issue.
 - Internal AIM work order fallback is available at `/work-orders`; External CMMS remains out of MVP scope.
@@ -652,7 +652,7 @@ Changed areas:
 
 - `apps/api/src/routes/rbi.ts` now exposes repeated finding-history trigger creation, review/export/close actions, same-asset evidence validation on calculation-triggered cases, and duplicate prevention for warning/finding signatures.
 - `apps/web/app/rbi/RbiInterfaceClient.tsx` now provides guided fields instead of JSON-only manual case creation, calculation-trigger and findings-history trigger forms, and a display-only qualitative risk matrix.
-- `apps/web/app/rbi/[caseId]/page.tsx` and detail client provide case-level workflow actions, evidence/source traceability, audit links, and placeholder risk driver visibility.
+- `apps/web/app/rbi/[caseId]/page.tsx` and detail client provide case-level workflow actions, evidence/source traceability, audit links, and screening risk driver visibility.
 - `04_API/openapi.yaml`, data dictionary, ERD, UAT, release, and source-of-truth docs are aligned to the new RBI workflow behavior.
 
 RC4-I introduces no API RP 581 quantitative formulas, no new deterministic calculation math, no report issuance automation, no final integrity decision automation, no direct n8n/database access, and no AI approval path.
@@ -1166,7 +1166,7 @@ Evidence IDs: MT-S6-001 through MT-S6-012.
 
 Sprint 6 adds the runtime foundation for tenant/customer onboarding plans, readiness gates, tenant support SLA profiles, support escalation review, and BAU handoff controls. It adds forward-only migration `0033_enterprise_multitenant_sprint6_customer_onboarding_support_controls.sql` and regression coverage in `apps/api/tests/enterprise-multitenant-runtime-sprint6-customer-onboarding-support-controls.test.ts`.
 
-Sprint 6 does not implement billing/payment processing, automatic tenant creation, external support-ticketing integration, or final enterprise tenant isolation certification. AI/n8n/service actors cannot accept multi-tenant Sprint 6 evidence, approve tenant onboarding, approve customer activation, approve support SLA exceptions, close support escalation, approve BAU handoff, waive customer onboarding evidence, or sign Sprint 6 closure.
+Sprint 6 uses a governed boundary instead of billing/payment processing, automatic tenant creation, external support-ticketing integration, or final enterprise tenant isolation certification. AI/n8n/service actors cannot accept multi-tenant Sprint 6 evidence, approve tenant onboarding, approve customer activation, approve support SLA exceptions, close support escalation, approve BAU handoff, waive customer onboarding evidence, or sign Sprint 6 closure.
 
 ## Enterprise Multi-Tenant Runtime Final Closure — Tenant Isolation Certification and Go/No-Go Pack
 

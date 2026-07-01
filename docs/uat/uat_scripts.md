@@ -216,7 +216,7 @@ Each UAT case below follows this format:
 | Role | Inspector or Engineer |
 | Preconditions | Asset and inspection exist. |
 | Test Data | `AIM-UAT-T-001_UT_SHELL_COURSE_1.pdf`. |
-| Steps | 1. Submit evidence metadata after storage upload placeholder. 2. Include checksum, MIME, size, extension, asset, inspection. |
+| Steps | 1. Submit evidence metadata after storage upload fixture. 2. Include checksum, MIME, size, extension, asset, inspection. |
 | API Endpoint / UI Reference | `POST /api/v1/evidence-files`; future `/evidence`. |
 | Expected Result | Evidence metadata record is created; binary is not stored in PostgreSQL. |
 | Expected Audit Event | `evidence.uploaded` or `evidence.metadata.created`. |
@@ -254,7 +254,7 @@ Each UAT case below follows this format:
 | Test Data | Synthetic evidence file metadata. |
 | Steps | 1. Request download/signed URL. 2. Confirm expiry metadata. 3. Confirm audit row. |
 | API Endpoint / UI Reference | `GET /api/v1/evidence/{evidenceId}/download-url` or equivalent route. |
-| Expected Result | Short-lived URL or placeholder signed URL metadata is returned. |
+| Expected Result | Short-lived URL or fixture signed URL metadata is returned. |
 | Expected Audit Event | `EVIDENCE_SIGNED_URL_CREATED` or evidence access audit. |
 | Expected Workflow/Error Event | None. |
 | Pass/Fail |  |
@@ -279,16 +279,16 @@ Each UAT case below follows this format:
 | Evidence/Screenshot |  |
 | Reviewer/Sign-off |  |
 
-### UAT-EVID-005 — Malware Scan Placeholder Status
+### UAT-EVID-005 — Malware Scan Fixture Status
 
 | Field | Value |
 |---|---|
 | UAT Case ID | UAT-EVID-005 |
-| Source Requirement | Malware scan placeholder status visible/recorded. |
+| Source Requirement | Malware scan fixture status visible/recorded. |
 | Role | IT Admin |
 | Preconditions | Evidence metadata exists. |
 | Test Data | Synthetic evidence metadata. |
-| Steps | 1. Inspect evidence metadata. 2. Confirm malware scan placeholder/status field exists or is logged as pending/not_configured. |
+| Steps | 1. Inspect evidence metadata. 2. Confirm malware scan fixture/status field exists or is logged as pending/not_configured. |
 | API Endpoint / UI Reference | `GET /api/v1/evidence-files`. |
 | Expected Result | Malware scan status is represented and does not imply production scanner unless configured. |
 | Expected Audit Event | Evidence security validation audit where configured. |
@@ -449,7 +449,7 @@ Each UAT case below follows this format:
 | Source Requirement | NDT measurements require evidence linkage and review before final use. |
 | Role | Inspector or Engineer |
 | Preconditions | Asset, inspection, evidence exist. |
-| Test Data | UT measurement placeholder for Shell Course 1. |
+| Test Data | UT measurement fixture for Shell Course 1. |
 | Steps | 1. Create/import NDT/UT sample if API supports it. 2. Confirm evidence link. 3. Attempt use without evidence/review. |
 | API Endpoint / UI Reference | `POST /api/v1/ndt/measurements` or current NDT route; future `/ndt`. |
 | Expected Result | Reviewed/evidence-linked data can proceed; missing review/evidence is blocked for final use. |

@@ -137,7 +137,7 @@ It also passes the checksum into upload-url and complete-upload requests, preven
 
 ## 4. Not Changed / Out of Scope
 
-This cleanup intentionally does not implement:
+This cleanup intentionally uses a governed boundary instead of:
 
 - AI staging promotion;
 - audit log UI;

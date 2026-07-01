@@ -28,7 +28,7 @@ Any accepted risk must reference the defect ID, owner, mitigation, expiry/target
 | Open defects accepted | `<defect IDs or none>` |
 | Governance exceptions accepted | `<exception IDs or none>` |
 | Comments | `<comments>` |
-| Signature placeholder | `<signature>` |
+| Signature field | Authorized signatory name or controlled approval record reference |
 
 ## 3. Lead Engineer Sign-Off
 
@@ -42,7 +42,7 @@ Any accepted risk must reference the defect ID, owner, mitigation, expiry/target
 | Open defects accepted | `<defect IDs or none>` |
 | Governance exceptions accepted | `<exception IDs or none>` |
 | Comments | `<comments>` |
-| Signature placeholder | `<signature>` |
+| Signature field | Authorized signatory name or controlled approval record reference |
 
 ## 4. Approver Sign-Off
 
@@ -56,7 +56,7 @@ Any accepted risk must reference the defect ID, owner, mitigation, expiry/target
 | Open defects accepted | `<defect IDs or none>` |
 | Governance exceptions accepted | `<exception IDs or none>` |
 | Comments | `<comments>` |
-| Signature placeholder | `<signature>` |
+| Signature field | Authorized signatory name or controlled approval record reference |
 
 ## 5. IT Admin / DevOps Sign-Off
 
@@ -70,7 +70,7 @@ Any accepted risk must reference the defect ID, owner, mitigation, expiry/target
 | Open defects accepted | `<defect IDs or none>` |
 | Governance exceptions accepted | `<exception IDs or none>` |
 | Comments | `<comments>` |
-| Signature placeholder | `<signature>` |
+| Signature field | Authorized signatory name or controlled approval record reference |
 
 ## 6. UAT Lead Sign-Off
 
@@ -84,7 +84,7 @@ Any accepted risk must reference the defect ID, owner, mitigation, expiry/target
 | Open defects accepted | `<defect IDs or none>` |
 | Governance exceptions accepted | `<exception IDs or none>` |
 | Comments | `<comments>` |
-| Signature placeholder | `<signature>` |
+| Signature field | Authorized signatory name or controlled approval record reference |
 
 ## 7. Security Owner if Applicable Sign-Off
 
@@ -98,7 +98,7 @@ Any accepted risk must reference the defect ID, owner, mitigation, expiry/target
 | Open defects accepted | `<defect IDs or none>` |
 | Governance exceptions accepted | `<exception IDs or none>` |
 | Comments | `<comments>` |
-| Signature placeholder | `<signature>` |
+| Signature field | Authorized signatory name or controlled approval record reference |
 
 ## 8. Consolidated Sign-Off Status
 

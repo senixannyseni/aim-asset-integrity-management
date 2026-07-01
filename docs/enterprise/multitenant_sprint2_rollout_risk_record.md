@@ -20,8 +20,8 @@ node scripts/repo-hygiene.mjs
 | Risk ID | Risk | Owner | Status | Sprint 3 disposition |
 |---|---|---|---|---|
 | MT-S2-RISK-001 | Some historical routes still require deeper tenant-specific filtering evidence | Lead Engineer | Open | Sprint 3 route expansion |
-| MT-S2-RISK-002 | Frontend tenant switcher is not implemented | Product Owner | Open | Sprint 3/Sprint 4 UX scope |
-| MT-S2-RISK-003 | Tenant-scoped object lifecycle policy is not implemented | DevOps / Security Owner | Open | Storage policy scope |
+| MT-S2-RISK-002 | Frontend tenant switcher requires approved governance before use | Product Owner | Open | Sprint 3/Sprint 4 UX scope |
+| MT-S2-RISK-003 | Tenant-scoped object lifecycle policy requires approved governance before use | DevOps / Security Owner | Open | Storage policy scope |
 
 ## 3. Human Closure Rule
 

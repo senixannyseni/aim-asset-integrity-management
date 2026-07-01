@@ -54,7 +54,7 @@ AIM remains the system of record. n8n remains orchestration-only. AI output rema
 
 ## 5. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, vulnerability exploit details, or real production incident payloads into Phase 5 closure documents. Use redacted placeholders and secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, webhook secrets, CMMS credentials, database connection strings with passwords, private keys, confidential client evidence, vulnerability exploit details, or real production incident payloads into Phase 5 closure documents. Use redacted fixtures and secure evidence storage.
 
 ## 6. No-Go Conditions
 

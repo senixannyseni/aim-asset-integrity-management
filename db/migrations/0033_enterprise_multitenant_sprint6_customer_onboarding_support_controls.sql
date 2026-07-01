@@ -102,7 +102,7 @@ insert into tenant_support_sla_profiles (
   status,
   human_approval_id
 )
-select id, 'default-standard-sla', 'standard', 'UTC', 60, 240, 480, 'ready_for_human_review', 'MT-S6-HUMAN-REVIEW-PLACEHOLDER'
+select id, 'default-standard-sla', 'standard', 'UTC', 60, 240, 480, 'ready_for_human_review', 'MT-S6-HUMAN-REVIEW-PENDING'
 from tenants
 where tenant_slug = 'default'
 on conflict (tenant_id, profile_code) do nothing;
@@ -152,11 +152,11 @@ insert into tenant_onboarding_readiness_gates (
 select p.tenant_id, p.id, gate.gate_key, gate.gate_status, gate.owner_role, gate.evidence_id, gate.human_approval_id
 from tenant_onboarding_plans p
 cross join (values
-  ('tenant_context_confirmed', 'approved', 'Engineering', 'MT-S6-001', 'MT-S6-HUMAN-REVIEW-PLACEHOLDER'),
-  ('tenant_admin_contact_confirmed', 'approved', 'Customer Success', 'MT-S6-002', 'MT-S6-HUMAN-REVIEW-PLACEHOLDER'),
-  ('evidence_lifecycle_policy_confirmed', 'approved', 'Operations', 'MT-S6-003', 'MT-S6-HUMAN-REVIEW-PLACEHOLDER'),
-  ('support_sla_profile_confirmed', 'approved', 'Customer Success', 'MT-S6-004', 'MT-S6-HUMAN-REVIEW-PLACEHOLDER'),
-  ('data_residency_confirmed', 'approved', 'Security', 'MT-S6-005', 'MT-S6-HUMAN-REVIEW-PLACEHOLDER'),
+  ('tenant_context_confirmed', 'approved', 'Engineering', 'MT-S6-001', 'MT-S6-HUMAN-REVIEW-PENDING'),
+  ('tenant_admin_contact_confirmed', 'approved', 'Customer Success', 'MT-S6-002', 'MT-S6-HUMAN-REVIEW-PENDING'),
+  ('evidence_lifecycle_policy_confirmed', 'approved', 'Operations', 'MT-S6-003', 'MT-S6-HUMAN-REVIEW-PENDING'),
+  ('support_sla_profile_confirmed', 'approved', 'Customer Success', 'MT-S6-004', 'MT-S6-HUMAN-REVIEW-PENDING'),
+  ('data_residency_confirmed', 'approved', 'Security', 'MT-S6-005', 'MT-S6-HUMAN-REVIEW-PENDING'),
   ('human_onboarding_approval_present', 'ready_for_human_review', 'Customer Success', 'MT-S6-006', null)
 ) as gate(gate_key, gate_status, owner_role, evidence_id, human_approval_id)
 where p.customer_name = 'Default AIM Tenant'

@@ -37,8 +37,8 @@ create index if not exists idx_internal_work_orders_report_id on internal_work_o
 create index if not exists idx_internal_work_orders_gate_status on internal_work_orders(gate_status);
 
 -- Internal fallback marker only. external_cmms_reference remains nullable for future integration reference and must not be populated by Phase 1.6 routes.
-comment on column internal_work_orders.external_cmms_reference is 'Nullable future placeholder only. Phase 1.6 does not implement SAP/Maximo/CMMS integration and AIM routes keep this value null.';
-comment on column internal_work_orders.external_cmms_status is 'Nullable future placeholder only. Phase 1.6 internal fallback does not call external CMMS.';
+comment on column internal_work_orders.external_cmms_reference is 'Nullable future integration field. Phase 1.6 uses the internal AIM work-order fallback before SAP/Maximo/CMMS integration and AIM routes keep this value null.';
+comment on column internal_work_orders.external_cmms_status is 'Nullable future integration field. Phase 1.6 internal fallback does not call external CMMS.';
 comment on column internal_work_orders.gate_checklist_json is 'Phase 1.6 internal work order gate checklist snapshot. Work order creation cannot bypass integrity/report gates.';
 comment on column reports.issue_gate_checklist_json is 'Phase 1.6 report issue gate checklist snapshot: required data, evidence, calculation, review, integrity decision, report approval, workflow errors, and approver comment.';
 

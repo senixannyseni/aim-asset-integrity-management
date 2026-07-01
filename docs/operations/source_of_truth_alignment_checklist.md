@@ -244,7 +244,7 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 
 - [ ] RC4-I adds RBI workflow detail/guided UI/completion behavior only.
 - [ ] `/rbi` supports guided RBI case creation and no longer relies only on raw JSON payload entry.
-- [ ] `/rbi/[caseId]` exists and shows case summary, trigger source, risk drivers, evidence links, source findings, placeholders, and audit link.
+- [ ] `/rbi/[caseId]` exists and shows case summary, trigger source, risk drivers, evidence links, source findings, fixtures, and audit link.
 - [ ] RBI status update is non-final and remains separate from approve/export/close final actions.
 - [ ] RBI review action writes `RBI_CASE_REVIEWED` audit event.
 - [ ] RBI approve/export/close actions require human senior authority through backend RBAC.
@@ -254,7 +254,7 @@ Confirm that the RC3 release candidate remains aligned with the AIM source-of-tr
 - [ ] Repeated-anomaly RBI trigger uses RC4-H `findings` history and blocks duplicate open cases for the same asset / trigger-rule / finding-signature.
 - [ ] Repeated-anomaly trigger requires at least two relevant active findings.
 - [ ] Evidence links created from calculation/finding source rows pass same-asset validation.
-- [ ] Risk matrix UI is labelled qualitative/semi-quantitative placeholder only.
+- [ ] Risk matrix UI is labelled qualitative/semi-quantitative fixture only.
 - [ ] No quantitative API RP 581 probability/consequence formula is implemented.
 - [ ] No new database migration is introduced by RC4-I.
 - [ ] No deterministic calculation math is changed by RC4-I.

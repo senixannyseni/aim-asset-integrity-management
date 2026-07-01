@@ -67,4 +67,4 @@ pnpm --filter @aim/api test -- health.test.ts
 
 ## Out of Scope Confirmation
 
-RC4-G does not implement new formulas, minimum thickness calculations, FFS workflow changes, RBI workflow changes, report builder changes, engineering approval workflow changes, Formula Registry authoring redesign, evidence upload changes, NDT import changes, validation-by-asset redesign, n8n webhook integration, AI staging promotion handlers, or direct n8n/database access.
+RC4-G uses a governed boundary instead of new formulas, minimum thickness calculations, FFS workflow changes, RBI workflow changes, report builder changes, engineering approval workflow changes, Formula Registry authoring redesign, evidence upload changes, NDT import changes, validation-by-asset redesign, n8n webhook integration, AI staging promotion handlers, or direct n8n/database access.

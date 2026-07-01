@@ -71,7 +71,7 @@ Production go-live remains conditional until required evidence is attached and h
 
 ## Boundary
 
-AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups. Sprint 7 creates FFS trigger workflow cases only; it does not execute FFS calculations or declare fitness for service. Sprint 8 creates RBI interface workflow cases only; it does not implement proprietary quantitative API RP 581 rules. Sprint 9 hardens evidence link same-asset boundaries and clarifies OpenAPI dev/internal exclusions.
+AIM remains the system of record. n8n may call AIM APIs only and must not write directly to PostgreSQL. AI output remains staging-only when implemented. AI cannot approve. No API/API-ASME formula expression or copyrighted standard clause text is embedded or executed. Sprint 6 executes only universal deterministic calculations and Formula Registry metadata lookups. Sprint 7 creates FFS trigger workflow cases only; it does not execute FFS calculations or declare fitness for service. Sprint 8 creates RBI interface workflow cases only; it uses a governed boundary instead of proprietary quantitative API RP 581 rules. Sprint 9 hardens evidence link same-asset boundaries and clarifies OpenAPI dev/internal exclusions.
 
 ## Current Implemented Routes
 
@@ -117,8 +117,8 @@ Status: Complete.
 
 - Adds RBI interface cases and trigger rules aligned with API RP 580/581 governance.
 - Supports manual engineering-review creation and calculation-warning creation.
-- Preserves calculation_run, inspection_event, evidence, and placeholder input references.
-- Quantitative API RP 581 calculations are not implemented or embedded.
+- Preserves calculation_run, inspection_event, evidence, and fixture input references.
+- Quantitative API RP 581 calculations require approved governance before use or embedded.
 
 
 ## Sprint 9 Evidence Linkage and Security Boundary Hardening
@@ -465,15 +465,15 @@ RC4-I continues after RC4-H and closes the RBI workflow gaps without reopening R
 
 Implemented RC4-I controls:
 
-- `/rbi/[caseId]` frontend detail page for RBI case summary, risk drivers, evidence lineage, finding-history source, audit link, input placeholders, and workflow actions.
+- `/rbi/[caseId]` frontend detail page for RBI case summary, risk drivers, evidence lineage, finding-history source, audit link, input fixtures, and workflow actions.
 - Guided RBI create form on `/rbi`, replacing JSON-only entry for the manual case path while still showing a payload preview for developer/operator traceability.
 - Frontend actions for status update, review, approve, export, and close, with permission-aware visibility based on `/api/v1/auth/me` permissions and backend RBAC remaining authoritative.
 - `/api/v1/rbi/cases/from-finding-history` to create repeated-anomaly RBI trigger cases from RC4-H `findings` history when at least two relevant active findings exist.
 - Duplicate prevention for repeated calculation-warning triggers using `source_warning_signature` and repeated finding-history triggers using `source_finding_signature`.
 - Explicit review/export/close backend endpoints with audit events: `RBI_CASE_REVIEWED`, `RBI_CASE_EXPORTED`, and `RBI_CASE_CLOSED`.
-- Richer display-only risk matrix on list/detail pages, clearly labelled as qualitative/semi-quantitative placeholder unless approved Formula Registry rules exist.
+- Richer display-only risk matrix on list/detail pages, clearly labelled as qualitative/semi-quantitative fixture unless approved Formula Registry rules exist.
 
-RC4-I adds no database migration and no new engineering formulas. It does not implement quantitative API RP 581 probability/consequence formulas, does not auto-create final integrity decisions, does not issue reports, does not approve calculations, and does not weaken AI/n8n/service-actor governance boundaries.
+RC4-I adds no database migration and no new engineering formulas. It uses a governed boundary instead of quantitative API RP 581 probability/consequence formulas, does not auto-create final integrity decisions, does not issue reports, does not approve calculations, and does not weaken AI/n8n/service-actor governance boundaries.
 
 ## RC4-J Engineering Review and Approval Detail
 

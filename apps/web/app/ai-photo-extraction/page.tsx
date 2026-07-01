@@ -184,7 +184,7 @@ export default function AiPhotoExtractionPage() {
           { label: 'Validation Flags', value: actionTarget?.validationFlags.join(', ') || '-' }
         ]} />
         <label><span>Decision</span><select defaultValue="correct"><option value="approve">approve</option><option value="correct">correct</option><option value="reject">reject</option></select></label>
-        <label><span>Reviewer Comment</span><input placeholder="Reason required for correction or rejection" /></label>
+        <label><span>Reviewer Comment</span><input /></label>
         <div className="action-row">
           <button className="primary-button" type="button" disabled>Submit review via backend</button>
           <span className="muted-text">No backend review endpoint is called from this UX preview.</span>

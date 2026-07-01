@@ -7,7 +7,7 @@
 ## 1. Pre-Run Safety Checks
 
 - Confirm the working tree is clean before collecting release evidence.
-- Confirm `.env.example` contains only safe placeholders.
+- Confirm `.env.example` contains only safe fixtures.
 - Confirm no production secrets, JWTs, passwords, object-storage keys, signed URLs, database dumps, private keys, or confidential client evidence will be pasted into committed files.
 - Confirm backup/restore evidence will be stored in approved secure evidence storage, with only redacted references committed.
 

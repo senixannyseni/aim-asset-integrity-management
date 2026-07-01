@@ -276,8 +276,8 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
         </div>
         <div className="form-grid">
           {!fixedAssetId && <label><span>Asset Filter</span><select value={assetFilter} onChange={(event) => setAssetFilter(event.target.value)}><option value="">All assets</option>{assets.map((asset) => <option key={asset.asset_id} value={asset.asset_id}>{asset.tank_tag ?? asset.asset_id} - {asset.asset_name ?? 'Unnamed asset'}</option>)}</select></label>}
-          <label><span>Component Filter</span><input value={componentFilter} onChange={(event) => setComponentFilter(event.target.value)} placeholder="shell" /></label>
-          <label><span>CML/TML/Grid Filter</span><input value={gridFilter} onChange={(event) => setGridFilter(event.target.value)} placeholder="CML-001 or A-01" /></label>
+          <label><span>Component Filter</span><input value={componentFilter} onChange={(event) => setComponentFilter(event.target.value)} /></label>
+          <label><span>CML/TML/Grid Filter</span><input value={gridFilter} onChange={(event) => setGridFilter(event.target.value)} /></label>
           <label><span>Method Filter</span><select value={methodFilter} onChange={(event) => setMethodFilter(event.target.value)}><option value="">All methods</option>{METHOD_OPTIONS.map((method) => <option key={method} value={method}>{method}</option>)}</select></label>
           <label><span>Evidence State</span><select value={evidenceStateFilter} onChange={(event) => setEvidenceStateFilter(event.target.value)}><option value="">All</option><option value="linked">Evidence linked</option><option value="missing">Missing evidence</option><option value="critical_missing">Critical missing evidence</option></select></label>
         </div>
@@ -310,11 +310,11 @@ export default function NdtDataRoomClient({ fixedAssetId, assetScoped = false }:
         label: 'Overview',
         content: <form className="form-grid" onSubmit={createMeasurement}>
           <label><span>Asset</span><select name="asset_id" defaultValue={fixedAssetId ?? assetFilter} disabled={Boolean(fixedAssetId)} required><option value="">Select asset</option>{assets.map((asset) => <option key={asset.asset_id} value={asset.asset_id}>{asset.tank_tag ?? asset.asset_id} - {asset.asset_name ?? 'Unnamed asset'}</option>)}</select></label>
-          <label><span>Inspection Event ID</span><input name="inspection_event_id" placeholder="optional inspection_event_id" /></label>
-          <label><span>Component</span><input name="component" placeholder="shell / floor / roof / nozzle" required /></label>
-          <label><span>Shell Course No</span><input name="shell_course_no" type="number" min="0" placeholder="1" /></label>
-          <label><span>CML/TML ID</span><input name="cml_tml_id" placeholder="CML-001" /></label>
-          <label><span>Grid Ref</span><input name="grid_ref" placeholder="A-01" /></label>
+          <label><span>Inspection Event ID</span><input name="inspection_event_id" /></label>
+          <label><span>Component</span><input name="component" required /></label>
+          <label><span>Shell Course No</span><input name="shell_course_no" type="number" min="0" /></label>
+          <label><span>CML/TML ID</span><input name="cml_tml_id" /></label>
+          <label><span>Grid Ref</span><input name="grid_ref" /></label>
           <label><span>Measured Thickness (mm)</span><input name="measured_thickness" type="number" step="0.001" required /></label>
           <label><span>Reading Date</span><input name="reading_date" type="date" required /></label>
           <label><span>Method</span><select name="method" defaultValue="UT">{METHOD_OPTIONS.map((method) => <option key={method} value={method}>{method}</option>)}</select></label>

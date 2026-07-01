@@ -541,7 +541,7 @@ The MVP must include internal work orders before external SAP/Maximo/CMMS integr
 
 The following are explicitly out-of-scope for the MVP:
 
-1. **Full API 581 quantitative RBI.** MVP may store simple qualitative indicators or placeholders for future RBI, but full quantitative API 581 implementation is excluded.
+1. **Full API 581 quantitative RBI.** MVP may store simple qualitative indicators or fixtures for future RBI, but full quantitative API 581 implementation is excluded.
 2. **Full SAP/Maximo production integration.** MVP must include internal work order fallback and may prepare future integration events, but production-grade SAP/Maximo integration is excluded.
 3. **Full 3D scan processing.** MVP may store 3D files as evidence, but automated 3D scan processing, mesh analysis, and 3D defect extraction are excluded.
 4. **AI-only approval.** AI cannot approve engineering data, calculations, integrity decisions, work orders, or reports.

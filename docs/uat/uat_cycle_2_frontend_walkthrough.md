@@ -19,7 +19,7 @@
 
 ## Walkthrough
 
-1. Open `/login` and log in using real JWT credentials. Confirm API calls use bearer token. Demo headers are allowed only when `NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true`.
+1. Open `/login` and log in using real JWT credentials. Confirm API calls use bearer token. Development headers are allowed only when `NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED=true`.
 2. Open `/evidence` and confirm evidence files are available.
 3. Open `/integrity-decisions`, create a decision from an approved calculation, and attempt approval before evidence. Confirm the UI shows `INTEGRITY_DECISION_EVIDENCE_REQUIRED`.
 4. Link evidence directly to `integrity_decision` and approve as senior engineer.

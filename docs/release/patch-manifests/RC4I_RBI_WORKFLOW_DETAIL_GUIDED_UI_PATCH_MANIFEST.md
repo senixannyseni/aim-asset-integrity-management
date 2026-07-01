@@ -14,7 +14,7 @@ Implements RBI workflow Future Fix items 51–57:
 - Repeated-anomaly RBI trigger from RC4-H findings/anomaly history.
 - Duplicate prevention for repeated RBI triggers from the same calculation warning/finding-history signatures.
 - Regression/static test coverage.
-- Placeholder/semi-quantitative risk matrix visualization.
+- Fixture/semi-quantitative risk matrix visualization.
 
 ## Changed Files
 

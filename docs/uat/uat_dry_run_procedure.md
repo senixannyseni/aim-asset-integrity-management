@@ -10,7 +10,7 @@ The dry run must prove that the controlled path works end to end:
 asset / inspection context -> evidence metadata and linkage -> AI extraction staging -> human review -> manual override where required -> calculation governance -> integrity decision -> report issue gates -> internal work order fallback -> workflow/error logs -> audit logs
 ```
 
-This procedure is documentation and execution support only. It does not add product features, does not implement frontend UI, does not implement full API 579, does not implement full API 581, does not implement SAP/Maximo/CMMS integration, does not implement 3D processing, and does not add invented API/ASME formulas.
+This procedure is documentation and execution support only. It does not add product features, uses a governed boundary instead of frontend UI, uses a governed boundary instead of full API 579, uses a governed boundary instead of full API 581, uses the internal AIM work-order fallback before SAP/Maximo/CMMS integration, uses a governed boundary instead of 3D processing, and does not add invented API/ASME formulas.
 
 ## 2. Entry Criteria
 
@@ -39,7 +39,7 @@ Required environment conditions:
 - Node.js and pnpm installed according to the repository baseline.
 - PostgreSQL reachable through the local/UAT environment variable.
 - AIM API can start locally or in the UAT environment.
-- Object storage references are metadata placeholders only unless a dedicated UAT object store is approved.
+- Object storage references are metadata fixtures only unless a dedicated UAT object store is approved.
 - No real client evidence files are required.
 - No production object storage URI is used.
 - No n8n PostgreSQL credentials exist.
@@ -75,7 +75,7 @@ Before module dry run, confirm the Phase 2.1 UAT seed is loaded:
 
 ```sql
 select count(*) as uat_assets from assets where asset_tag = 'AIM-UAT-T-001';
-select count(*) as uat_evidence from evidence_files where storage_uri like 'uat-placeholder://%';
+select count(*) as uat_evidence from evidence_files where storage_uri like 'uat-fixture://%';
 select count(*) as uat_work_orders from internal_work_orders where work_order_code like 'UAT-WO-%';
 select count(*) as uat_audit from audit_logs where request_id like 'uat-%';
 ```
@@ -104,7 +104,7 @@ The dry run requires role coverage for:
 |---:|---|---|---|---|
 | 1 | auth/RBAC | Verify login, auth/me, logout, unauthorized request, and authenticated unauthorized request | API response log, screenshot, or terminal output | Auth succeeds for valid user and RBAC denial returns expected status |
 | 2 | asset/inspection setup | Confirm sample atmospheric tank and inspection workspace exist | Query/API response showing `AIM-UAT-T-001` and UAT inspection | Asset and inspection are present and not production data |
-| 3 | evidence metadata and linkage | Verify evidence metadata placeholders and evidence links | Query/API response and evidence link IDs | Evidence records use `uat-placeholder://` and required links exist |
+| 3 | evidence metadata and linkage | Verify evidence metadata fixtures and evidence links | Query/API response and evidence link IDs | Evidence records use `uat-fixture://` and required links exist |
 | 4 | AI extraction/staging review | Verify extraction job, extraction fields, staging record, low confidence, missing evidence, unit mismatch | Extraction/staging API response or SQL query | AI output remains staging/review data only |
 | 5 | manual override | Verify corrected field/manual override scenario | Manual override query/API response | Correction has reason, reviewer, original/corrected value, and evidence reference |
 | 6 | NDT/reviewed measurement path | Verify NDT or reviewed measurement prerequisite where current API supports it | Measurement/evidence link query or documented partial result | Measurement data cannot be final without review/evidence gate |

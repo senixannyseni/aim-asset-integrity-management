@@ -31,7 +31,7 @@ Final production go-live authorization is the last human release decision before
 
 ## 3. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, webhook secrets, CMMS credentials, confidential client evidence, vulnerability exploit details, or irreversible production cutover credentials into go-live documents. Use redacted placeholders and attach sensitive evidence only in approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, webhook secrets, CMMS credentials, confidential client evidence, vulnerability exploit details, or irreversible production cutover credentials into go-live documents. Use redacted fixtures and attach sensitive evidence only in approved secure evidence storage.
 
 ## 4. Final Human Authorization Rule
 

@@ -42,7 +42,7 @@ n8n remains orchestration-only. AIM remains the system of record.
 
 ## 4. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, tenant credentials, customer PII, real customer data, tenant data, database connection strings with passwords, private keys, partner credentials, customer commercial terms, contract redlines, invoice/payment details, tenant billing details, payment processing data, partner contract terms, confidential sales pipeline data, vulnerability exploit details, or raw production payloads into Sprint 0 records. Use redacted placeholders and approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, tenant credentials, customer PII, real customer data, tenant data, database connection strings with passwords, private keys, partner credentials, customer commercial terms, contract redlines, invoice/payment details, tenant billing details, payment processing data, partner contract terms, confidential sales pipeline data, vulnerability exploit details, or raw production payloads into Sprint 0 records. Use redacted fixtures and approved secure evidence storage.
 
 ## 5. No-Go Conditions
 

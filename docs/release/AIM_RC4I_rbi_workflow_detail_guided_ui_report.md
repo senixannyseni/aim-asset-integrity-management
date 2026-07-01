@@ -14,7 +14,7 @@ RC4-I implements Future Fix items 51–57 for the RBI workflow:
 4. Repeated-anomaly trigger connection to the real RC4-H findings/anomaly history module.
 5. Duplicate-prevention logic for repeated RBI triggers from the same calculation warning signature and same finding-history signature.
 6. Integration/static regression coverage for calculation warning → RBI case → review → senior/lead-engineer approval/export/close workflow.
-7. Richer placeholder/semi-quantitative risk matrix visualization.
+7. Richer screening/semi-quantitative risk matrix visualization.
 
 ## Changed Files
 
@@ -53,9 +53,9 @@ The case stores:
 
 - `trigger_source = finding_history`
 - `trigger_rule_id = RBI-TRIG-REPEATED-ANOMALY`
-- `input_placeholders.source_module = findings_anomaly_history`
-- `input_placeholders.source_findings`
-- `input_placeholders.source_finding_signature`
+- `input_requirements.source_module = findings_anomaly_history`
+- `input_requirements.source_findings`
+- `input_requirements.source_finding_signature`
 
 ### Review/finalization endpoints
 
@@ -74,8 +74,8 @@ The generic status update endpoint cannot mark `ready_for_review` or backfill `r
 
 - `/rbi` now provides guided manual creation fields.
 - `/rbi` includes calculation-warning and finding-history trigger forms.
-- `/rbi` includes a display-only risk matrix labelled placeholder/semi-quantitative.
-- `/rbi/[caseId]` shows case summary, risk drivers, evidence links, source findings, placeholders, audit link, and workflow actions.
+- `/rbi` includes a display-only risk matrix labelled screening/semi-quantitative.
+- `/rbi/[caseId]` shows case summary, risk drivers, evidence links, source findings, fixtures, audit link, and workflow actions.
 - Buttons are hidden/disabled based on user permissions from `/api/v1/auth/me`; backend RBAC remains authoritative.
 
 ## Governance Boundaries

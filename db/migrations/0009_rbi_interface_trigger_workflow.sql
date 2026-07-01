@@ -14,12 +14,12 @@ alter table rbi_cases
   add column if not exists recommended_interval text,
   add column if not exists inspection_plan_reference text,
   add column if not exists evidence_links jsonb not null default '[]'::jsonb,
-  add column if not exists input_placeholders jsonb not null default '{}'::jsonb,
+  add column if not exists input_requirements jsonb not null default '{}'::jsonb,
   add column if not exists trigger_source text not null default 'engineering_review',
   add column if not exists trigger_reason text,
   add column if not exists trigger_rule_id text,
-  add column if not exists calculation_basis text not null default 'qualitative_placeholder_only_no_api_581_quantitative_rules',
-  add column if not exists calculation_basis_note text not null default 'RBI interface only. Quantitative API RP 581 logic is not implemented unless approved Formula Registry rules are provided.',
+  add column if not exists calculation_basis text not null default 'qualitative_screening_only_no_api_581_quantitative_rules',
+  add column if not exists calculation_basis_note text not null default 'RBI interface only. Quantitative API RP 581 logic requires approved Formula Registry rules before quantitative use.',
   add column if not exists reviewer uuid references users(id),
   add column if not exists approver uuid references users(id),
   add column if not exists reviewed_at timestamptz,
@@ -33,19 +33,19 @@ set
   system = coalesce(system, 'tank_integrity'),
   component = coalesce(component, 'unknown_component'),
   damage_mechanism = coalesce(damage_mechanism, screening_data_json->>'damage_mechanism', 'engineering_review_required'),
-  probability_driver = coalesce(probability_driver, screening_data_json->>'probability_driver', 'qualitative_placeholder'),
-  consequence_driver = coalesce(consequence_driver, screening_data_json->>'consequence_driver', 'qualitative_placeholder'),
+  probability_driver = coalesce(probability_driver, screening_data_json->>'probability_driver', 'qualitative_screening'),
+  consequence_driver = coalesce(consequence_driver, screening_data_json->>'consequence_driver', 'qualitative_screening'),
   risk_category = coalesce(risk_category, screening_data_json->>'risk_category', 'screening_required'),
   recommended_interval = coalesce(recommended_interval, screening_data_json->>'recommended_interval', 'engineer_review_required'),
   inspection_plan_reference = coalesce(inspection_plan_reference, screening_data_json->>'inspection_plan_reference', 'not_assigned'),
   evidence_links = coalesce(evidence_links, '[]'::jsonb),
-  input_placeholders = coalesce(input_placeholders, screening_data_json, '{}'::jsonb),
-  trigger_reason = coalesce(trigger_reason, source_note, 'RBI interface record migrated from baseline placeholder.'),
+  input_requirements = coalesce(input_requirements, screening_data_json, '{}'::jsonb),
+  trigger_reason = coalesce(trigger_reason, source_note, 'RBI interface record migrated from baseline screening record.'),
   trigger_rule_id = coalesce(trigger_rule_id, 'RBI-TRIG-ENGINEERING-REVIEW')
 where case_id is null
    or component is null
    or risk_category is null
-   or input_placeholders = '{}'::jsonb;
+   or input_requirements = '{}'::jsonb;
 
 alter table rbi_cases
   alter column case_id set not null,
@@ -109,7 +109,7 @@ create table if not exists rbi_trigger_rules (
   default_risk_category text not null,
   recommended_interval text not null,
   inspection_plan_reference text not null,
-  governance_note text not null default 'RBI trigger interface only. Does not implement quantitative API RP 581 calculations.',
+  governance_note text not null default 'RBI trigger interface only. Quantitative API RP 581 calculations require approved Formula Registry rules.',
   active_flag boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -126,10 +126,10 @@ insert into rbi_trigger_rules(
   recommended_interval,
   inspection_plan_reference
 ) values
-  ('RBI-TRIG-HIGH-CORROSION-RATE', 'High corrosion rate RBI trigger candidate', 'calculation_warning', array['HIGH_CORROSION_RATE','RBI_TRIGGER_CANDIDATE'], 'corrosion_rate_screening', 'consequence_placeholder_required', 'medium_high', 'engineer_review_required', 'update_inspection_plan_after_rbi_review'),
-  ('RBI-TRIG-SHORT-REMAINING-LIFE', 'Short remaining life RBI trigger candidate', 'calculation_warning', array['LOW_REMAINING_LIFE','RBI_TRIGGER_CANDIDATE'], 'remaining_life_screening', 'consequence_placeholder_required', 'high', 'short_interval_review_required', 'review_or_escalate_inspection_plan'),
-  ('RBI-TRIG-REPEATED-ANOMALY', 'Repeated anomaly RBI trigger candidate', 'engineering_review', array['REPEATED_ANOMALY'], 'repeated_anomaly_screening', 'consequence_placeholder_required', 'medium', 'engineer_review_required', 'review_damage_mechanism_and_history'),
-  ('RBI-TRIG-ENGINEERING-REVIEW', 'Engineering review RBI trigger candidate', 'engineering_review', array['ENGINEERING_REVIEW'], 'engineering_review_placeholder', 'consequence_placeholder_required', 'screening_required', 'engineer_review_required', 'create_or_update_rbi_screening_record')
+  ('RBI-TRIG-HIGH-CORROSION-RATE', 'High corrosion rate RBI trigger candidate', 'calculation_warning', array['HIGH_CORROSION_RATE','RBI_TRIGGER_CANDIDATE'], 'corrosion_rate_screening', 'consequence_input_required', 'medium_high', 'engineer_review_required', 'update_inspection_plan_after_rbi_review'),
+  ('RBI-TRIG-SHORT-REMAINING-LIFE', 'Short remaining life RBI trigger candidate', 'calculation_warning', array['LOW_REMAINING_LIFE','RBI_TRIGGER_CANDIDATE'], 'remaining_life_screening', 'consequence_input_required', 'high', 'short_interval_review_required', 'review_or_escalate_inspection_plan'),
+  ('RBI-TRIG-REPEATED-ANOMALY', 'Repeated anomaly RBI trigger candidate', 'engineering_review', array['REPEATED_ANOMALY'], 'repeated_anomaly_screening', 'consequence_input_required', 'medium', 'engineer_review_required', 'review_damage_mechanism_and_history'),
+  ('RBI-TRIG-ENGINEERING-REVIEW', 'Engineering review RBI trigger candidate', 'engineering_review', array['ENGINEERING_REVIEW'], 'engineering_review_required', 'consequence_input_required', 'screening_required', 'engineer_review_required', 'create_or_update_rbi_screening_record')
 on conflict (rule_id) do update set
   rule_name = excluded.rule_name,
   trigger_source_type = excluded.trigger_source_type,

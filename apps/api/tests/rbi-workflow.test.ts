@@ -15,7 +15,7 @@ describe('RBI interface trigger workflow governance', () => {
   it('creates RBI schema without quantitative API 581 formulas', () => {
     const migration = readRepoFile('db/migrations/0009_rbi_interface_trigger_workflow.sql');
     expect(migration).toContain('create table if not exists rbi_trigger_rules');
-    expect(migration).toContain('qualitative_placeholder_only_no_api_581_quantitative_rules');
+    expect(migration).toContain('qualitative_screening_only_no_api_581_quantitative_rules');
     expect(migration).not.toMatch(/API\s*581\s*equation|quantitative\s*formula\s*=|PoF\s*=|CoF\s*=/i);
   });
 

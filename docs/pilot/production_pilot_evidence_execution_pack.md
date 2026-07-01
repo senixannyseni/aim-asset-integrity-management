@@ -29,7 +29,7 @@ Production pilot evidence execution is not production-wide go-live approval. It 
 
 ## 3. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, webhook secrets, CMMS credentials, confidential client evidence, exploit details, or unredacted vulnerability evidence into pilot documents. Use redacted placeholders and attach sensitive evidence only in approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, database connection strings with passwords, private keys, webhook secrets, CMMS credentials, confidential client evidence, exploit details, or unredacted vulnerability evidence into pilot documents. Use redacted fixtures and attach sensitive evidence only in approved secure evidence storage.
 
 ## 4. Required Human Review
 

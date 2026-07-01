@@ -133,7 +133,7 @@ describe('Phase 2.0 release readiness pack', () => {
       'n8n_service',
       'AIM-UAT-T-001',
       'atmospheric_storage_tank',
-      'Evidence Metadata Placeholders',
+      'Evidence Metadata Fixtures',
       'Evidence Links',
       'Extraction Job and Fields',
       'manual_overrides',

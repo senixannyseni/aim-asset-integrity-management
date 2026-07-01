@@ -143,7 +143,7 @@ export default function EvidenceRepositoryClient() {
             </select>
           </label>
 
-          <label><span>File Name</span><input name="file_name" placeholder="ex. TK-001_UT_Report.pdf" required /></label>
+          <label><span>File Name</span><input name="file_name" required /></label>
           <label>
             <span>File Type</span>
             <select name="file_type" defaultValue="PDF" required>
@@ -151,12 +151,12 @@ export default function EvidenceRepositoryClient() {
             </select>
           </label>
           <label><span>Inspection Date</span><input name="inspection_date" type="date" required /></label>
-          <label><span>Method</span><input name="method" placeholder="ex. UT thickness" required /></label>
-          <label><span>Component</span><input name="component" placeholder="ex. shell course 1" required /></label>
-          <label><span>Location</span><input name="location" placeholder="ex. 90 deg / 2.5 m elevation" /></label>
-          <label><span>Page or Sheet Ref</span><input name="page_or_sheet_ref" placeholder="ex. p. 12 / Sheet UT-01" /></label>
-          <label><span>Checksum</span><input name="checksum" placeholder="demo-checksum-sha256" required /></label>
-          <label><span>File Size Bytes</span><input name="file_size_bytes" type="number" placeholder="0" /></label>
+          <label><span>Method</span><input name="method" required /></label>
+          <label><span>Component</span><input name="component" required /></label>
+          <label><span>Location</span><input name="location" /></label>
+          <label><span>Page or Sheet Ref</span><input name="page_or_sheet_ref" /></label>
+          <label><span>Checksum</span><input name="checksum" required /></label>
+          <label><span>File Size Bytes</span><input name="file_size_bytes" type="number" /></label>
           <button className="primary-button" type="submit">Register Evidence</button>
         </form>
 

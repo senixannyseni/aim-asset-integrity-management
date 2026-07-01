@@ -326,7 +326,7 @@ export default function EngineeringReviewDetailClient({ reviewId }: { reviewId: 
         <section className="grid-two">
           <form className="panel" onSubmit={addComment}>
             <h2>Threaded comments</h2>
-            <label><span>Reply to comment ID</span><input value={parentCommentId} onChange={(event) => setParentCommentId(event.target.value)} placeholder="Optional parent comment_id" /></label>
+            <label><span>Reply to comment ID</span><input value={parentCommentId} onChange={(event) => setParentCommentId(event.target.value)} /></label>
             <label><span>Comment</span><textarea rows={4} value={comment} onChange={(event) => setComment(event.target.value)} /></label>
             <button className="primary-button" type="submit" disabled={!canComment || reviewMutationLocked || !comment.trim()}>Add Comment</button>
           </form>

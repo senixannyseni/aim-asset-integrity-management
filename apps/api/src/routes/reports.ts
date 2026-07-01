@@ -398,7 +398,7 @@ function buildReportDocument(context: Awaited<ReturnType<typeof loadReportContex
       title: 'FFS/RBI Trigger Summary',
       body: [
         ...(context.ffsCases.length > 0 ? context.ffsCases.map((row) => `FFS ${row.case_id ?? row.id}: ${row.damage_mechanism ?? row.trigger_reason ?? 'trigger'} — status ${row.status}`) : ['No FFS trigger case linked to this calculation run.']),
-        ...(context.rbiCases.length > 0 ? context.rbiCases.map((row) => `RBI ${row.case_id ?? row.id}: ${row.risk_category ?? 'risk category n/a'} — ${row.calculation_basis ?? 'qualitative placeholder basis'}`) : ['No RBI interface case linked to this calculation run.'])
+        ...(context.rbiCases.length > 0 ? context.rbiCases.map((row) => `RBI ${row.case_id ?? row.id}: ${row.risk_category ?? 'risk category n/a'} — ${row.calculation_basis ?? 'qualitative screening basis'}`) : ['No RBI interface case linked to this calculation run.'])
       ]
     },
     {

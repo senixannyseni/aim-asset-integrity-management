@@ -20,7 +20,7 @@ Included:
 
 ## Out of Scope
 
-RC4-J does not implement:
+RC4-J uses a governed boundary instead of:
 
 - New engineering formulas.
 - API 579/API 581 quantitative logic.

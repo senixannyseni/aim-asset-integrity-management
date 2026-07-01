@@ -62,7 +62,7 @@ A defect record must preserve enough evidence to support controlled engineering 
 | governance defect | Breaks AIM source-of-truth, AI staging, review, evidence, calculation, report, work-order, n8n, or audit control |
 | data defect | Synthetic UAT data missing, inconsistent, or incorrectly linked |
 | test data issue | UAT seed or fixture does not support planned test |
-| environment issue | Local/UAT environment, database, object storage placeholder, or service startup issue |
+| environment issue | Local/UAT environment, database, object storage fixture, or service startup issue |
 | functional defect | Expected implemented endpoint/behavior fails |
 | documentation defect | Guide, procedure, checklist, or test instruction is incomplete or misleading |
 

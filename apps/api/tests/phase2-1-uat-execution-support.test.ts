@@ -120,7 +120,7 @@ describe('Phase 2.1 controlled UAT dataset and execution support', () => {
       'audit_logs',
       'uat.ai.agent@example.test',
       'uat.n8n.service@example.test',
-      'uat-placeholder://',
+      'uat-fixture://',
       'Engineering review required before final use.'
     ]);
     expectNoObviousSecrets(seedPath, seed);
@@ -129,7 +129,7 @@ describe('Phase 2.1 controlled UAT dataset and execution support', () => {
     expect(seed).not.toMatch(/external_cmms_status\s*=\s*'[^']+'/i);
   });
 
-  it('documents UAT seed execution, validation queries, rollback, and placeholder evidence warnings', () => {
+  it('documents UAT seed execution, validation queries, rollback, and fixture evidence warnings', () => {
     const guidePath = 'docs/sample_data/uat_seed_execution_guide.md';
     expectFileExists(guidePath);
     const guide = readRepoFile(guidePath);
@@ -142,8 +142,8 @@ describe('Phase 2.1 controlled UAT dataset and execution support', () => {
       'Expected Records Created',
       'Validation SQL Queries',
       'Rollback / Cleanup Notes',
-      'Evidence Placeholder Warning',
-      'uat-placeholder://',
+      'Evidence Fixture Warning',
+      'uat-fixture://',
       'manual_overrides',
       'external CMMS fields remain null'
     ]);

@@ -99,7 +99,7 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
 
   async function testRun() {
     if (!selected) return;
-    await postAction(`/api/v1/formulas/records/${selected.record_id}/test-run`, 'Placeholder test run recorded. No expression was executed.');
+    await postAction(`/api/v1/formulas/records/${selected.record_id}/test-run`, 'Formula guardrail test recorded. No expression was executed.');
   }
 
   async function compareVersions() {
@@ -118,7 +118,7 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
         <div>
           <p className="eyebrow">Formula Detail</p>
           <h1>{formulaId}</h1>
-          <p>RC4-F version approval, executable formula_versions synchronization, deprecation, comparison, and placeholder test governance.</p>
+          <p>RC4-F version approval, executable formula_versions synchronization, deprecation, comparison, and guardrail test governance.</p>
         </div>
         <Link className="secondary-button" href="/formulas">Formula Registry</Link>
       </header>
@@ -164,7 +164,7 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
                 <button className="primary-button" type="button" onClick={approve}>Approve</button>
                 <button className="secondary-button" type="button" onClick={syncToExecutable}>Sync to Executable</button>
                 <button className="secondary-button" type="button" onClick={deprecate}>Deprecate</button>
-                <button className="secondary-button" type="button" onClick={testRun}>Run Placeholder Test</button>
+                <button className="secondary-button" type="button" onClick={testRun}>Record Guardrail Test</button>
               </div>
             </>
           ) : <p>No versions found.</p>}
@@ -174,8 +174,8 @@ export default function FormulaDetailClient({ formulaId }: { formulaId: string }
       <section className="panel wide-panel">
         <h2>Compare Versions</h2>
         <div className="search-row">
-          <input value={fromVersion} onChange={(event) => setFromVersion(event.target.value)} placeholder="from version" />
-          <input value={toVersion} onChange={(event) => setToVersion(event.target.value)} placeholder="to version" />
+          <input value={fromVersion} onChange={(event) => setFromVersion(event.target.value)} />
+          <input value={toVersion} onChange={(event) => setToVersion(event.target.value)} />
           <button className="secondary-button" type="button" onClick={() => void compareVersions()}>Compare</button>
         </div>
         {compareResult !== null && compareResult !== undefined ? (

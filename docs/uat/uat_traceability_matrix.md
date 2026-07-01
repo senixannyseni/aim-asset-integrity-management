@@ -23,7 +23,7 @@ Status values:
 | UAT-EVID-002 | Evidence upload validation rejects unsupported type/MIME/size/checksum failure. | Evidence/Security | Inspector | Evidence metadata validation | `evidence_files`, `error_logs` | `evidence.upload_rejected` | covered |
 | UAT-EVID-003 | Signed URL endpoint and evidence access/download audit. | Evidence | Engineer | Evidence download/signed URL endpoint | `evidence_files`, `audit_logs` | `EVIDENCE_SIGNED_URL_CREATED` | covered |
 | UAT-EVID-004 | Linked evidence deletion blocked or routed to delete approval flow. | Evidence | Engineer, IT Admin | Evidence delete/request endpoint | `evidence_links`, `evidence_files` | `evidence.delete_blocked` | covered |
-| UAT-EVID-005 | Malware scan placeholder status represented. | Evidence/Security | IT Admin | Evidence metadata view | `evidence_files` | evidence security validation audit where configured | partial |
+| UAT-EVID-005 | Malware scan fixture status represented. | Evidence/Security | IT Admin | Evidence metadata view | `evidence_files` | evidence security validation audit where configured | partial |
 | UAT-AI-001 | AI extraction job created through AIM. | AI Extraction | Inspector, Engineer | `POST /api/v1/extraction-jobs` | `extraction_jobs` | `extraction_job.created` | covered |
 | UAT-AI-002 | AI output remains extraction/staging only. | AI Extraction/Staging | Engineer, IT Admin | Extraction/staging endpoints | `extraction_fields`, `staging_records` | `extraction_field.created`, `staging_record.created` | covered |
 | UAT-AI-003 | Low-confidence and missing evidence routed to review and block promotion. | AI Validation | Engineer | Field review and staging promote endpoints | `extraction_fields`, `data_quality_checks`, `staging_records` | `data_quality_check.failed` | covered |
@@ -55,7 +55,7 @@ Status values:
 | Source Area | UAT Coverage | Notes |
 |---|---:|---|
 | Auth/RBAC | covered | Login/logout/me/refresh, unauthorized and unauthorized-by-role paths, demo auth boundary. |
-| Evidence governance | covered | Upload metadata, validation, signed URL, audit, deletion block, malware placeholder. |
+| Evidence governance | covered | Upload metadata, validation, signed URL, audit, deletion block, malware fixture. |
 | AI extraction/staging | covered | Extraction jobs, field confidence/review, staging-only, service-user block. |
 | Human review/manual override | covered | Approve/correct/reject/promote with evidence and reason. |
 | NDT/reviewed data | partial | Uses current NDT API where supported; final evidence gate verified. |

@@ -12,7 +12,7 @@ This runbook helps the delivery team install, configure, migrate, seed, test, an
 | Audience | Responsibility |
 |---|---|
 | Developer | Apply branch, run tests, verify API behavior, fix defects. |
-| IT Admin | Configure auth, roles, object storage placeholders, workflow/error monitoring. |
+| IT Admin | Configure auth, roles, object storage fixtures, workflow/error monitoring. |
 | DevOps/operator | Prepare infrastructure, env vars, database, backup, service start/stop, rollback. |
 | UAT Coordinator | Confirm sample dataset, run UAT scripts, gather evidence and sign-off. |
 
@@ -36,7 +36,7 @@ This runbook helps the delivery team install, configure, migrate, seed, test, an
 | pnpm | Use package manager configured by `pnpm-lock.yaml`. |
 | Docker/Desktop | Required if using local PostgreSQL via `docker-compose.yml`. |
 | PostgreSQL | Reachable database, local default commonly `127.0.0.1:5433`. |
-| Object storage | S3-compatible placeholder or local/minio-style environment for smoke test. |
+| Object storage | S3-compatible fixture or local/minio-style environment for smoke test. |
 | Environment file | `.env` or environment-specific secret injection. |
 | Network ports | API port, PostgreSQL port, optional object storage port. |
 | Baseline | Phase 1 Governance Closure tag/branch merged before Phase 2.0. |
@@ -45,7 +45,7 @@ This runbook helps the delivery team install, configure, migrate, seed, test, an
 
 Do not place real secret values in documentation or committed files.
 
-| Variable | Required | Example Placeholder | Purpose |
+| Variable | Required | Example Fixture | Purpose |
 |---|---:|---|---|
 | `DATABASE_URL` | Yes | `postgres://aim_app:change-me@127.0.0.1:5433/aim_dev` | PostgreSQL connection. |
 | `AUTH_JWT_SECRET` | Yes | `replace-with-local-dev-secret-at-least-32-chars` | Access token signing secret. |
@@ -53,14 +53,14 @@ Do not place real secret values in documentation or committed files.
 | `NODE_ENV` | Yes | `local`, `test`, `development`, `production` | Runtime mode. |
 | `API_PORT` | Yes | `3001` | API service port. |
 | `CORS_ORIGIN` | Conditional | `http://localhost:3000` | Allowed frontend origin if frontend is used later. |
-| `OBJECT_STORAGE_ENDPOINT` | Conditional | `http://127.0.0.1:9000` | S3-compatible endpoint placeholder. |
+| `OBJECT_STORAGE_ENDPOINT` | Conditional | `http://127.0.0.1:9000` | S3-compatible endpoint fixture. |
 | `OBJECT_STORAGE_BUCKET` | Conditional | `aim-uat-evidence` | Evidence bucket. |
-| `OBJECT_STORAGE_ACCESS_KEY_ID` | Conditional | `replace-with-local-access-key` | Placeholder only; never commit real value. |
-| `OBJECT_STORAGE_SECRET_ACCESS_KEY` | Conditional | `replace-with-local-secret-key` | Placeholder only; never commit real value. |
+| `OBJECT_STORAGE_ACCESS_KEY_ID` | Conditional | `replace-with-local-access-key` | Fixture only; never commit real value. |
+| `OBJECT_STORAGE_SECRET_ACCESS_KEY` | Conditional | `replace-with-local-secret-key` | Fixture only; never commit real value. |
 | `OBJECT_STORAGE_SECRET_KEY` | Deprecated alias | `replace-with-local-secret-key` | Legacy name retained only for backward compatibility notes; prefer `OBJECT_STORAGE_SECRET_ACCESS_KEY`. |
 | `SIGNED_URL_EXPIRY_SECONDS` | Conditional | `900` | Signed evidence URL lifetime. |
 | `N8N_WEBHOOK_SECRET` | Conditional | `replace-with-local-n8n-secret` | Shared secret for workflow calls if enabled. |
-| `AI_PROVIDER_API_KEY` | Conditional | `replace-with-local-provider-key` | AI provider placeholder if extraction service is used. |
+| `AI_PROVIDER_API_KEY` | Conditional | `replace-with-local-provider-key` | AI provider fixture if extraction service is used. |
 | `LOG_LEVEL` | Optional | `info` | Runtime logging verbosity. |
 
 ## 5. Local Startup Sequence
@@ -174,7 +174,7 @@ pnpm db:seed
 | Auth me | `GET /api/v1/auth/me` | Current user and permissions returned. |  |
 | Protected route | `GET /api/v1/assets` | Authorized user succeeds; anonymous fails. |  |
 | Evidence metadata | Create/list evidence metadata | Metadata only; no DB binary storage. |  |
-| Signed URL | evidence download URL route | Short-lived URL/placeholder returned and audited. |  |
+| Signed URL | evidence download URL route | Short-lived URL/fixture returned and audited. |  |
 | Workflow event | `POST /api/v1/workflow-events` | Event accepted and visible. |  |
 | Error log | `POST /api/v1/error-logs` | Error log accepted and visible. |  |
 | Calculation gate | calculation run with missing formula/evidence | Blocked safely. |  |
@@ -321,7 +321,7 @@ The API secret environment variable is `AUTH_JWT_SECRET`. Use `$login.data.acces
 For frontend UAT, demo headers are opt-in only:
 
 ```text
-NEXT_PUBLIC_AIM_DEMO_HEADERS_ENABLED=true
+NEXT_PUBLIC_AIM_DEV_HEADERS_ENABLED=true
 ```
 
 Do not enable demo headers in UAT/prod-like validation. Verify `/login`, `/integrity-decisions`, `/reports`, and `/work-orders` with real RBAC roles. External CMMS remains out of MVP scope; internal AIM work order fallback remains active. n8n remains orchestration-only and must not write final engineering data directly to PostgreSQL.

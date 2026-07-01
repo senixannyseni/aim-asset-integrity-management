@@ -29,7 +29,7 @@ This package is documentation/evidence-control only. It does not add runtime API
 
 ## 3. Evidence Safety Rule
 
-Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, customer PII, real customer data, customer commercial terms, contract redlines, invoice/payment details, tenant billing details, payment processing data, private keys, confidential client evidence, raw support payloads, webhook secrets, CMMS credentials, database connection strings with passwords, or vulnerability exploit details into customer success or commercial operations records. Use redacted placeholders and attach sensitive evidence only in approved secure evidence storage.
+Do not paste secrets, JWTs, passwords, object-storage keys, signed URLs, production credentials, customer PII, real customer data, customer commercial terms, contract redlines, invoice/payment details, tenant billing details, payment processing data, private keys, confidential client evidence, raw support payloads, webhook secrets, CMMS credentials, database connection strings with passwords, or vulnerability exploit details into customer success or commercial operations records. Use redacted fixtures and attach sensitive evidence only in approved secure evidence storage.
 
 ## 4. Required Human Review
 
